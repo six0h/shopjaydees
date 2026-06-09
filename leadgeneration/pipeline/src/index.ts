@@ -13,7 +13,15 @@ import type {
   Segment,
   Category,
   City,
+  LeadData,
+  GeminiDraftOutput,
+  PersonalizationRunResult,
+  LeadPersonalizationResult,
 } from "./types.js";
+import { createFirecrawlClient, findSecondaryPages } from "./clients/firecrawl.js";
+import type { FirecrawlClient } from "./clients/firecrawl.js";
+import { createGeminiClient } from "./clients/gemini.js";
+import type { GeminiClient } from "./clients/gemini.js";
 import { scoreLead } from "./scoring.js";
 import { buildSearchQuery, cityToPhase } from "./mapping.js";
 import { loadConfig } from "./config.js";
@@ -450,6 +458,628 @@ ff.http("discover", async (req: Request, res: Response) => {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.critical("Unhandled error in Discovery Agent", { error: errorMsg });
     await alerter.send("Unhandled error in discovery-agent", errorMsg);
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// =====================================================
+// PERSONALIZATION AGENT
+// =====================================================
+
+// --- Lead Data Extraction ---
+
+export function extractLeadData(task: ClickUpTask, config: Config): LeadData {
+  let companyName = "";
+  let companyDomain = "";
+  let contactName = "";
+  let contactTitle = "";
+  let segment = "Business";
+  let category = "Other";
+  let leadScore = 0;
+  let companyIndustry = "";
+  let companyHeadcount = "";
+  let companyCity = "";
+
+  for (const field of task.custom_fields) {
+    switch (field.id) {
+      case config.fields.companyName:
+        companyName = String(field.value ?? "");
+        break;
+      case config.fields.companyDomain:
+        companyDomain = String(field.value ?? "");
+        break;
+      case config.fields.contactName:
+        contactName = String(field.value ?? "");
+        break;
+      case config.fields.contactTitle:
+        contactTitle = String(field.value ?? "");
+        break;
+      case config.fields.segment:
+        if (field.type_config?.options && typeof field.value === "number") {
+          const opt = field.type_config.options.find(
+            (o) => o.orderindex === field.value
+          );
+          if (opt) segment = opt.name;
+        }
+        break;
+      case config.fields.category:
+        if (field.type_config?.options && typeof field.value === "number") {
+          const opt = field.type_config.options.find(
+            (o) => o.orderindex === field.value
+          );
+          if (opt) category = opt.name;
+        }
+        break;
+      case config.fields.leadScore:
+        leadScore = typeof field.value === "number" ? field.value : 0;
+        break;
+      case config.fields.companyIndustry:
+        companyIndustry = String(field.value ?? "");
+        break;
+      case config.fields.companyHeadcount:
+        companyHeadcount = String(field.value ?? "");
+        break;
+      case config.fields.companyCity:
+        if (field.type_config?.options && typeof field.value === "number") {
+          const opt = field.type_config.options.find(
+            (o) => o.orderindex === field.value
+          );
+          if (opt) companyCity = opt.name;
+        } else {
+          companyCity = String(field.value ?? "");
+        }
+        break;
+    }
+  }
+
+  const isReEngagement = task.tags.some((t) => t.name === "re-engagement");
+
+  return {
+    taskId: task.id,
+    companyName,
+    companyDomain,
+    contactName,
+    contactTitle,
+    segment,
+    category,
+    leadScore,
+    companyIndustry,
+    companyHeadcount,
+    companyCity,
+    isReEngagement,
+  };
+}
+
+// --- Prompt Builder ---
+
+export function buildPrompt(lead: LeadData, scrapedContent: string): string {
+  const websiteSection =
+    scrapedContent.trim().length > 0
+      ? scrapedContent
+      : "No website content available — use the company data above.";
+
+  const socialProofMap: Record<string, string> = {
+    School: 'Schools: "We work with over 100 schools in the Lower Mainland"',
+    Team: 'Teams: "We\'ve helped teams raise thousands through apparel-based fundraising — no inventory, no hassle"',
+    Business:
+      'Corporate: "We frequently work with businesses with anywhere from 12 to 250+ employees"',
+  };
+  const socialProof =
+    socialProofMap[lead.segment] ?? socialProofMap["Business"];
+
+  let prompt = `You are writing cold outreach for ShopJaydees (shopjaydees.com), a custom clothing
+company in BC's Lower Mainland. They serve businesses, schools, and teams with
+branded apparel — uniforms, spirit wear, team gear, corporate swag.
+
+ShopJaydees runs "Wear It Forward" — a portion of every order goes to community
+initiatives. This is a genuine differentiator, not a gimmick. Mention it naturally
+once in Touch 1, but don't lead with it.
+
+TONE: Friendly > Professional > Casual. Like a local business owner reaching out
+to another. First-name basis. No corporate jargon, no buzzwords, no pressure.
+
+PROSPECT DATA:
+- Company: ${lead.companyName}
+- Domain: ${lead.companyDomain}
+- Contact: ${lead.contactName}, ${lead.contactTitle}
+- Segment: ${lead.segment}
+- Category: ${lead.category}
+- Industry: ${lead.companyIndustry}
+- Headcount: ${lead.companyHeadcount}
+- City: ${lead.companyCity}
+
+WEBSITE CONTENT:
+${websiteSection}
+
+SOCIAL PROOF (use the one matching the segment):
+${socialProof}
+
+INSTRUCTIONS:
+1. Write 3 email touches following the sequence structure (Touch 1: intro + value,
+   Touch 2: value-add follow-up, Touch 3: friendly check-in).
+2. Reference something specific from their website or business. Do not be generic.
+3. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
+4. Sign all emails as "Ellie" (the ShopJaydees outreach persona — not the owner's name).
+5. Write a LinkedIn connection request note (under 300 chars, no pitch).
+6. Check the website content for any "do not contact" or "do not solicit" statements.
+7. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
+   role at ${lead.companyName}.
+8. If no website content was available, still write the emails using the company data,
+   but note that in the website_scrape_summary field.
+
+Return your response as structured JSON matching the schema provided.`;
+
+  if (lead.isReEngagement) {
+    prompt += `
+
+RE-ENGAGEMENT NOTICE: This prospect was contacted previously with no response.
+Their 90-day cool-off period has passed. You MUST:
+- Use a completely different angle than a typical first outreach
+- Do NOT reference or acknowledge previous outreach attempts
+- Find a fresh hook — new seasonal angle, different value prop, updated community signal
+- The tone should feel like a first contact, not a follow-up`;
+  }
+
+  return prompt;
+}
+
+// --- Draft Validation ---
+
+export function validateDrafts(
+  drafts: GeminiDraftOutput,
+  lead: LeadData
+): string[] {
+  const errors: string[] = [];
+
+  if (drafts.email_touch_1_body.length < 100) {
+    errors.push(
+      `email_touch_1_body too short: ${drafts.email_touch_1_body.length} chars (min 100)`
+    );
+  }
+  if (drafts.email_touch_2_body.length < 80) {
+    errors.push(
+      `email_touch_2_body too short: ${drafts.email_touch_2_body.length} chars (min 80)`
+    );
+  }
+  if (drafts.email_touch_3_body.length < 60) {
+    errors.push(
+      `email_touch_3_body too short: ${drafts.email_touch_3_body.length} chars (min 60)`
+    );
+  }
+
+  if (!drafts.email_touch_1_body.includes(lead.companyName)) {
+    errors.push(
+      `email_touch_1_body missing company name "${lead.companyName}"`
+    );
+  }
+
+  const firstName = lead.contactName.split(" ")[0];
+  if (firstName && !drafts.email_touch_1_body.includes(firstName)) {
+    errors.push(
+      `email_touch_1_body missing contact first name "${firstName}"`
+    );
+  }
+
+  const subjects = [
+    { name: "email_touch_1_subject", value: drafts.email_touch_1_subject },
+    { name: "email_touch_2_subject", value: drafts.email_touch_2_subject },
+    { name: "email_touch_3_subject", value: drafts.email_touch_3_subject },
+  ];
+  for (const subj of subjects) {
+    if (subj.value.length < 3 || subj.value.length > 80) {
+      errors.push(
+        `${subj.name} length ${subj.value.length} out of range 3-80: "${subj.value}"`
+      );
+    }
+  }
+
+  if (drafts.linkedin_message.length > 300) {
+    drafts.linkedin_message = drafts.linkedin_message.slice(0, 300);
+  }
+
+  return errors;
+}
+
+// --- Personalization Agent Core ---
+
+export interface PersonalizationDeps {
+  config: Config;
+  clickup: ClickUpClient;
+  firecrawl: FirecrawlClient;
+  gemini: GeminiClient;
+  alerter: Alerter;
+  logger: Logger;
+}
+
+export async function runPersonalization(
+  deps: PersonalizationDeps
+): Promise<PersonalizationRunResult> {
+  const { config, clickup, firecrawl, gemini, alerter, logger } = deps;
+  const now = new Date();
+  const runId = `personalize-${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
+  logger.setRunId(runId);
+  logger.info("Personalization agent starting");
+
+  const result: PersonalizationRunResult = {
+    runId,
+    timestamp: now.toISOString(),
+    batchSizeRequested: config.personalizationBatchSize,
+    leadsAvailable: 0,
+    leadsProcessed: 0,
+    results: {
+      success: 0,
+      generationFailed: 0,
+      caslBlocked: 0,
+      scrapeFailedButProceeded: 0,
+      stuckLeadsReset: 0,
+    },
+    leads: [],
+    deferredRemaining: 0,
+  };
+
+  // Pre-step: Reset leads stuck in "Personalizing" status > 30 min
+  const stuckLeads = await clickup.getTasks(config.clickupListId, {
+    statuses: ["Personalizing"],
+  });
+  for (const task of stuckLeads) {
+    const updatedAt = parseInt(task.date_updated, 10);
+    const minutesStale = (Date.now() - updatedAt) / 60_000;
+    if (minutesStale > 30) {
+      await clickup.updateTask(task.id, { status: "Enriched" });
+      logger.warn("RESET: stuck Personalizing lead", {
+        taskId: task.id,
+        minutesStale: Math.round(minutesStale),
+      });
+      result.results.stuckLeadsReset += 1;
+    }
+  }
+
+  // Step 1: Query ClickUp for Enriched leads
+  const allEnriched = await clickup.getTasks(config.clickupListId, {
+    statuses: ["Enriched"],
+  });
+
+  // Client-side filtering: score >= 3
+  const eligible = allEnriched.filter((task) => {
+    const scoreField = task.custom_fields.find(
+      (f) => f.id === config.fields.leadScore
+    );
+    const score = typeof scoreField?.value === "number" ? scoreField.value : 0;
+    return score >= 3;
+  });
+
+  // Client-side sorting: score DESC, date_created ASC
+  eligible.sort((a, b) => {
+    const scoreA =
+      (a.custom_fields.find((f) => f.id === config.fields.leadScore)
+        ?.value as number) ?? 0;
+    const scoreB =
+      (b.custom_fields.find((f) => f.id === config.fields.leadScore)
+        ?.value as number) ?? 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return parseInt(a.date_created, 10) - parseInt(b.date_created, 10);
+  });
+
+  result.leadsAvailable = eligible.length;
+
+  if (eligible.length === 0) {
+    logger.info("No eligible Enriched leads. Exiting.");
+    return result;
+  }
+
+  // Take batch
+  const batch = eligible.slice(0, config.personalizationBatchSize);
+
+  logger.info("Processing batch", {
+    batchSize: batch.length,
+    totalAvailable: eligible.length,
+  });
+
+  // Process each lead
+  for (const task of batch) {
+    const lead = extractLeadData(task, config);
+    const leadResult: LeadPersonalizationResult = {
+      taskId: lead.taskId,
+      company: lead.companyName,
+      status: "success",
+      scrapePages: 0,
+      geminiTokensUsed: 0,
+      tagsAdded: [],
+    };
+
+    try {
+      // Step 2: Lock lead
+      await clickup.updateTask(lead.taskId, { status: "Personalizing" });
+
+      // Step 4: Scrape prospect website
+      let scrapedContent = "";
+      let scrapeFailed = false;
+      let pagesScraped = 0;
+
+      const homepageResult = await firecrawl.scrape(lead.companyDomain);
+      if (homepageResult.success && homepageResult.data?.markdown) {
+        scrapedContent += `## Homepage (${lead.companyDomain})\n\n${homepageResult.data.markdown}`;
+        pagesScraped += 1;
+
+        const links = homepageResult.data.links ?? [];
+        const secondaryPages = findSecondaryPages(links, lead.companyDomain);
+
+        for (const pageUrl of secondaryPages) {
+          const pageResult = await firecrawl.scrape(pageUrl);
+          if (pageResult.success && pageResult.data?.markdown) {
+            scrapedContent += `\n\n---\n\n## ${pageUrl}\n\n${pageResult.data.markdown}`;
+            pagesScraped += 1;
+          }
+        }
+      } else {
+        scrapeFailed = true;
+        await clickup.addTag(lead.taskId, "no-scrape");
+        leadResult.tagsAdded.push("no-scrape");
+        logger.warn("Firecrawl failed — proceeding with Hunter.io data only", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+        });
+      }
+
+      leadResult.scrapePages = pagesScraped;
+
+      if (scrapeFailed) {
+        result.results.scrapeFailedButProceeded += 1;
+      }
+
+      // Step 5: Generate drafts via Gemini
+      const prompt = buildPrompt(lead, scrapedContent);
+      const geminiResult = await gemini.generateDrafts(prompt);
+      leadResult.geminiTokensUsed = geminiResult.tokensUsed;
+
+      // Handle Gemini rate limit — defer entire remaining batch
+      if (geminiResult.isRateLimited) {
+        logger.warn("Gemini 429 — deferring remaining batch", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+        });
+
+        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        leadResult.status = "deferred";
+        result.leads.push(leadResult);
+        result.leadsProcessed += 1;
+
+        const currentIndex = batch.indexOf(task);
+        result.deferredRemaining = batch.length - currentIndex - 1;
+
+        await alerter.send(
+          "Gemini rate limit — personalization batch deferred",
+          `Rate limited after processing lead ${lead.companyName}. ${result.deferredRemaining} leads deferred to next run.`
+        );
+
+        break;
+      }
+
+      // Handle other Gemini errors
+      if (geminiResult.error || !geminiResult.drafts) {
+        logger.error("Gemini generation failed", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+          error: geminiResult.error,
+        });
+        await clickup.addTag(lead.taskId, "generation-failed");
+        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        leadResult.tagsAdded.push("generation-failed");
+        leadResult.status = "generation_failed";
+        leadResult.error = geminiResult.error;
+        result.results.generationFailed += 1;
+        result.leads.push(leadResult);
+        result.leadsProcessed += 1;
+        continue;
+      }
+
+      const drafts = geminiResult.drafts;
+
+      // Step 6: Validate — CASL opt-out check first
+      if (!drafts.casl_opt_out_check) {
+        logger.warn("CASL block — prospect website has do-not-contact", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+        });
+        await clickup.addTag(lead.taskId, "casl-block");
+        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        leadResult.tagsAdded.push("casl-block");
+        leadResult.status = "casl_blocked";
+        result.results.caslBlocked += 1;
+        result.leads.push(leadResult);
+        result.leadsProcessed += 1;
+        continue;
+      }
+
+      // Step 6 continued: Validate draft quality
+      const validationErrors = validateDrafts(drafts, lead);
+      if (validationErrors.length > 0) {
+        logger.error("Draft validation failed", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+          errors: validationErrors,
+        });
+        await clickup.addTag(lead.taskId, "generation-failed");
+        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        leadResult.tagsAdded.push("generation-failed");
+        leadResult.status = "generation_failed";
+        leadResult.error = `Validation: ${validationErrors.join("; ")}`;
+        result.results.generationFailed += 1;
+        result.leads.push(leadResult);
+        result.leadsProcessed += 1;
+        continue;
+      }
+
+      // Step 7: Write results back to ClickUp
+      const todayMidnightUtc = new Date();
+      todayMidnightUtc.setUTCHours(0, 0, 0, 0);
+      const caslDateMs = todayMidnightUtc.getTime();
+
+      await clickup.updateTask(lead.taskId, {
+        status: "Ready for Review",
+        custom_fields: [
+          {
+            id: config.personalizationFields.websiteScrapeSummary,
+            value: drafts.website_scrape_summary,
+          },
+          {
+            id: config.personalizationFields.communitySignals,
+            value: drafts.community_signals,
+          },
+          {
+            id: config.personalizationFields.personalizationHooks,
+            value: drafts.personalization_hooks,
+          },
+          {
+            id: config.personalizationFields.emailTouch1,
+            value: drafts.email_touch_1_body,
+          },
+          {
+            id: config.personalizationFields.emailTouch1Subject,
+            value: drafts.email_touch_1_subject,
+          },
+          {
+            id: config.personalizationFields.emailTouch2,
+            value: drafts.email_touch_2_body,
+          },
+          {
+            id: config.personalizationFields.emailTouch2Subject,
+            value: drafts.email_touch_2_subject,
+          },
+          {
+            id: config.personalizationFields.emailTouch3,
+            value: drafts.email_touch_3_body,
+          },
+          {
+            id: config.personalizationFields.emailTouch3Subject,
+            value: drafts.email_touch_3_subject,
+          },
+          {
+            id: config.personalizationFields.linkedinMessage,
+            value: drafts.linkedin_message,
+          },
+          {
+            id: config.personalizationFields.caslOptOutCheck,
+            value: true,
+          },
+          {
+            id: config.personalizationFields.caslRelevanceRationale,
+            value: drafts.casl_relevance_rationale,
+          },
+          {
+            id: config.personalizationFields.caslConsentBasis,
+            value: 0,
+          },
+          {
+            id: config.personalizationFields.caslDateVerified,
+            value: caslDateMs,
+          },
+          {
+            id: config.personalizationFields.reviewDecision,
+            value: 0,
+          },
+        ],
+      });
+
+      result.results.success += 1;
+      logger.info("Lead personalized successfully", {
+        taskId: lead.taskId,
+        company: lead.companyName,
+        scrapePages: pagesScraped,
+        tokensUsed: geminiResult.tokensUsed,
+      });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.error("Lead personalization failed", {
+        taskId: lead.taskId,
+        company: lead.companyName,
+        error: errorMsg,
+      });
+      leadResult.status = "generation_failed";
+      leadResult.error = errorMsg;
+      result.results.generationFailed += 1;
+
+      try {
+        await clickup.addTag(lead.taskId, "generation-failed");
+        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        leadResult.tagsAdded.push("generation-failed");
+      } catch {
+        // Don't mask the real error
+      }
+    }
+
+    result.leads.push(leadResult);
+    result.leadsProcessed += 1;
+  }
+
+  logger.info("Personalization agent complete", {
+    leadsProcessed: result.leadsProcessed,
+    success: result.results.success,
+    generationFailed: result.results.generationFailed,
+    caslBlocked: result.results.caslBlocked,
+    deferredRemaining: result.deferredRemaining,
+  });
+
+  return result;
+}
+
+// --- Cloud Function Entry Point ---
+
+ff.http("personalize", async (req: Request, res: Response) => {
+  const config = loadConfig();
+  const logger = createLogger("personalization-agent");
+  const alerter = createAlerter({
+    alertEmail: config.alertEmail,
+    alertWebhookUrl: config.alertWebhookUrl,
+  });
+  const clickup = createClickUpClient({
+    token: config.clickupApiToken,
+    rateLimit: config.clickupRateLimit,
+    logger,
+  });
+  const firecrawlClient = createFirecrawlClient({
+    apiKey: config.firecrawlApiKey,
+    logger,
+  });
+  const geminiClient = createGeminiClient({
+    apiKey: config.geminiApiKey,
+    logger,
+  });
+
+  try {
+    const batchSizeOverride =
+      req.body && typeof req.body === "object" && "batch_size" in req.body
+        ? parseInt(String(req.body.batch_size), 10)
+        : undefined;
+    const dryRunOverride =
+      req.body && typeof req.body === "object" && "dry_run" in req.body
+        ? req.body.dry_run === true
+        : undefined;
+
+    const effectiveConfig = {
+      ...config,
+      ...(batchSizeOverride !== undefined && !isNaN(batchSizeOverride)
+        ? { personalizationBatchSize: batchSizeOverride }
+        : {}),
+      ...(dryRunOverride !== undefined ? { dryRun: dryRunOverride } : {}),
+    };
+
+    const result = await runPersonalization({
+      config: effectiveConfig,
+      clickup,
+      firecrawl: firecrawlClient,
+      gemini: geminiClient,
+      alerter,
+      logger,
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.critical("Unhandled error in Personalization Agent", {
+      error: errorMsg,
+    });
+    await alerter.send("Unhandled error in personalization-agent", errorMsg);
     res.status(500).json({ error: errorMsg });
   }
 });
