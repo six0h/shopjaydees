@@ -164,3 +164,92 @@ export interface ClickUpFieldOption {
   name: string;
   orderindex: number;
 }
+
+// --- Personalization Agent Types ---
+
+export const ABOUT_PATH_KEYWORDS = [
+  "/about",
+  "/about-us",
+  "/our-story",
+  "/team",
+] as const;
+
+export const COMMUNITY_PATH_KEYWORDS = [
+  "/community",
+  "/giving",
+  "/charity",
+  "/sponsorship",
+  "/csr",
+  "/give-back",
+] as const;
+
+export interface FirecrawlScrapeResult {
+  success: boolean;
+  data?: {
+    markdown: string;
+    metadata?: {
+      title?: string;
+      description?: string;
+      sourceURL?: string;
+      statusCode?: number;
+    };
+    links?: string[];
+  };
+}
+
+export interface GeminiDraftOutput {
+  website_scrape_summary: string;
+  community_signals: string;
+  personalization_hooks: string;
+  email_touch_1_subject: string;
+  email_touch_1_body: string;
+  email_touch_2_subject: string;
+  email_touch_2_body: string;
+  email_touch_3_subject: string;
+  email_touch_3_body: string;
+  linkedin_message: string;
+  casl_opt_out_check: boolean;
+  casl_relevance_rationale: string;
+}
+
+export interface LeadData {
+  taskId: string;
+  companyName: string;
+  companyDomain: string;
+  contactName: string;
+  contactTitle: string;
+  segment: string;
+  category: string;
+  leadScore: number;
+  companyIndustry: string;
+  companyHeadcount: string;
+  companyCity: string;
+  isReEngagement: boolean;
+}
+
+export interface LeadPersonalizationResult {
+  taskId: string;
+  company: string;
+  status: "success" | "generation_failed" | "casl_blocked" | "deferred";
+  scrapePages: number;
+  geminiTokensUsed: number;
+  tagsAdded: string[];
+  error?: string;
+}
+
+export interface PersonalizationRunResult {
+  runId: string;
+  timestamp: string;
+  batchSizeRequested: number;
+  leadsAvailable: number;
+  leadsProcessed: number;
+  results: {
+    success: number;
+    generationFailed: number;
+    caslBlocked: number;
+    scrapeFailedButProceeded: number;
+    stuckLeadsReset: number;
+  };
+  leads: LeadPersonalizationResult[];
+  deferredRemaining: number;
+}

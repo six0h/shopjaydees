@@ -4,15 +4,15 @@ import {
   type Category,
   type ProspectStatus,
   type ProspectingRequestStatus,
-  type HunterContact,
-  type HunterCompany,
-  type ProspectingRequest,
-  type LeadScoreResult,
-  type DiscoveryRunResult,
-  type RequestResult,
+  type GeminiDraftOutput,
+  type PersonalizationRunResult,
+  type LeadPersonalizationResult,
+  type FirecrawlScrapeResult,
   SEGMENTS,
   PROSPECT_STATUSES,
   PROSPECTING_REQUEST_STATUSES,
+  ABOUT_PATH_KEYWORDS,
+  COMMUNITY_PATH_KEYWORDS,
 } from "../src/types.js";
 
 describe("types", () => {
@@ -23,6 +23,8 @@ describe("types", () => {
   it("exports prospect statuses matching ClickUp data model", () => {
     expect(PROSPECT_STATUSES).toContain("New");
     expect(PROSPECT_STATUSES).toContain("Enriched");
+    expect(PROSPECT_STATUSES).toContain("Personalizing");
+    expect(PROSPECT_STATUSES).toContain("Ready for Review");
     expect(PROSPECT_STATUSES).toContain("Parked");
     expect(PROSPECT_STATUSES).toContain("Dormant");
     expect(PROSPECT_STATUSES).toContain("Unsubscribed");
@@ -36,5 +38,21 @@ describe("types", () => {
       "Complete",
       "Failed",
     ]);
+  });
+
+  it("exports about page path keywords for secondary page discovery", () => {
+    expect(ABOUT_PATH_KEYWORDS).toContain("/about");
+    expect(ABOUT_PATH_KEYWORDS).toContain("/about-us");
+    expect(ABOUT_PATH_KEYWORDS).toContain("/our-story");
+    expect(ABOUT_PATH_KEYWORDS).toContain("/team");
+  });
+
+  it("exports community page path keywords for secondary page discovery", () => {
+    expect(COMMUNITY_PATH_KEYWORDS).toContain("/community");
+    expect(COMMUNITY_PATH_KEYWORDS).toContain("/giving");
+    expect(COMMUNITY_PATH_KEYWORDS).toContain("/charity");
+    expect(COMMUNITY_PATH_KEYWORDS).toContain("/sponsorship");
+    expect(COMMUNITY_PATH_KEYWORDS).toContain("/csr");
+    expect(COMMUNITY_PATH_KEYWORDS).toContain("/give-back");
   });
 });
