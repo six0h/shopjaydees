@@ -1,14 +1,18 @@
 export interface Config {
   clickupApiToken: string;
   hunterApiKey: string;
+  firecrawlApiKey: string;
+  geminiApiKey: string;
   clickupListId: string;
   clickupProspectingListId: string;
   clickupRateLimit: number;
+  personalizationBatchSize: number;
   dryRun: boolean;
   alertEmail: string;
   alertWebhookUrl: string;
   fields: ClickUpFieldIds;
   prospectingFields: ProspectingRequestFieldIds;
+  personalizationFields: PersonalizationFieldIds;
 }
 
 export interface ClickUpFieldIds {
@@ -39,6 +43,24 @@ export interface ProspectingRequestFieldIds {
   duplicatesSkipped: string;
 }
 
+export interface PersonalizationFieldIds {
+  websiteScrapeSummary: string;
+  communitySignals: string;
+  personalizationHooks: string;
+  emailTouch1: string;
+  emailTouch1Subject: string;
+  emailTouch2: string;
+  emailTouch2Subject: string;
+  emailTouch3: string;
+  emailTouch3Subject: string;
+  linkedinMessage: string;
+  caslOptOutCheck: string;
+  caslRelevanceRationale: string;
+  caslConsentBasis: string;
+  caslDateVerified: string;
+  reviewDecision: string;
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -51,9 +73,12 @@ export function loadConfig(): Config {
   return {
     clickupApiToken: required("CLICKUP_API_TOKEN"),
     hunterApiKey: required("HUNTER_API_KEY"),
+    firecrawlApiKey: required("FIRECRAWL_API_KEY"),
+    geminiApiKey: required("GEMINI_API_KEY"),
     clickupListId: required("CLICKUP_LIST_ID"),
     clickupProspectingListId: required("CLICKUP_PROSPECTING_LIST_ID"),
     clickupRateLimit: parseInt(process.env.CLICKUP_RATE_LIMIT ?? "90", 10),
+    personalizationBatchSize: parseInt(process.env.PERSONALIZATION_BATCH_SIZE ?? "15", 10),
     dryRun: process.env.DRY_RUN === "true",
     alertEmail: required("ALERT_EMAIL"),
     alertWebhookUrl: process.env.ALERT_WEBHOOK_URL ?? "",
@@ -82,6 +107,23 @@ export function loadConfig(): Config {
       leadsCreated: required("CLICKUP_FIELD_PR_LEADS_CREATED"),
       leadsParked: required("CLICKUP_FIELD_PR_LEADS_PARKED"),
       duplicatesSkipped: required("CLICKUP_FIELD_PR_DUPLICATES_SKIPPED"),
+    },
+    personalizationFields: {
+      websiteScrapeSummary: required("CLICKUP_FIELD_WEBSITE_SCRAPE_SUMMARY"),
+      communitySignals: required("CLICKUP_FIELD_COMMUNITY_SIGNALS"),
+      personalizationHooks: required("CLICKUP_FIELD_PERSONALIZATION_HOOKS"),
+      emailTouch1: required("CLICKUP_FIELD_EMAIL_TOUCH_1"),
+      emailTouch1Subject: required("CLICKUP_FIELD_EMAIL_TOUCH_1_SUBJECT"),
+      emailTouch2: required("CLICKUP_FIELD_EMAIL_TOUCH_2"),
+      emailTouch2Subject: required("CLICKUP_FIELD_EMAIL_TOUCH_2_SUBJECT"),
+      emailTouch3: required("CLICKUP_FIELD_EMAIL_TOUCH_3"),
+      emailTouch3Subject: required("CLICKUP_FIELD_EMAIL_TOUCH_3_SUBJECT"),
+      linkedinMessage: required("CLICKUP_FIELD_LINKEDIN_MESSAGE"),
+      caslOptOutCheck: required("CLICKUP_FIELD_CASL_OPT_OUT_CHECK"),
+      caslRelevanceRationale: required("CLICKUP_FIELD_CASL_RELEVANCE_RATIONALE"),
+      caslConsentBasis: required("CLICKUP_FIELD_CASL_CONSENT_BASIS"),
+      caslDateVerified: required("CLICKUP_FIELD_CASL_DATE_VERIFIED"),
+      reviewDecision: required("CLICKUP_FIELD_REVIEW_DECISION"),
     },
   };
 }

@@ -15,6 +15,8 @@ describe("loadConfig", () => {
   function setRequiredEnv() {
     process.env.CLICKUP_API_TOKEN = "pk_test_token";
     process.env.HUNTER_API_KEY = "hunter_test_key";
+    process.env.FIRECRAWL_API_KEY = "fc_test_key";
+    process.env.GEMINI_API_KEY = "gemini_test_key";
     process.env.CLICKUP_LIST_ID = "111";
     process.env.CLICKUP_PROSPECTING_LIST_ID = "222";
     process.env.CLICKUP_FIELD_COMPANY_NAME = "field-company-name";
@@ -40,6 +42,22 @@ describe("loadConfig", () => {
     process.env.CLICKUP_FIELD_PR_LEADS_PARKED = "field-pr-parked";
     process.env.CLICKUP_FIELD_PR_DUPLICATES_SKIPPED = "field-pr-dupes";
     process.env.ALERT_EMAIL = "cody@sixohquad.com";
+    // Personalization fields
+    process.env.CLICKUP_FIELD_WEBSITE_SCRAPE_SUMMARY = "field-scrape-summary";
+    process.env.CLICKUP_FIELD_COMMUNITY_SIGNALS = "field-community-signals";
+    process.env.CLICKUP_FIELD_PERSONALIZATION_HOOKS = "field-personalization-hooks";
+    process.env.CLICKUP_FIELD_EMAIL_TOUCH_1 = "field-email-touch-1";
+    process.env.CLICKUP_FIELD_EMAIL_TOUCH_1_SUBJECT = "field-email-touch-1-subject";
+    process.env.CLICKUP_FIELD_EMAIL_TOUCH_2 = "field-email-touch-2";
+    process.env.CLICKUP_FIELD_EMAIL_TOUCH_2_SUBJECT = "field-email-touch-2-subject";
+    process.env.CLICKUP_FIELD_EMAIL_TOUCH_3 = "field-email-touch-3";
+    process.env.CLICKUP_FIELD_EMAIL_TOUCH_3_SUBJECT = "field-email-touch-3-subject";
+    process.env.CLICKUP_FIELD_LINKEDIN_MESSAGE = "field-linkedin-message";
+    process.env.CLICKUP_FIELD_CASL_OPT_OUT_CHECK = "field-casl-opt-out";
+    process.env.CLICKUP_FIELD_CASL_RELEVANCE_RATIONALE = "field-casl-relevance";
+    process.env.CLICKUP_FIELD_CASL_CONSENT_BASIS = "field-casl-consent";
+    process.env.CLICKUP_FIELD_CASL_DATE_VERIFIED = "field-casl-date";
+    process.env.CLICKUP_FIELD_REVIEW_DECISION = "field-review-decision";
   }
 
   it("loads all required environment variables", () => {
@@ -82,5 +100,57 @@ describe("loadConfig", () => {
     process.env.CLICKUP_RATE_LIMIT = "50";
     const config = loadConfig();
     expect(config.clickupRateLimit).toBe(50);
+  });
+
+  it("loads Firecrawl and Gemini API keys", () => {
+    setRequiredEnv();
+    const config = loadConfig();
+    expect(config.firecrawlApiKey).toBe("fc_test_key");
+    expect(config.geminiApiKey).toBe("gemini_test_key");
+  });
+
+  it("throws if FIRECRAWL_API_KEY is missing", () => {
+    setRequiredEnv();
+    delete process.env.FIRECRAWL_API_KEY;
+    expect(() => loadConfig()).toThrow("FIRECRAWL_API_KEY");
+  });
+
+  it("throws if GEMINI_API_KEY is missing", () => {
+    setRequiredEnv();
+    delete process.env.GEMINI_API_KEY;
+    expect(() => loadConfig()).toThrow("GEMINI_API_KEY");
+  });
+
+  it("defaults personalizationBatchSize to 15", () => {
+    setRequiredEnv();
+    const config = loadConfig();
+    expect(config.personalizationBatchSize).toBe(15);
+  });
+
+  it("reads custom PERSONALIZATION_BATCH_SIZE", () => {
+    setRequiredEnv();
+    process.env.PERSONALIZATION_BATCH_SIZE = "10";
+    const config = loadConfig();
+    expect(config.personalizationBatchSize).toBe(10);
+  });
+
+  it("loads all personalization ClickUp field IDs", () => {
+    setRequiredEnv();
+    const config = loadConfig();
+    expect(config.personalizationFields.websiteScrapeSummary).toBe("field-scrape-summary");
+    expect(config.personalizationFields.communitySignals).toBe("field-community-signals");
+    expect(config.personalizationFields.personalizationHooks).toBe("field-personalization-hooks");
+    expect(config.personalizationFields.emailTouch1).toBe("field-email-touch-1");
+    expect(config.personalizationFields.emailTouch1Subject).toBe("field-email-touch-1-subject");
+    expect(config.personalizationFields.emailTouch2).toBe("field-email-touch-2");
+    expect(config.personalizationFields.emailTouch2Subject).toBe("field-email-touch-2-subject");
+    expect(config.personalizationFields.emailTouch3).toBe("field-email-touch-3");
+    expect(config.personalizationFields.emailTouch3Subject).toBe("field-email-touch-3-subject");
+    expect(config.personalizationFields.linkedinMessage).toBe("field-linkedin-message");
+    expect(config.personalizationFields.caslOptOutCheck).toBe("field-casl-opt-out");
+    expect(config.personalizationFields.caslRelevanceRationale).toBe("field-casl-relevance");
+    expect(config.personalizationFields.caslConsentBasis).toBe("field-casl-consent");
+    expect(config.personalizationFields.caslDateVerified).toBe("field-casl-date");
+    expect(config.personalizationFields.reviewDecision).toBe("field-review-decision");
   });
 });
