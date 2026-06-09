@@ -175,7 +175,7 @@ describe("validateDrafts", () => {
     expect(errors.some((e) => e.includes("subject"))).toBe(true);
   });
 
-  it("truncates linkedin_message to 300 chars (not an error)", () => {
+  it("does not error on long linkedin_message (truncation handled at write time)", () => {
     const drafts = makeMockDraftOutput({
       linkedin_message: "X".repeat(350),
     });
@@ -183,7 +183,7 @@ describe("validateDrafts", () => {
     const errors = validateDrafts(drafts, lead);
 
     expect(errors).toHaveLength(0);
-    expect(drafts.linkedin_message).toHaveLength(300);
+    expect(drafts.linkedin_message).toHaveLength(350);
   });
 });
 
@@ -616,16 +616,17 @@ describe("runPersonalization", () => {
     const alerter = makeMockAlerter();
     const logger = createLogger("test");
 
+    const now = Date.now();
     const getTasksMock = clickup.getTasks as ReturnType<typeof vi.fn>;
     getTasksMock
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
-        makeEnrichedClickUpTask({ id: "lead_low", leadScore: 3 }),
-        makeEnrichedClickUpTask({ id: "lead_high_new", leadScore: 5 }),
-        makeEnrichedClickUpTask({ id: "lead_high_old", leadScore: 5 }),
+        { ...makeEnrichedClickUpTask({ id: "lead_low", leadScore: 3 }), date_created: String(now) },
+        { ...makeEnrichedClickUpTask({ id: "lead_high_new", leadScore: 5 }), date_created: String(now) },
+        { ...makeEnrichedClickUpTask({ id: "lead_high_old", leadScore: 5 }), date_created: String(now - 86_400_000) },
       ]);
 
-    const result = await runPersonalization({
+    await runPersonalization({
       config,
       clickup,
       firecrawl,
@@ -638,7 +639,9 @@ describe("runPersonalization", () => {
     const lockCalls = updateCalls.filter(
       (call: unknown[]) => (call[1] as { status?: string }).status === "Personalizing"
     );
-    expect(lockCalls[0][0]).not.toBe("lead_low");
+    expect(lockCalls[0][0]).toBe("lead_high_old");
+    expect(lockCalls[1][0]).toBe("lead_high_new");
+    expect(lockCalls[2][0]).toBe("lead_low");
   });
 
   it("scrapes secondary pages (about + community) when found in homepage links", async () => {

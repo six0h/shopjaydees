@@ -673,10 +673,6 @@ export function validateDrafts(
     }
   }
 
-  if (drafts.linkedin_message.length > 300) {
-    drafts.linkedin_message = drafts.linkedin_message.slice(0, 300);
-  }
-
   return errors;
 }
 
@@ -725,11 +721,10 @@ export async function runPersonalization(
     const updatedAt = parseInt(task.date_updated, 10);
     const minutesStale = (Date.now() - updatedAt) / 60_000;
     if (minutesStale > 30) {
-      await clickup.updateTask(task.id, { status: "Enriched" });
-      logger.warn("RESET: stuck Personalizing lead", {
-        taskId: task.id,
-        minutesStale: Math.round(minutesStale),
-      });
+      if (!config.dryRun) {
+        await clickup.updateTask(task.id, { status: "Enriched" });
+      }
+      logger.warn("RESET: stuck Personalizing lead", { taskId: task.id, minutesStale: Math.round(minutesStale) });
       result.results.stuckLeadsReset += 1;
     }
   }
@@ -750,12 +745,10 @@ export async function runPersonalization(
 
   // Client-side sorting: score DESC, date_created ASC
   eligible.sort((a, b) => {
-    const scoreA =
-      (a.custom_fields.find((f) => f.id === config.fields.leadScore)
-        ?.value as number) ?? 0;
-    const scoreB =
-      (b.custom_fields.find((f) => f.id === config.fields.leadScore)
-        ?.value as number) ?? 0;
+    const valA = a.custom_fields.find((f) => f.id === config.fields.leadScore)?.value;
+    const scoreA = typeof valA === "number" ? valA : 0;
+    const valB = b.custom_fields.find((f) => f.id === config.fields.leadScore)?.value;
+    const scoreB = typeof valB === "number" ? valB : 0;
     if (scoreB !== scoreA) return scoreB - scoreA;
     return parseInt(a.date_created, 10) - parseInt(b.date_created, 10);
   });
@@ -789,7 +782,9 @@ export async function runPersonalization(
 
     try {
       // Step 2: Lock lead
-      await clickup.updateTask(lead.taskId, { status: "Personalizing" });
+      if (!config.dryRun) {
+        await clickup.updateTask(lead.taskId, { status: "Personalizing" });
+      }
 
       // Step 4: Scrape prospect website
       let scrapedContent = "";
@@ -813,7 +808,9 @@ export async function runPersonalization(
         }
       } else {
         scrapeFailed = true;
-        await clickup.addTag(lead.taskId, "no-scrape");
+        if (!config.dryRun) {
+          await clickup.addTag(lead.taskId, "no-scrape");
+        }
         leadResult.tagsAdded.push("no-scrape");
         logger.warn("Firecrawl failed — proceeding with Hunter.io data only", {
           taskId: lead.taskId,
@@ -839,7 +836,9 @@ export async function runPersonalization(
           company: lead.companyName,
         });
 
-        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        if (!config.dryRun) {
+          await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        }
         leadResult.status = "deferred";
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
@@ -862,8 +861,10 @@ export async function runPersonalization(
           company: lead.companyName,
           error: geminiResult.error,
         });
-        await clickup.addTag(lead.taskId, "generation-failed");
-        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        if (!config.dryRun) {
+          await clickup.addTag(lead.taskId, "generation-failed");
+          await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        }
         leadResult.tagsAdded.push("generation-failed");
         leadResult.status = "generation_failed";
         leadResult.error = geminiResult.error;
@@ -881,8 +882,10 @@ export async function runPersonalization(
           taskId: lead.taskId,
           company: lead.companyName,
         });
-        await clickup.addTag(lead.taskId, "casl-block");
-        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        if (!config.dryRun) {
+          await clickup.addTag(lead.taskId, "casl-block");
+          await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        }
         leadResult.tagsAdded.push("casl-block");
         leadResult.status = "casl_blocked";
         result.results.caslBlocked += 1;
@@ -899,8 +902,10 @@ export async function runPersonalization(
           company: lead.companyName,
           errors: validationErrors,
         });
-        await clickup.addTag(lead.taskId, "generation-failed");
-        await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        if (!config.dryRun) {
+          await clickup.addTag(lead.taskId, "generation-failed");
+          await clickup.updateTask(lead.taskId, { status: "Enriched" });
+        }
         leadResult.tagsAdded.push("generation-failed");
         leadResult.status = "generation_failed";
         leadResult.error = `Validation: ${validationErrors.join("; ")}`;
@@ -911,75 +916,80 @@ export async function runPersonalization(
       }
 
       // Step 7: Write results back to ClickUp
+      const linkedinMessage = drafts.linkedin_message.length > 300
+        ? drafts.linkedin_message.slice(0, 300)
+        : drafts.linkedin_message;
       const todayMidnightUtc = new Date();
       todayMidnightUtc.setUTCHours(0, 0, 0, 0);
       const caslDateMs = todayMidnightUtc.getTime();
 
-      await clickup.updateTask(lead.taskId, {
-        status: "Ready for Review",
-        custom_fields: [
-          {
-            id: config.personalizationFields.websiteScrapeSummary,
-            value: drafts.website_scrape_summary,
-          },
-          {
-            id: config.personalizationFields.communitySignals,
-            value: drafts.community_signals,
-          },
-          {
-            id: config.personalizationFields.personalizationHooks,
-            value: drafts.personalization_hooks,
-          },
-          {
-            id: config.personalizationFields.emailTouch1,
-            value: drafts.email_touch_1_body,
-          },
-          {
-            id: config.personalizationFields.emailTouch1Subject,
-            value: drafts.email_touch_1_subject,
-          },
-          {
-            id: config.personalizationFields.emailTouch2,
-            value: drafts.email_touch_2_body,
-          },
-          {
-            id: config.personalizationFields.emailTouch2Subject,
-            value: drafts.email_touch_2_subject,
-          },
-          {
-            id: config.personalizationFields.emailTouch3,
-            value: drafts.email_touch_3_body,
-          },
-          {
-            id: config.personalizationFields.emailTouch3Subject,
-            value: drafts.email_touch_3_subject,
-          },
-          {
-            id: config.personalizationFields.linkedinMessage,
-            value: drafts.linkedin_message,
-          },
-          {
-            id: config.personalizationFields.caslOptOutCheck,
-            value: true,
-          },
-          {
-            id: config.personalizationFields.caslRelevanceRationale,
-            value: drafts.casl_relevance_rationale,
-          },
-          {
-            id: config.personalizationFields.caslConsentBasis,
-            value: 0,
-          },
-          {
-            id: config.personalizationFields.caslDateVerified,
-            value: caslDateMs,
-          },
-          {
-            id: config.personalizationFields.reviewDecision,
-            value: 0,
-          },
-        ],
-      });
+      if (!config.dryRun) {
+        await clickup.updateTask(lead.taskId, {
+          status: "Ready for Review",
+          custom_fields: [
+            {
+              id: config.personalizationFields.websiteScrapeSummary,
+              value: drafts.website_scrape_summary,
+            },
+            {
+              id: config.personalizationFields.communitySignals,
+              value: drafts.community_signals,
+            },
+            {
+              id: config.personalizationFields.personalizationHooks,
+              value: drafts.personalization_hooks,
+            },
+            {
+              id: config.personalizationFields.emailTouch1,
+              value: drafts.email_touch_1_body,
+            },
+            {
+              id: config.personalizationFields.emailTouch1Subject,
+              value: drafts.email_touch_1_subject,
+            },
+            {
+              id: config.personalizationFields.emailTouch2,
+              value: drafts.email_touch_2_body,
+            },
+            {
+              id: config.personalizationFields.emailTouch2Subject,
+              value: drafts.email_touch_2_subject,
+            },
+            {
+              id: config.personalizationFields.emailTouch3,
+              value: drafts.email_touch_3_body,
+            },
+            {
+              id: config.personalizationFields.emailTouch3Subject,
+              value: drafts.email_touch_3_subject,
+            },
+            {
+              id: config.personalizationFields.linkedinMessage,
+              value: linkedinMessage,
+            },
+            {
+              id: config.personalizationFields.caslOptOutCheck,
+              value: true,
+            },
+            {
+              id: config.personalizationFields.caslRelevanceRationale,
+              value: drafts.casl_relevance_rationale,
+            },
+            {
+              id: config.personalizationFields.caslConsentBasis,
+              value: 0,
+            },
+            {
+              id: config.personalizationFields.caslDateVerified,
+              value: caslDateMs,
+            },
+            {
+              id: config.personalizationFields.reviewDecision,
+              value: 0,
+            },
+          ],
+        });
+      }
 
       result.results.success += 1;
       logger.info("Lead personalized successfully", {
@@ -999,12 +1009,14 @@ export async function runPersonalization(
       leadResult.error = errorMsg;
       result.results.generationFailed += 1;
 
-      try {
-        await clickup.addTag(lead.taskId, "generation-failed");
-        await clickup.updateTask(lead.taskId, { status: "Enriched" });
-        leadResult.tagsAdded.push("generation-failed");
-      } catch {
-        // Don't mask the real error
+      if (!config.dryRun) {
+        try {
+          await clickup.addTag(lead.taskId, "generation-failed");
+          await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          leadResult.tagsAdded.push("generation-failed");
+        } catch {
+          // Don't mask the real error
+        }
       }
     }
 
