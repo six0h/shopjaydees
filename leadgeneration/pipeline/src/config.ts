@@ -3,6 +3,8 @@ export interface Config {
   hunterApiKey: string;
   firecrawlApiKey: string;
   geminiApiKey: string;
+  instantlyApiKey: string;
+  instantlySendingDomains: string[];
   clickupListId: string;
   clickupProspectingListId: string;
   clickupRateLimit: number;
@@ -13,6 +15,7 @@ export interface Config {
   fields: ClickUpFieldIds;
   prospectingFields: ProspectingRequestFieldIds;
   personalizationFields: PersonalizationFieldIds;
+  outreachFields: OutreachTrackingFieldIds;
 }
 
 export interface ClickUpFieldIds {
@@ -41,6 +44,15 @@ export interface ProspectingRequestFieldIds {
   leadsCreated: string;
   leadsParked: string;
   duplicatesSkipped: string;
+}
+
+export interface OutreachTrackingFieldIds {
+  instantlyCampaignId: string;
+  instantlyLeadId: string;
+  sendingDomain: string;
+  sequenceStatus: string;
+  dormantDate: string;
+  dormantReactivationDate: string;
 }
 
 export interface PersonalizationFieldIds {
@@ -75,6 +87,10 @@ export function loadConfig(): Config {
     hunterApiKey: required("HUNTER_API_KEY"),
     firecrawlApiKey: required("FIRECRAWL_API_KEY"),
     geminiApiKey: required("GEMINI_API_KEY"),
+    instantlyApiKey: required("INSTANTLY_API_KEY"),
+    instantlySendingDomains: required("INSTANTLY_SENDING_DOMAINS")
+      .split(",")
+      .map((d) => d.trim()),
     clickupListId: required("CLICKUP_LIST_ID"),
     clickupProspectingListId: required("CLICKUP_PROSPECTING_LIST_ID"),
     clickupRateLimit: parseInt(process.env.CLICKUP_RATE_LIMIT ?? "90", 10),
@@ -124,6 +140,14 @@ export function loadConfig(): Config {
       caslConsentBasis: required("CLICKUP_FIELD_CASL_CONSENT_BASIS"),
       caslDateVerified: required("CLICKUP_FIELD_CASL_DATE_VERIFIED"),
       reviewDecision: required("CLICKUP_FIELD_REVIEW_DECISION"),
+    },
+    outreachFields: {
+      instantlyCampaignId: required("CLICKUP_FIELD_INSTANTLY_CAMPAIGN_ID"),
+      instantlyLeadId: required("CLICKUP_FIELD_INSTANTLY_LEAD_ID"),
+      sendingDomain: required("CLICKUP_FIELD_SENDING_DOMAIN"),
+      sequenceStatus: required("CLICKUP_FIELD_SEQUENCE_STATUS"),
+      dormantDate: required("CLICKUP_FIELD_DORMANT_DATE"),
+      dormantReactivationDate: required("CLICKUP_FIELD_DORMANT_REACTIVATION_DATE"),
     },
   };
 }

@@ -58,6 +58,16 @@ describe("loadConfig", () => {
     process.env.CLICKUP_FIELD_CASL_CONSENT_BASIS = "field-casl-consent";
     process.env.CLICKUP_FIELD_CASL_DATE_VERIFIED = "field-casl-date";
     process.env.CLICKUP_FIELD_REVIEW_DECISION = "field-review-decision";
+    // Instantly API
+    process.env.INSTANTLY_API_KEY = "instantly_test_key";
+    process.env.INSTANTLY_SENDING_DOMAINS = "shopjaydees.ca,shopjaydees.net";
+    // Outreach Tracking Fields
+    process.env.CLICKUP_FIELD_INSTANTLY_CAMPAIGN_ID = "field-campaign-id";
+    process.env.CLICKUP_FIELD_INSTANTLY_LEAD_ID = "field-lead-id";
+    process.env.CLICKUP_FIELD_SENDING_DOMAIN = "field-sending-domain";
+    process.env.CLICKUP_FIELD_SEQUENCE_STATUS = "field-seq-status";
+    process.env.CLICKUP_FIELD_DORMANT_DATE = "field-dormant-date";
+    process.env.CLICKUP_FIELD_DORMANT_REACTIVATION_DATE = "field-dormant-react-date";
   }
 
   it("loads all required environment variables", () => {
@@ -152,5 +162,34 @@ describe("loadConfig", () => {
     expect(config.personalizationFields.caslConsentBasis).toBe("field-casl-consent");
     expect(config.personalizationFields.caslDateVerified).toBe("field-casl-date");
     expect(config.personalizationFields.reviewDecision).toBe("field-review-decision");
+  });
+
+  it("loads Instantly API key", () => {
+    setRequiredEnv();
+    const config = loadConfig();
+    expect(config.instantlyApiKey).toBe("instantly_test_key");
+  });
+
+  it("throws if INSTANTLY_API_KEY is missing", () => {
+    setRequiredEnv();
+    delete process.env.INSTANTLY_API_KEY;
+    expect(() => loadConfig()).toThrow("INSTANTLY_API_KEY");
+  });
+
+  it("parses sending domains from comma-separated string", () => {
+    setRequiredEnv();
+    const config = loadConfig();
+    expect(config.instantlySendingDomains).toEqual(["shopjaydees.ca", "shopjaydees.net"]);
+  });
+
+  it("loads outreach tracking field IDs", () => {
+    setRequiredEnv();
+    const config = loadConfig();
+    expect(config.outreachFields.instantlyCampaignId).toBe("field-campaign-id");
+    expect(config.outreachFields.instantlyLeadId).toBe("field-lead-id");
+    expect(config.outreachFields.sendingDomain).toBe("field-sending-domain");
+    expect(config.outreachFields.sequenceStatus).toBe("field-seq-status");
+    expect(config.outreachFields.dormantDate).toBe("field-dormant-date");
+    expect(config.outreachFields.dormantReactivationDate).toBe("field-dormant-react-date");
   });
 });
