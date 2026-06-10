@@ -2,6 +2,7 @@ import * as ff from "@google-cloud/functions-framework";
 import type { Request, Response } from "@google-cloud/functions-framework";
 import type { ClickUpClient } from "./clients/clickup.js";
 import type { HunterClient } from "./clients/hunter.js";
+import type { InstantlyClient } from "./clients/instantly.js";
 import type { Alerter } from "./alerting.js";
 import type { Logger } from "./logger.js";
 import type { Config } from "./config.js";
@@ -17,7 +18,10 @@ import type {
   GeminiDraftOutput,
   PersonalizationRunResult,
   LeadPersonalizationResult,
+  SendRunResult,
+  SendLeadResult,
 } from "./types.js";
+import { InstantlyApiError, createInstantlyClient } from "./clients/instantly.js";
 import { createFirecrawlClient, findSecondaryPages } from "./clients/firecrawl.js";
 import type { FirecrawlClient } from "./clients/firecrawl.js";
 import { createGeminiClient } from "./clients/gemini.js";
@@ -1092,6 +1096,362 @@ ff.http("personalize", async (req: Request, res: Response) => {
       error: errorMsg,
     });
     await alerter.send("Unhandled error in personalization-agent", errorMsg);
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// =====================================================
+// SEND AGENT
+// =====================================================
+
+// --- Send Agent Helpers ---
+
+export function getSegmentLabel(task: ClickUpTask, segmentFieldId: string): string {
+  for (const field of task.custom_fields) {
+    if (field.id === segmentFieldId && field.type_config?.options) {
+      const opt = field.type_config.options.find(
+        (o) => o.orderindex === field.value
+      );
+      if (opt) return opt.name;
+    }
+  }
+  return "Business";
+}
+
+export function buildCampaignName(segment: string, now: Date): string {
+  const month = now.toISOString().slice(0, 7);
+  return `${segment} - ${month}`;
+}
+
+function getSendFieldValue(task: ClickUpTask, fieldId: string): unknown {
+  const field = task.custom_fields.find((f) => f.id === fieldId);
+  return field?.value ?? null;
+}
+
+export function extractSendData(
+  task: ClickUpTask,
+  config: Config
+): {
+  contactEmail: string;
+  contactName: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  touch1Body: string;
+  touch1Subject: string;
+  touch2Body: string;
+  touch2Subject: string;
+  touch3Body: string;
+  touch3Subject: string;
+} {
+  const contactEmail = String(getSendFieldValue(task, config.fields.contactEmail) ?? "");
+  const contactName = String(getSendFieldValue(task, config.fields.contactName) ?? "");
+  const parts = contactName.split(" ");
+  const firstName = parts[0] ?? "";
+  const lastName = parts.slice(1).join(" ");
+
+  return {
+    contactEmail,
+    contactName,
+    firstName,
+    lastName,
+    companyName: String(getSendFieldValue(task, config.fields.companyName) ?? ""),
+    touch1Body: String(getSendFieldValue(task, config.personalizationFields.emailTouch1) ?? ""),
+    touch1Subject: String(getSendFieldValue(task, config.personalizationFields.emailTouch1Subject) ?? ""),
+    touch2Body: String(getSendFieldValue(task, config.personalizationFields.emailTouch2) ?? ""),
+    touch2Subject: String(getSendFieldValue(task, config.personalizationFields.emailTouch2Subject) ?? ""),
+    touch3Body: String(getSendFieldValue(task, config.personalizationFields.emailTouch3) ?? ""),
+    touch3Subject: String(getSendFieldValue(task, config.personalizationFields.emailTouch3Subject) ?? ""),
+  };
+}
+
+function getSendLeadScore(task: ClickUpTask, leadScoreFieldId: string): number {
+  const field = task.custom_fields.find((f) => f.id === leadScoreFieldId);
+  return typeof field?.value === "number" ? field.value : 0;
+}
+
+// --- Send Agent Core ---
+
+export interface SendDeps {
+  config: Config;
+  clickup: ClickUpClient;
+  instantly: InstantlyClient;
+  alerter: Alerter;
+  logger: Logger;
+}
+
+export async function runSend(deps: SendDeps): Promise<SendRunResult> {
+  const { config, clickup, instantly, alerter, logger } = deps;
+  const now = new Date();
+  const runId = `send-${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
+  logger.setRunId(runId);
+  logger.info("Send agent starting");
+
+  const result: SendRunResult = {
+    runId,
+    timestamp: now.toISOString(),
+    leadsQueued: 0,
+    results: {
+      sent: 0,
+      instantlyDuplicate: 0,
+      invalidEmail: 0,
+      deferredRateLimit: 0,
+      errors: 0,
+    },
+    leads: [],
+  };
+
+  const approvedTasks = await clickup.getTasks(config.clickupListId, {
+    statuses: ["Approved"],
+  });
+
+  if (approvedTasks.length === 0) {
+    logger.info("No approved leads. Exiting.");
+    return result;
+  }
+
+  approvedTasks.sort(
+    (a, b) =>
+      getSendLeadScore(b, config.fields.leadScore) -
+      getSendLeadScore(a, config.fields.leadScore)
+  );
+
+  result.leadsQueued = approvedTasks.length;
+  logger.info("Approved leads found", { count: approvedTasks.length });
+
+  const prospectFields = await clickup.getFields(config.clickupListId);
+  const dropdownOptions: Record<string, Array<{ name: string; orderindex: number }>> = {};
+  for (const field of prospectFields) {
+    if (field.type_config?.options) {
+      dropdownOptions[field.id] = field.type_config.options;
+    }
+  }
+
+  const existingCampaigns = config.dryRun ? [] : await instantly.listCampaigns();
+  const campaignCache = new Map<string, string>();
+  for (const camp of existingCampaigns) {
+    campaignCache.set(camp.name, camp.id);
+  }
+
+  let rateLimited = false;
+
+  for (let i = 0; i < approvedTasks.length; i++) {
+    const task = approvedTasks[i];
+    const leadResult: SendLeadResult = {
+      taskId: task.id,
+      company: "",
+      email: "",
+      status: "sent",
+      campaignId: null,
+      sendingDomain: null,
+    };
+
+    try {
+      if (rateLimited) {
+        leadResult.status = "deferred_rate_limit";
+        result.results.deferredRateLimit += 1;
+        result.leads.push(leadResult);
+        continue;
+      }
+
+      const leadData = extractSendData(task, config);
+      leadResult.company = leadData.companyName;
+      leadResult.email = leadData.contactEmail;
+
+      const sendingDomain = config.instantlySendingDomains[i % config.instantlySendingDomains.length];
+      leadResult.sendingDomain = sendingDomain;
+
+      const segment = getSegmentLabel(task, config.fields.segment);
+      const campaignName = buildCampaignName(segment, now);
+
+      if (config.dryRun) {
+        logger.info("DRY_RUN: would send lead", {
+          taskId: task.id,
+          email: leadData.contactEmail,
+          campaign: campaignName,
+          sendingDomain,
+        });
+        result.results.sent += 1;
+        result.leads.push(leadResult);
+        continue;
+      }
+
+      let campaignId = campaignCache.get(campaignName);
+      if (!campaignId) {
+        logger.info("Creating new campaign", { name: campaignName });
+        const newCampaign = await instantly.createCampaign(campaignName);
+        campaignId = newCampaign.id;
+        campaignCache.set(campaignName, campaignId);
+      }
+      leadResult.campaignId = campaignId;
+
+      const instantlyResponse = await instantly.addLeadToCampaign(campaignId, {
+        email: leadData.contactEmail,
+        firstName: leadData.firstName,
+        lastName: leadData.lastName,
+        companyName: leadData.companyName,
+        customVariables: {
+          touch_1_subject: leadData.touch1Subject,
+          touch_1_body: leadData.touch1Body,
+          touch_2_subject: leadData.touch2Subject,
+          touch_2_body: leadData.touch2Body,
+          touch_3_subject: leadData.touch3Subject,
+          touch_3_body: leadData.touch3Body,
+          sending_domain: sendingDomain,
+        },
+      });
+
+      const isSkipped = instantlyResponse.leads_skipped > 0;
+      if (isSkipped) {
+        logger.warn("Lead skipped by Instantly (already in workspace)", {
+          taskId: task.id,
+          email: leadData.contactEmail,
+        });
+        await clickup.addTag(task.id, "instantly-duplicate");
+        leadResult.status = "instantly_duplicate";
+        result.results.instantlyDuplicate += 1;
+      } else {
+        leadResult.status = "sent";
+        result.results.sent += 1;
+      }
+
+      // Write tracking data back to ClickUp with retry
+      const sendingDomainIndex = dropdownOptions[config.outreachFields.sendingDomain]?.find(
+        (o) => o.name === sendingDomain
+      )?.orderindex ?? 0;
+      const notStartedIndex = dropdownOptions[config.outreachFields.sequenceStatus]?.find(
+        (o) => o.name === "Not Started"
+      )?.orderindex ?? 0;
+
+      let clickupSuccess = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await clickup.updateTask(task.id, {
+            status: "Outreach Active",
+            custom_fields: [
+              { id: config.outreachFields.instantlyCampaignId, value: campaignId },
+              { id: config.outreachFields.instantlyLeadId, value: instantlyResponse.upload_id },
+              { id: config.outreachFields.sendingDomain, value: sendingDomainIndex },
+              { id: config.outreachFields.sequenceStatus, value: notStartedIndex },
+            ],
+          });
+          clickupSuccess = true;
+          break;
+        } catch (clickupErr) {
+          const waitMs = Math.pow(2, attempt) * 1000;
+          logger.warn("ClickUp PUT failed, retrying", {
+            taskId: task.id,
+            attempt: attempt + 1,
+            waitMs,
+            error: clickupErr instanceof Error ? clickupErr.message : String(clickupErr),
+          });
+          if (attempt < 2) {
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+          }
+        }
+      }
+
+      if (!clickupSuccess) {
+        const alertMsg = `Task ${task.id} (${leadData.contactEmail}) was added to Instantly campaign ${campaignId} but ClickUp update failed after 3 retries. Manual reconciliation needed.`;
+        logger.critical("ClickUp/Instantly sync mismatch", {
+          taskId: task.id,
+          campaignId,
+          email: leadData.contactEmail,
+        });
+        await alerter.send("CRITICAL: ClickUp/Instantly sync mismatch — manual fix needed", alertMsg);
+        leadResult.status = "error";
+        leadResult.error = "ClickUp update failed after Instantly success";
+        result.results.errors += 1;
+      }
+    } catch (err) {
+      if (err instanceof InstantlyApiError) {
+        if (err.code === 429) {
+          logger.warn("Instantly 429 — stopping batch", {
+            taskId: task.id,
+            remainingLeads: approvedTasks.length - i,
+          });
+          rateLimited = true;
+          leadResult.status = "deferred_rate_limit";
+          result.results.deferredRateLimit += 1;
+          result.leads.push(leadResult);
+          continue;
+        }
+
+        if (err.code === 400) {
+          logger.warn("Instantly 400 — invalid email", { taskId: task.id });
+          await clickup.addTag(task.id, "invalid-email");
+          await clickup.updateTask(task.id, { status: "Bounced" });
+          leadResult.status = "invalid_email";
+          result.results.invalidEmail += 1;
+          result.leads.push(leadResult);
+          continue;
+        }
+      }
+
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.error("Send failed for lead", { taskId: task.id, error: errorMsg });
+      leadResult.status = "error";
+      leadResult.error = errorMsg;
+      result.results.errors += 1;
+    }
+
+    result.leads.push(leadResult);
+  }
+
+  logger.info("Send agent complete", {
+    sent: result.results.sent,
+    duplicates: result.results.instantlyDuplicate,
+    invalidEmails: result.results.invalidEmail,
+    deferred: result.results.deferredRateLimit,
+    errors: result.results.errors,
+  });
+
+  return result;
+}
+
+// --- Cloud Function Entry Point ---
+
+ff.http("send", async (req: Request, res: Response) => {
+  const config = loadConfig();
+  const logger = createLogger("send-agent");
+  const alerter = createAlerter({
+    alertEmail: config.alertEmail,
+    alertWebhookUrl: config.alertWebhookUrl,
+  });
+  const clickup = createClickUpClient({
+    token: config.clickupApiToken,
+    rateLimit: config.clickupRateLimit,
+    logger,
+  });
+  const instantly = createInstantlyClient({
+    apiKey: config.instantlyApiKey,
+    logger,
+  });
+
+  try {
+    const dryRunOverride =
+      req.body && typeof req.body === "object" && "dry_run" in req.body
+        ? req.body.dry_run === true
+        : undefined;
+
+    const effectiveConfig =
+      dryRunOverride !== undefined
+        ? { ...config, dryRun: dryRunOverride }
+        : config;
+
+    const result = await runSend({
+      config: effectiveConfig,
+      clickup,
+      instantly,
+      alerter,
+      logger,
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.critical("Unhandled error in Send Agent", { error: errorMsg });
+    await alerter.send("Unhandled error in send-agent", errorMsg);
     res.status(500).json({ error: errorMsg });
   }
 });
