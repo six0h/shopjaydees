@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Pipeline in ClickUp — ShopJaydees</title>
+
+<!-- Fonts: Outfit from Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (SPLIT PASTEL THEME)
+   =========================================== */
+:root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --title-size: clamp(2rem, 5.5vw, 4.5rem);
+    --h2-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    --h3-size: clamp(1rem, 2vw, 1.5rem);
+    --subtitle-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    --body-size: clamp(0.75rem, 1.3vw, 1rem);
+    --small-size: clamp(0.65rem, 1vw, 0.85rem);
+
+    --slide-padding: clamp(1.5rem, 4vw, 4rem);
+    --content-gap: clamp(0.8rem, 2vw, 1.5rem);
+    --element-gap: clamp(0.3rem, 1vw, 0.8rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.6s;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+
+    /* ClickUp mock colors */
+    --cu-bg: #1e1f21;
+    --cu-sidebar: #2b2c2e;
+    --cu-surface: #2b2c2e;
+    --cu-surface-hover: #35363a;
+    --cu-border: #3d3e42;
+    --cu-text: #e8e8e8;
+    --cu-text-dim: #a0a0a5;
+    --cu-purple: #7b68ee;
+    --cu-blue: #4ea8de;
+    --cu-green: #36b37e;
+    --cu-orange: #ff9800;
+    --cu-gold: #ffc107;
+    --cu-teal: #36b37e;
+    --cu-red: #f44336;
+    --cu-gray: #bcaaa4;
+}
+
+/* ===========================================
+   BASE STYLES
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING
+   =========================================== */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+}
+.card, .container, .content-box {
+    max-width: min(90vw, 1000px);
+    max-height: min(80vh, 700px);
+}
+.feature-list, .bullet-list {
+    gap: clamp(0.4rem, 1vh, 1rem);
+}
+.feature-list li, .bullet-list li {
+    font-size: var(--body-size);
+    line-height: 1.4;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+img, .image-container {
+    max-width: 100%;
+    max-height: min(50vh, 400px);
+    object-fit: contain;
+}
+
+/* Short viewports */
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+        --h2-size: clamp(1rem, 3vw, 1.75rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+}
+@media (max-width: 600px) {
+    :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); }
+    .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   SPLIT PASTEL LAYOUT SYSTEM
+   =========================================== */
+body {
+    font-family: var(--font-body);
+    color: var(--text-dark);
+    background: var(--bg-peach);
+}
+
+.split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+}
+@media (max-width: 768px) {
+    .split { grid-template-columns: 1fr; }
+    .split .panel-right { display: none; }
+}
+.panel-left {
+    background: var(--bg-peach);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--slide-padding);
+    position: relative;
+}
+.panel-right {
+    background: var(--bg-lavender);
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center;
+    padding: var(--slide-padding);
+    position: relative; overflow: hidden;
+}
+.panel-right::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+}
+
+.full-peach { background: var(--bg-peach); }
+.full-lavender { background: var(--bg-lavender); }
+.full-warm { background: var(--bg-warm); }
+.full-dark {
+    background: var(--accent-dark);
+    color: #ffffff;
+}
+
+.centered-content {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: var(--slide-padding);
+    height: 100%;
+    max-height: 100%;
+}
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+h1 {
+    font-family: var(--font-display);
+    font-size: var(--title-size);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-dark);
+}
+h2 {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
+h3 {
+    font-family: var(--font-display);
+    font-size: var(--h3-size);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-dark);
+}
+.subtitle {
+    font-size: var(--subtitle-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+    max-width: 36ch;
+}
+.body-text {
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+}
+.small-text {
+    font-size: var(--small-size);
+    color: var(--text-light);
+}
+.white h1, .white h2, .white h3 { color: #ffffff; }
+.white .subtitle { color: rgba(255,255,255,0.7); }
+.white .body-text { color: rgba(255,255,255,0.6); }
+
+/* ===========================================
+   BADGE PILLS
+   =========================================== */
+.badges {
+    display: flex; flex-wrap: wrap;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-bottom: clamp(0.8rem, 2vw, 1.5rem);
+}
+.badge {
+    display: inline-block;
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.6rem, 1vw, 0.9rem);
+    border-radius: var(--radius-pill);
+    font-size: var(--small-size);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+.badge.mint { background: var(--badge-mint); }
+.badge.yellow { background: var(--badge-yellow); }
+.badge.pink { background: var(--badge-pink); }
+.badge.blue { background: var(--badge-blue); }
+.badge.peach { background: var(--badge-peach); }
+
+/* ===========================================
+   PIPELINE FLOW
+   =========================================== */
+.pipeline-flow {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.3rem, 0.8vw, 0.6rem);
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: min(90vw, 900px);
+}
+.flow-step {
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius);
+    padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.8rem, 1.5vw, 1.2rem);
+    backdrop-filter: blur(8px);
+    text-align: center;
+    flex: 1;
+    min-width: clamp(80px, 12vw, 130px);
+}
+.flow-step .flow-icon {
+    font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+    line-height: 1;
+    margin-bottom: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+.flow-step .flow-label {
+    font-weight: 600;
+    font-size: var(--small-size);
+    color: var(--text-dark);
+}
+.flow-step .flow-desc {
+    font-size: clamp(0.55rem, 0.85vw, 0.72rem);
+    color: var(--text-light);
+    margin-top: 2px;
+}
+.flow-step.you {
+    background: var(--accent-warm);
+    color: #fff;
+}
+.flow-step.you .flow-label { color: #fff; }
+.flow-step.you .flow-desc { color: rgba(255,255,255,0.75); }
+.flow-arrow {
+    font-size: clamp(0.8rem, 1.5vw, 1.2rem);
+    color: var(--text-light);
+    flex-shrink: 0;
+}
+
+/* ===========================================
+   FEATURE CARDS
+   =========================================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(180px, 20vw, 260px)), 1fr));
+    gap: clamp(0.6rem, 1.5vw, 1rem);
+    width: 100%;
+    max-width: min(90vw, 900px);
+}
+.feature-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    backdrop-filter: blur(8px);
+    text-align: center;
+}
+.feature-card .card-icon {
+    width: clamp(32px, 4vw, 44px); height: clamp(32px, 4vw, 44px);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    line-height: 1;
+    margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);
+}
+.feature-card h3 {
+    font-size: clamp(0.8rem, 1.3vw, 1rem);
+    margin-bottom: clamp(0.2rem, 0.5vw, 0.3rem);
+}
+.feature-card p {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* ===========================================
+   METRIC CARDS
+   =========================================== */
+.metric-row {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: clamp(0.6rem, 1.5vw, 1.2rem);
+    width: 100%; max-width: min(90vw, 800px);
+}
+.metric-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem) clamp(1rem, 2vw, 1.8rem);
+    text-align: center;
+    backdrop-filter: blur(8px);
+    flex: 1; min-width: clamp(100px, 15vw, 160px);
+}
+.metric-value {
+    font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+}
+.metric-label {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    margin-top: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+
+/* ===========================================
+   BULLET LIST
+   =========================================== */
+.check-list {
+    list-style: none;
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vh, 0.8rem);
+}
+.check-list li {
+    display: flex; align-items: flex-start;
+    gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.5;
+}
+.check-list li::before {
+    content: '\2192';
+    color: var(--accent-warm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* ===========================================
+   TIMELINE
+   =========================================== */
+.timeline {
+    display: flex; flex-direction: column;
+    gap: clamp(0.5rem, 1.2vw, 0.9rem);
+    width: 100%; max-width: min(90vw, 600px);
+    position: relative;
+    padding-left: clamp(1.5rem, 3vw, 2.5rem);
+}
+.timeline::before {
+    content: ''; position: absolute;
+    left: clamp(0.5rem, 1vw, 0.8rem); top: 0; bottom: 0;
+    width: 2px; background: rgba(0,0,0,0.08);
+}
+.timeline-item {
+    position: relative;
+}
+.timeline-item::before {
+    content: ''; position: absolute;
+    left: calc(-1 * clamp(1.5rem, 3vw, 2.5rem) + clamp(0.3rem, 0.6vw, 0.5rem));
+    top: clamp(0.3rem, 0.6vw, 0.5rem);
+    width: clamp(8px, 1vw, 10px); height: clamp(8px, 1vw, 10px);
+    border-radius: 50%; background: var(--accent-warm);
+}
+.timeline-period {
+    font-size: var(--small-size);
+    font-weight: 600;
+    color: var(--accent-warm);
+}
+.timeline-text {
+    font-size: var(--small-size);
+    color: var(--text-mid);
+    margin-top: 2px;
+}
+
+/* ===========================================
+   CLICKUP MOCK STYLES
+   =========================================== */
+.cu-mock {
+    background: var(--cu-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    width: 100%;
+    max-width: min(90vw, 850px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    font-family: var(--font-body);
+}
+.cu-mock-sm {
+    max-width: min(85vw, 500px);
+}
+.cu-toolbar {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.6rem, 1.2vw, 1rem);
+    background: var(--cu-surface);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: var(--small-size);
+    color: var(--cu-text-dim);
+}
+.cu-toolbar-title {
+    font-weight: 600;
+    color: var(--cu-text);
+    font-size: var(--body-size);
+}
+.cu-toolbar-badge {
+    background: var(--cu-purple);
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-size: clamp(0.55rem, 0.8vw, 0.7rem);
+    font-weight: 600;
+}
+.cu-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+    background: var(--cu-surface);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: clamp(0.55rem, 0.85vw, 0.72rem);
+    color: var(--cu-text-dim);
+}
+.cu-breadcrumb span { opacity: 0.5; }
+
+/* List view */
+.cu-list {
+    width: 100%;
+}
+.cu-list-header {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 0.8fr 0.6fr 2fr;
+    gap: 1px;
+    padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+    background: var(--cu-surface);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 600;
+    color: var(--cu-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.cu-list-row {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 0.8fr 0.6fr 2fr;
+    gap: 1px;
+    padding: clamp(0.35rem, 0.7vw, 0.55rem) clamp(0.6rem, 1.2vw, 1rem);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: var(--small-size);
+    color: var(--cu-text);
+    align-items: center;
+    transition: background 0.15s;
+}
+.cu-list-row:last-child { border-bottom: none; }
+.cu-list-row:hover { background: var(--cu-surface-hover); }
+.cu-list-row .company-name {
+    font-weight: 600;
+    color: var(--cu-text);
+}
+.cu-list-row .contact-name {
+    color: var(--cu-text-dim);
+}
+.cu-list-row .subject-preview {
+    color: var(--cu-text-dim);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Status chips */
+.cu-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+}
+.cu-status.orange { background: var(--cu-orange); }
+.cu-status.blue { background: var(--cu-blue); }
+.cu-status.green { background: var(--cu-green); }
+.cu-status.purple { background: var(--cu-purple); }
+.cu-status.gold { background: var(--cu-gold); color: var(--text-dark); }
+.cu-status.teal { background: var(--cu-teal); }
+.cu-status.gray { background: var(--cu-gray); color: var(--text-dark); }
+.cu-status.red { background: var(--cu-red); }
+
+/* Segment chips */
+.cu-segment {
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 500;
+}
+.cu-segment.business { background: rgba(78,168,222,0.2); color: #4ea8de; }
+.cu-segment.school { background: rgba(54,179,126,0.2); color: #36b37e; }
+.cu-segment.team { background: rgba(255,152,0,0.2); color: #ff9800; }
+
+/* Score badge */
+.cu-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(22px, 2.5vw, 28px);
+    height: clamp(22px, 2.5vw, 28px);
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: var(--small-size);
+    color: #fff;
+}
+.cu-score.s5 { background: #36b37e; }
+.cu-score.s4 { background: #4ea8de; }
+.cu-score.s3 { background: #ff9800; }
+
+/* Task detail mock */
+.cu-task-detail {
+    padding: clamp(0.8rem, 1.5vw, 1.2rem);
+    color: var(--cu-text);
+}
+.cu-task-title {
+    font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+    font-weight: 700;
+    color: var(--cu-text);
+    margin-bottom: clamp(0.5rem, 1vw, 0.8rem);
+}
+.cu-field-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-bottom: clamp(0.5rem, 1vw, 0.8rem);
+}
+.cu-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.cu-field-label {
+    font-size: clamp(0.5rem, 0.75vw, 0.65rem);
+    color: var(--cu-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+.cu-field-value {
+    font-size: var(--small-size);
+    color: var(--cu-text);
+    font-weight: 500;
+}
+.cu-draft-section {
+    margin-top: clamp(0.4rem, 0.8vw, 0.6rem);
+    padding: clamp(0.4rem, 0.8vw, 0.6rem);
+    background: rgba(255,255,255,0.05);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--cu-purple);
+}
+.cu-draft-label {
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    color: var(--cu-purple);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.cu-draft-text {
+    font-size: clamp(0.55rem, 0.85vw, 0.72rem);
+    color: var(--cu-text-dim);
+    line-height: 1.5;
+}
+
+/* Board / Kanban mock */
+.cu-board {
+    display: flex;
+    gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    padding: clamp(0.5rem, 1vw, 0.8rem);
+    overflow-x: auto;
+    width: 100%;
+}
+.cu-column {
+    min-width: clamp(100px, 14vw, 150px);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.3rem, 0.5vw, 0.4rem);
+}
+.cu-column-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: clamp(0.2rem, 0.4vw, 0.3rem) 0;
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 600;
+    color: var(--cu-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.cu-column-count {
+    background: var(--cu-surface-hover);
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    font-size: clamp(0.5rem, 0.7vw, 0.6rem);
+}
+.cu-board-card {
+    background: var(--cu-surface);
+    border-radius: var(--radius-sm);
+    padding: clamp(0.35rem, 0.7vw, 0.55rem);
+    border: 1px solid var(--cu-border);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    color: var(--cu-text);
+}
+.cu-board-card .card-company {
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+.cu-board-card .card-contact {
+    color: var(--cu-text-dim);
+    font-size: clamp(0.5rem, 0.7vw, 0.6rem);
+}
+.cu-board-card .card-segment {
+    margin-top: 4px;
+}
+
+/* Workspace tree */
+.cu-tree {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.3rem, 0.6vw, 0.4rem);
+    width: 100%;
+    max-width: min(85vw, 380px);
+}
+.cu-tree-item {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.3rem, 0.7vw, 0.5rem);
+    padding: clamp(0.35rem, 0.7vw, 0.55rem) clamp(0.5rem, 1vw, 0.8rem);
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius-sm);
+    font-size: var(--small-size);
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+}
+.cu-tree-item.indent-1 { margin-left: clamp(1rem, 2vw, 1.5rem); }
+.cu-tree-item.indent-2 { margin-left: clamp(2rem, 4vw, 3rem); }
+.cu-tree-icon {
+    width: clamp(20px, 2.5vw, 28px);
+    height: clamp(20px, 2.5vw, 28px);
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+    flex-shrink: 0;
+}
+
+/* Form mock */
+.cu-form {
+    background: var(--cu-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    width: 100%;
+    max-width: min(85vw, 420px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.cu-form-body {
+    padding: clamp(0.8rem, 1.5vw, 1.2rem);
+}
+.cu-form-field {
+    margin-bottom: clamp(0.4rem, 0.8vw, 0.6rem);
+}
+.cu-form-field label {
+    display: block;
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    color: var(--cu-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.cu-form-input {
+    background: var(--cu-surface-hover);
+    border: 1px solid var(--cu-border);
+    border-radius: 6px;
+    padding: clamp(0.3rem, 0.6vw, 0.45rem) clamp(0.4rem, 0.8vw, 0.6rem);
+    color: var(--cu-text);
+    font-size: var(--small-size);
+    font-family: var(--font-body);
+    width: 100%;
+}
+.cu-form-select {
+    background: var(--cu-surface-hover);
+    border: 1px solid var(--cu-border);
+    border-radius: 6px;
+    padding: clamp(0.3rem, 0.6vw, 0.45rem) clamp(0.4rem, 0.8vw, 0.6rem);
+    color: var(--cu-text);
+    font-size: var(--small-size);
+    font-family: var(--font-body);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.cu-form-select::after {
+    content: '\25BC';
+    font-size: 0.6em;
+    color: var(--cu-text-dim);
+}
+
+/* Results bar on prospecting request */
+.cu-results-bar {
+    display: flex;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    padding: clamp(0.4rem, 0.8vw, 0.6rem);
+    background: rgba(54,179,126,0.1);
+    border-radius: var(--radius-sm);
+    margin-top: clamp(0.4rem, 0.8vw, 0.6rem);
+    flex-wrap: wrap;
+}
+.cu-result-stat {
+    text-align: center;
+    flex: 1;
+    min-width: 60px;
+}
+.cu-result-stat .stat-val {
+    font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+    font-weight: 700;
+    color: var(--cu-text);
+}
+.cu-result-stat .stat-label {
+    font-size: clamp(0.5rem, 0.7vw, 0.6rem);
+    color: var(--cu-text-dim);
+}
+
+/* Action buttons */
+.cu-actions {
+    display: flex;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-top: clamp(0.4rem, 0.8vw, 0.6rem);
+}
+.cu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.5rem, 1vw, 0.8rem);
+    border-radius: 6px;
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 600;
+    font-family: var(--font-body);
+    border: 1px solid var(--cu-border);
+    cursor: pointer;
+    color: var(--cu-text);
+    background: var(--cu-surface-hover);
+}
+.cu-btn.approve { background: var(--cu-green); color: #fff; border-color: var(--cu-green); }
+.cu-btn.edit { background: var(--cu-blue); color: #fff; border-color: var(--cu-blue); }
+.cu-btn.reject { background: transparent; color: var(--cu-text-dim); }
+
+/* Status dropdown mock */
+.cu-status-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--cu-surface);
+    border: 1px solid var(--cu-border);
+    border-radius: var(--radius-sm);
+    padding: clamp(0.3rem, 0.5vw, 0.4rem);
+    margin-top: clamp(0.3rem, 0.5vw, 0.4rem);
+}
+.cu-status-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: clamp(0.2rem, 0.4vw, 0.3rem) clamp(0.3rem, 0.6vw, 0.5rem);
+    border-radius: 4px;
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    color: var(--cu-text);
+    cursor: pointer;
+}
+.cu-status-option:hover { background: var(--cu-surface-hover); }
+.cu-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Follow-up view */
+.cu-followup-list {
+    width: 100%;
+}
+.cu-followup-row {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1.5fr;
+    gap: 1px;
+    padding: clamp(0.35rem, 0.7vw, 0.55rem) clamp(0.6rem, 1.2vw, 1rem);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: var(--small-size);
+    color: var(--cu-text);
+    align-items: center;
+}
+.cu-followup-header {
+    display: grid;
+    grid-template-columns: 2fr 1.2fr 1fr 1.5fr;
+    gap: 1px;
+    padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+    background: var(--cu-surface);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 600;
+    color: var(--cu-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* LinkedIn queue */
+.cu-linkedin-list {
+    width: 100%;
+}
+.cu-linkedin-header {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 2.5fr;
+    gap: 1px;
+    padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+    background: var(--cu-surface);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    font-weight: 600;
+    color: var(--cu-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.cu-linkedin-row {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 2.5fr;
+    gap: 1px;
+    padding: clamp(0.35rem, 0.7vw, 0.55rem) clamp(0.6rem, 1.2vw, 1rem);
+    border-bottom: 1px solid var(--cu-border);
+    font-size: var(--small-size);
+    color: var(--cu-text);
+    align-items: center;
+}
+.cu-linkedin-msg {
+    font-size: clamp(0.55rem, 0.8vw, 0.68rem);
+    color: var(--cu-text-dim);
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Views list */
+.views-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(160px, 18vw, 240px)), 1fr));
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    width: 100%;
+    max-width: min(90vw, 800px);
+}
+.view-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.6rem, 1.2vw, 1rem);
+    backdrop-filter: blur(8px);
+}
+.view-card .view-freq {
+    font-size: clamp(0.5rem, 0.7vw, 0.6rem);
+    font-weight: 600;
+    color: var(--accent-warm);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+.view-card h3 {
+    font-size: clamp(0.75rem, 1.1vw, 0.9rem);
+    margin-bottom: 2px;
+}
+.view-card p {
+    font-size: clamp(0.55rem, 0.85vw, 0.72rem);
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(clamp(15px, 3vw, 30px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+.reveal:nth-child(5) { transition-delay: 0.5s; }
+.reveal:nth-child(6) { transition-delay: 0.6s; }
+
+.reveal-left {
+    opacity: 0;
+    transform: translateX(clamp(20px, 4vw, 40px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal-left {
+    opacity: 1; transform: translateX(0);
+}
+.reveal-left:nth-child(1) { transition-delay: 0.15s; }
+.reveal-left:nth-child(2) { transition-delay: 0.3s; }
+.reveal-left:nth-child(3) { transition-delay: 0.45s; }
+.reveal-left:nth-child(4) { transition-delay: 0.6s; }
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: var(--accent-warm);
+    z-index: 9999; width: 0;
+    transition: width 0.3s ease;
+}
+
+/* ===========================================
+   NAVIGATION DOTS
+   =========================================== */
+.nav-dots {
+    position: fixed;
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 0.8vh, 10px);
+    z-index: 9998;
+}
+.nav-dot {
+    width: clamp(8px, 1vw, 10px);
+    height: clamp(8px, 1vw, 10px);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    border: none; padding: 0;
+}
+.nav-dot.active {
+    background: var(--accent-warm);
+    transform: scale(1.3);
+}
+.nav-dot:hover { background: var(--accent-warm); }
+
+/* ===========================================
+   SLIDE NUMBER
+   =========================================== */
+.slide-number {
+    position: absolute;
+    bottom: clamp(0.8rem, 2vw, 1.5rem);
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    font-size: var(--small-size);
+    color: var(--text-light);
+    font-weight: 500;
+    opacity: 0.5;
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone {
+    position: fixed; top: 0; left: 0;
+    width: 80px; height: 80px;
+    z-index: 10000; cursor: pointer;
+}
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    width: 40px; height: 40px;
+    border-radius: 50%; border: none;
+    background: var(--text-dark); color: #fff;
+    font-size: 16px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.edit-toggle.show, .edit-toggle.active {
+    opacity: 1; pointer-events: auto;
+}
+.edit-toggle.active { background: var(--accent-warm); }
+.edit-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--accent-warm); color: #fff;
+    text-align: center;
+    font-size: var(--small-size); font-weight: 500;
+    padding: clamp(0.3rem, 0.5vw, 0.4rem);
+    z-index: 9999;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+.edit-banner.active { transform: translateY(0); }
+body.edit-active [contenteditable="true"] {
+    outline: 2px dashed rgba(212,133,106,0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
+    cursor: text;
+}
+body.edit-active [contenteditable="true"]:focus {
+    outline-color: var(--accent-warm);
+}
+</style>
+</head>
+
+<body>
+
+<!-- === PROGRESS BAR === -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- === NAVIGATION DOTS === -->
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<!-- === INLINE EDITING CONTROLS === -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)" aria-label="Toggle edit mode">&#9998;</button>
+<div class="edit-banner" id="editBanner">Edit Mode &mdash; Click any text to edit &middot; Ctrl+S to save</div>
+
+
+<!-- ===========================================
+     SLIDE 1: TITLE
+     =========================================== -->
+<section class="slide" aria-label="Title">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">ClickUp Walkthrough</span>
+            </div>
+            <h1 class="reveal">Your Pipeline<br>in ClickUp</h1>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">A day-to-day guide for managing your lead generation. Everything you need to know about your workspace, your daily routine, and what the system handles for you.</p>
+        </div>
+        <div class="panel-right">
+            <div style="position: relative; z-index: 1; text-align: center;">
+                <div class="metric-card reveal-left" style="margin-bottom: var(--content-gap); background: rgba(255,255,255,0.65);">
+                    <div class="metric-value" style="color: var(--accent-warm);">15-20 min</div>
+                    <div class="metric-label">Your daily time in ClickUp</div>
+                </div>
+                <p class="body-text reveal-left" style="max-width: 28ch; margin: 0 auto; color: var(--text-mid);">Review drafts, approve sends, follow up on warm replies. That's it.</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">01 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 2: THE BIG PICTURE
+     =========================================== -->
+<section class="slide full-warm" aria-label="The Big Picture">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">The Big Picture</span>
+        </div>
+        <h2 class="reveal">Your role in<br>the pipeline.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            You set the direction and handle the human moments. Everything in between runs automatically.
+        </p>
+        <div class="pipeline-flow reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem);">
+            <div class="flow-step you">
+                <div class="flow-icon">&#127919;</div>
+                <div class="flow-label">You set direction</div>
+                <div class="flow-desc">Create targeting requests</div>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step">
+                <div class="flow-icon">&#128269;</div>
+                <div class="flow-label">System finds leads</div>
+                <div class="flow-desc">Automatic discovery</div>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step">
+                <div class="flow-icon">&#9997;</div>
+                <div class="flow-label">AI writes drafts</div>
+                <div class="flow-desc">Personalized messages</div>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step you">
+                <div class="flow-icon">&#9989;</div>
+                <div class="flow-label">You review</div>
+                <div class="flow-desc">Approve or edit</div>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step">
+                <div class="flow-icon">&#128640;</div>
+                <div class="flow-label">Emails send</div>
+                <div class="flow-desc">3-touch sequence</div>
+            </div>
+            <div class="flow-arrow">&#8594;</div>
+            <div class="flow-step you">
+                <div class="flow-icon">&#128172;</div>
+                <div class="flow-label">You follow up</div>
+                <div class="flow-desc">Warm conversations</div>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: var(--content-gap); color: var(--text-light);">
+            Highlighted steps are where you spend your time &mdash; ~15-20 minutes per day
+        </p>
+    </div>
+    <div class="slide-number">02 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 3: YOUR WORKSPACE AT A GLANCE
+     =========================================== -->
+<section class="slide" aria-label="Workspace Structure">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge yellow">Your Workspace</span>
+            </div>
+            <h2 class="reveal">Simple<br>structure.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Your ClickUp workspace has one space, one folder, and two lists. That's all you need to manage the entire pipeline.
+            </p>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li><strong>Prospects</strong> &mdash; every lead lives here, from discovery through close</li>
+                <li><strong>Prospecting Requests</strong> &mdash; where you tell the system what to look for</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div class="cu-tree" style="position: relative; z-index: 1;">
+                <div class="cu-tree-item reveal-left">
+                    <div class="cu-tree-icon" style="background: var(--badge-blue);">&#127968;</div>
+                    <span><strong>ShopJaydees</strong> <span style="color: var(--text-light); font-size: 0.85em;">Workspace</span></span>
+                </div>
+                <div class="cu-tree-item indent-1 reveal-left">
+                    <div class="cu-tree-icon" style="background: var(--badge-mint);">&#128640;</div>
+                    <span><strong>Lead Generation</strong> <span style="color: var(--text-light); font-size: 0.85em;">Space</span></span>
+                </div>
+                <div class="cu-tree-item indent-2 reveal-left">
+                    <div class="cu-tree-icon" style="background: var(--badge-yellow);">&#128193;</div>
+                    <span><strong>Outbound Pipeline</strong> <span style="color: var(--text-light); font-size: 0.85em;">Folder</span></span>
+                </div>
+                <div class="cu-tree-item indent-2 reveal-left" style="margin-left: clamp(3rem, 6vw, 4.5rem); background: rgba(255,255,255,0.85);">
+                    <div class="cu-tree-icon" style="background: var(--badge-pink);">&#128203;</div>
+                    <span><strong>Prospects</strong></span>
+                </div>
+                <div class="cu-tree-item indent-2 reveal-left" style="margin-left: clamp(3rem, 6vw, 4.5rem); background: rgba(255,255,255,0.85);">
+                    <div class="cu-tree-icon" style="background: var(--badge-peach);">&#128203;</div>
+                    <span><strong>Prospecting Requests</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">03 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 4: SETTING YOUR TARGETING
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Prospecting Requests">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge peach">Your Starting Point</span>
+        </div>
+        <h2 class="reveal">Tell the system<br>what to find.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            Create a Prospecting Request and the system handles the rest. You'll see results when drafts are ready for review.
+        </p>
+        <div class="cu-form reveal" style="margin-top: clamp(1rem, 2vw, 1.5rem);">
+            <div class="cu-toolbar">
+                <span class="cu-toolbar-title">New Prospecting Request</span>
+                <span class="cu-status green">Requested</span>
+            </div>
+            <div class="cu-form-body">
+                <div class="cu-form-field">
+                    <label>Task Name</label>
+                    <div class="cu-form-input" style="font-weight: 600;">Schools &mdash; Elementary &amp; Secondary in Langley</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.4rem, 0.8vw, 0.6rem);">
+                    <div class="cu-form-field">
+                        <label>Segment</label>
+                        <div class="cu-form-select">School <span></span></div>
+                    </div>
+                    <div class="cu-form-field">
+                        <label>Category</label>
+                        <div class="cu-form-select">Elementary &amp; Secondary <span></span></div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: clamp(0.4rem, 0.8vw, 0.6rem);">
+                    <div class="cu-form-field">
+                        <label>Target City</label>
+                        <div class="cu-form-select">Langley <span></span></div>
+                    </div>
+                    <div class="cu-form-field">
+                        <label>Max Results <span style="opacity: 0.5; text-transform: none;">(optional)</span></label>
+                        <div class="cu-form-input" style="color: var(--cu-text-dim);">25</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">04 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 5: WHAT HAPPENS BEHIND THE SCENES
+     =========================================== -->
+<section class="slide" aria-label="Behind the Scenes">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Behind the Scenes</span>
+            </div>
+            <h2 class="reveal">The system<br>takes over.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                After you create a request, the Discovery Agent handles everything automatically. You don't need to touch Hunter.io or score leads yourself.
+            </p>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li>Finds matching companies automatically</li>
+                <li>Gets decision-maker contact info</li>
+                <li>Scores each lead (1-5) based on fit</li>
+                <li>High-scoring leads enter the personalization pipeline</li>
+                <li>Low-scoring leads get parked for later</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div class="cu-form reveal-left" style="position: relative; z-index: 1;">
+                <div class="cu-toolbar">
+                    <span class="cu-toolbar-title" style="font-size: var(--small-size);">Schools &mdash; Elementary &amp; Secondary in Langley</span>
+                    <span class="cu-status green">Complete</span>
+                </div>
+                <div class="cu-form-body">
+                    <div class="cu-results-bar">
+                        <div class="cu-result-stat">
+                            <div class="stat-val">23</div>
+                            <div class="stat-label">Results Found</div>
+                        </div>
+                        <div class="cu-result-stat">
+                            <div class="stat-val">15</div>
+                            <div class="stat-label">Leads Created</div>
+                        </div>
+                        <div class="cu-result-stat">
+                            <div class="stat-val">5</div>
+                            <div class="stat-label">Parked</div>
+                        </div>
+                        <div class="cu-result-stat">
+                            <div class="stat-val">3</div>
+                            <div class="stat-label">Duplicates</div>
+                        </div>
+                    </div>
+                    <p style="font-size: clamp(0.55rem, 0.8vw, 0.68rem); color: var(--cu-text-dim); margin-top: clamp(0.4rem, 0.8vw, 0.6rem); line-height: 1.5;">
+                        15 new leads are now in your pipeline. 5 scored lower and were parked for later. 3 were already in your system. Drafts will be ready for review tomorrow.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">05 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 6: YOUR APPROVAL QUEUE
+     =========================================== -->
+<section class="slide full-warm" aria-label="Approval Queue">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge pink">Daily ~10-15 min</span>
+        </div>
+        <h2 class="reveal">Your approval<br>queue.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            This is where you spend most of your time. Each row is a lead with draft messages ready for you to review.
+        </p>
+        <div class="cu-mock reveal" style="margin-top: clamp(1rem, 2vw, 1.5rem);">
+            <div class="cu-toolbar">
+                <span class="cu-toolbar-title">Approval Queue</span>
+                <span class="cu-toolbar-badge">5 leads</span>
+                <span style="margin-left: auto; font-size: clamp(0.55rem, 0.8vw, 0.68rem);">Filtered: Ready for Review</span>
+            </div>
+            <div class="cu-list">
+                <div class="cu-list-header">
+                    <span>Company / Contact</span>
+                    <span>Segment</span>
+                    <span>Score</span>
+                    <span></span>
+                    <span>Email Subject Preview</span>
+                </div>
+                <div class="cu-list-row">
+                    <div><span class="company-name">Pacific Coast Electrical</span><br><span class="contact-name">Mike Roberts, Owner</span></div>
+                    <div><span class="cu-segment business">Business</span></div>
+                    <div><span class="cu-score s5">5</span></div>
+                    <div><span class="cu-status orange">Review</span></div>
+                    <div class="subject-preview">Your crew deserves gear that matches their work...</div>
+                </div>
+                <div class="cu-list-row">
+                    <div><span class="company-name">Langley Christian School</span><br><span class="contact-name">Sarah Chen, Principal</span></div>
+                    <div><span class="cu-segment school">School</span></div>
+                    <div><span class="cu-score s4">4</span></div>
+                    <div><span class="cu-status orange">Review</span></div>
+                    <div class="subject-preview">Spirit wear that gives back to your community...</div>
+                </div>
+                <div class="cu-list-row">
+                    <div><span class="company-name">Fraser Valley FC</span><br><span class="contact-name">David Park, Program Director</span></div>
+                    <div><span class="cu-segment team">Team</span></div>
+                    <div><span class="cu-score s4">4</span></div>
+                    <div><span class="cu-status orange">Review</span></div>
+                    <div class="subject-preview">Custom kits for your players this season...</div>
+                </div>
+                <div class="cu-list-row">
+                    <div><span class="company-name">Westcoast Plumbing &amp; Heating</span><br><span class="contact-name">Jason Li, Operations Manager</span></div>
+                    <div><span class="cu-segment business">Business</span></div>
+                    <div><span class="cu-score s3">3</span></div>
+                    <div><span class="cu-status orange">Review</span></div>
+                    <div class="subject-preview">Branded gear that works as hard as your team...</div>
+                </div>
+                <div class="cu-list-row">
+                    <div><span class="company-name">Lord Tweedsmuir Secondary</span><br><span class="contact-name">Karen Mitchell, VP Admin</span></div>
+                    <div><span class="cu-segment school">School</span></div>
+                    <div><span class="cu-score s4">4</span></div>
+                    <div><span class="cu-status orange">Review</span></div>
+                    <div class="subject-preview">A fresh look for Panther pride this year...</div>
+                </div>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: var(--element-gap);">Click into any row to see the full draft emails, then approve, edit, or reject</p>
+    </div>
+    <div class="slide-number">06 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 7: REVIEWING A DRAFT
+     =========================================== -->
+<section class="slide full-peach" aria-label="Reviewing a Draft">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">Inside a Lead</span>
+        </div>
+        <h2 class="reveal">What you see when<br>you click in.</h2>
+        <div class="cu-mock cu-mock-sm reveal" style="margin-top: clamp(1rem, 2vw, 1.5rem); text-align: left;">
+            <div class="cu-toolbar">
+                <span class="cu-toolbar-title" style="font-size: var(--small-size);">Pacific Coast Electrical &mdash; Mike Roberts</span>
+                <span class="cu-status orange">Ready for Review</span>
+            </div>
+            <div class="cu-task-detail">
+                <div class="cu-field-group">
+                    <div class="cu-field">
+                        <div class="cu-field-label">Contact</div>
+                        <div class="cu-field-value">Mike Roberts, Owner</div>
+                    </div>
+                    <div class="cu-field">
+                        <div class="cu-field-label">Email</div>
+                        <div class="cu-field-value">mike@pacificcoastelectrical.ca</div>
+                    </div>
+                    <div class="cu-field">
+                        <div class="cu-field-label">Segment / Category</div>
+                        <div class="cu-field-value"><span class="cu-segment business">Business</span> Trades &amp; Contractors</div>
+                    </div>
+                    <div class="cu-field">
+                        <div class="cu-field-label">Lead Score</div>
+                        <div class="cu-field-value"><span class="cu-score s5" style="display: inline-flex;">5</span> &nbsp;High-volume trades company, 45 employees, active website</div>
+                    </div>
+                </div>
+                <div class="cu-draft-section">
+                    <div class="cu-draft-label">Email Touch 1 &mdash; Day 0</div>
+                    <div class="cu-draft-text">Hi Mike, I came across Pacific Coast Electrical and love seeing a local trades company with such a strong reputation in Surrey. With 45+ crew members, keeping everyone looking sharp on job sites makes a real difference...</div>
+                </div>
+                <div class="cu-draft-section" style="border-left-color: var(--cu-blue);">
+                    <div class="cu-draft-label" style="color: var(--cu-blue);">Email Touch 2 &mdash; Day 4</div>
+                    <div class="cu-draft-text">Hi Mike, quick follow-up &mdash; a lot of trades companies we work with tell us that consistent branded gear across their crew builds trust with clients on site...</div>
+                </div>
+                <div class="cu-draft-section" style="border-left-color: var(--cu-green);">
+                    <div class="cu-draft-label" style="color: var(--cu-green);">Email Touch 3 &mdash; Day 9</div>
+                    <div class="cu-draft-text">Hi Mike, just circling back. If the timing isn't right, no worries at all &mdash; happy to connect whenever branded gear makes sense for your team...</div>
+                </div>
+                <div class="cu-draft-section" style="border-left-color: var(--cu-gold);">
+                    <div class="cu-draft-label" style="color: var(--cu-gold);">LinkedIn Message</div>
+                    <div class="cu-draft-text">Hi Mike &mdash; I came across Pacific Coast Electrical and love what you've built in Surrey. Would be great to connect!</div>
+                </div>
+                <div class="cu-actions">
+                    <div class="cu-btn approve">&#10003; Approve</div>
+                    <div class="cu-btn edit">&#9998; Edit &amp; Approve</div>
+                    <div class="cu-btn reject">&#10005; Reject</div>
+                    <div class="cu-btn" style="margin-left: auto;">&#128075; I Know This Person</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">07 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 8: THE PIPELINE BOARD
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Pipeline Board">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Bird's-Eye View</span>
+        </div>
+        <h2 class="reveal">Your pipeline<br>board.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            Most columns manage themselves. You mainly work in "Ready for Review" and "Responded."
+        </p>
+        <div class="cu-mock reveal" style="margin-top: clamp(1rem, 2vw, 1.5rem);">
+            <div class="cu-toolbar">
+                <span class="cu-toolbar-title">Pipeline Board</span>
+                <span style="margin-left: auto; font-size: clamp(0.55rem, 0.8vw, 0.68rem);">Board View &mdash; Active Leads</span>
+            </div>
+            <div class="cu-board">
+                <div class="cu-column">
+                    <div class="cu-column-header"><span class="cu-status-dot" style="background: var(--cu-blue);"></span> Enriched <span class="cu-column-count">3</span></div>
+                    <div class="cu-board-card"><div class="card-company">Canuck Roofing</div><div class="card-contact">Tom H.</div><div class="card-segment"><span class="cu-segment business">Business</span></div></div>
+                    <div class="cu-board-card"><div class="card-company">Valley Dance Academy</div><div class="card-contact">Priya S.</div><div class="card-segment"><span class="cu-segment team">Team</span></div></div>
+                    <div class="cu-board-card"><div class="card-company">Maple Ridge Secondary</div><div class="card-contact">James W.</div><div class="card-segment"><span class="cu-segment school">School</span></div></div>
+                </div>
+                <div class="cu-column">
+                    <div class="cu-column-header"><span class="cu-status-dot" style="background: var(--cu-orange);"></span> Ready for Review <span class="cu-column-count">5</span></div>
+                    <div class="cu-board-card"><div class="card-company">Pacific Coast Electrical</div><div class="card-contact">Mike R.</div><div class="card-segment"><span class="cu-segment business">Business</span></div></div>
+                    <div class="cu-board-card"><div class="card-company">Langley Christian School</div><div class="card-contact">Sarah C.</div><div class="card-segment"><span class="cu-segment school">School</span></div></div>
+                    <div class="cu-board-card"><div class="card-company">Fraser Valley FC</div><div class="card-contact">David P.</div><div class="card-segment"><span class="cu-segment team">Team</span></div></div>
+                    <div class="cu-board-card" style="opacity: 0.6; text-align: center; color: var(--cu-text-dim);">+2 more</div>
+                </div>
+                <div class="cu-column">
+                    <div class="cu-column-header"><span class="cu-status-dot" style="background: var(--cu-teal);"></span> Approved <span class="cu-column-count">2</span></div>
+                    <div class="cu-board-card"><div class="card-company">Surrey Minor Hockey</div><div class="card-contact">Lisa M.</div><div class="card-segment"><span class="cu-segment team">Team</span></div></div>
+                    <div class="cu-board-card"><div class="card-company">Delta School of Music</div><div class="card-contact">Amy T.</div><div class="card-segment"><span class="cu-segment team">Team</span></div></div>
+                </div>
+                <div class="cu-column">
+                    <div class="cu-column-header"><span class="cu-status-dot" style="background: #2196f3;"></span> Outreach Active <span class="cu-column-count">8</span></div>
+                    <div class="cu-board-card"><div class="card-company">Burnaby Iron Works</div><div class="card-contact">Raj P.</div><div class="card-segment"><span class="cu-segment business">Business</span></div></div>
+                    <div class="cu-board-card"><div class="card-company">Chilliwack Elementary</div><div class="card-contact">Diane K.</div><div class="card-segment"><span class="cu-segment school">School</span></div></div>
+                    <div class="cu-board-card" style="opacity: 0.6; text-align: center; color: var(--cu-text-dim);">+6 more</div>
+                </div>
+                <div class="cu-column">
+                    <div class="cu-column-header"><span class="cu-status-dot" style="background: var(--cu-gold);"></span> Responded <span class="cu-column-count">1</span></div>
+                    <div class="cu-board-card" style="border-color: var(--cu-gold);"><div class="card-company">Abbotsford Youth Soccer</div><div class="card-contact">Kevin L.</div><div class="card-segment"><span class="cu-segment team">Team</span></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">08 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 9: HANDLING WARM RESPONSES
+     =========================================== -->
+<section class="slide" aria-label="Warm Responses">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge peach">Warm Leads</span>
+            </div>
+            <h2 class="reveal">When someone<br>replies.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                When a prospect responds positively, the task moves to "Responded &mdash; Owner Follow-up" and you get a notification. This is where the human touch matters most.
+            </p>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li>Respond personally &mdash; these are real conversations</li>
+                <li>Reference their specific situation from the task details</li>
+                <li>Mention Wear It Forward if it fits naturally</li>
+                <li>Move to "Won" when they become a customer</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div class="cu-mock cu-mock-sm reveal-left" style="position: relative; z-index: 1;">
+                <div class="cu-toolbar">
+                    <span class="cu-toolbar-title" style="font-size: var(--small-size);">My Follow-ups</span>
+                    <span class="cu-toolbar-badge">2 leads</span>
+                </div>
+                <div class="cu-followup-list">
+                    <div class="cu-followup-header">
+                        <span>Company</span>
+                        <span>Contact</span>
+                        <span>Replied</span>
+                        <span>Segment</span>
+                    </div>
+                    <div class="cu-followup-row" style="border-left: 3px solid var(--cu-gold);">
+                        <div style="font-weight: 600;">Abbotsford Youth Soccer</div>
+                        <div>Kevin Lee</div>
+                        <div style="color: var(--cu-gold);">Today</div>
+                        <div><span class="cu-segment team">Team</span></div>
+                    </div>
+                    <div class="cu-followup-row" style="border-left: 3px solid var(--cu-gold);">
+                        <div style="font-weight: 600;">Burnaby Iron Works</div>
+                        <div>Raj Patel</div>
+                        <div style="color: var(--cu-gold);">Yesterday</div>
+                        <div><span class="cu-segment business">Business</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">09 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 10: LINKEDIN SENDS
+     =========================================== -->
+<section class="slide full-warm" aria-label="LinkedIn Queue">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">~5 min/day</span>
+        </div>
+        <h2 class="reveal">LinkedIn<br>messages.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            Copy the pre-written message, open their LinkedIn profile, send. Personal sends get better response rates than any automation.
+        </p>
+        <div class="cu-mock reveal" style="margin-top: clamp(1rem, 2vw, 1.5rem); max-width: min(90vw, 700px);">
+            <div class="cu-toolbar">
+                <span class="cu-toolbar-title">LinkedIn Queue</span>
+                <span class="cu-toolbar-badge">4 ready</span>
+            </div>
+            <div class="cu-linkedin-list">
+                <div class="cu-linkedin-header">
+                    <span>Contact</span>
+                    <span>Segment</span>
+                    <span>Message</span>
+                </div>
+                <div class="cu-linkedin-row">
+                    <div><span style="font-weight: 600;">Mike Roberts</span><br><span style="font-size: 0.85em; color: var(--cu-text-dim);">Pacific Coast Electrical</span></div>
+                    <div><span class="cu-segment business">Business</span></div>
+                    <div class="cu-linkedin-msg">Hi Mike &mdash; I came across Pacific Coast Electrical and love what you've built in Surrey. Would be great to connect!</div>
+                </div>
+                <div class="cu-linkedin-row">
+                    <div><span style="font-weight: 600;">Sarah Chen</span><br><span style="font-size: 0.85em; color: var(--cu-text-dim);">Langley Christian School</span></div>
+                    <div><span class="cu-segment school">School</span></div>
+                    <div class="cu-linkedin-msg">Hi Sarah &mdash; saw the amazing work at Langley Christian School. Spirit wear programs are such a great way to build community. Would love to connect!</div>
+                </div>
+                <div class="cu-linkedin-row">
+                    <div><span style="font-weight: 600;">David Park</span><br><span style="font-size: 0.85em; color: var(--cu-text-dim);">Fraser Valley FC</span></div>
+                    <div><span class="cu-segment team">Team</span></div>
+                    <div class="cu-linkedin-msg">Hi David &mdash; Fraser Valley FC looks like a fantastic program for youth in the Valley. Would love to connect and learn more about what you're building!</div>
+                </div>
+                <div class="cu-linkedin-row">
+                    <div><span style="font-weight: 600;">Jason Li</span><br><span style="font-size: 0.85em; color: var(--cu-text-dim);">Westcoast Plumbing &amp; Heating</span></div>
+                    <div><span class="cu-segment business">Business</span></div>
+                    <div class="cu-linkedin-msg">Hi Jason &mdash; great to see Westcoast Plumbing growing in Burnaby. Always good to connect with fellow local businesses!</div>
+                </div>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: var(--element-gap);">LinkedIn doesn't allow automated messaging &mdash; personal sends are safer and more effective</p>
+    </div>
+    <div class="slide-number">10 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 11: YOUR WEEKLY ROUTINE
+     =========================================== -->
+<section class="slide" aria-label="Weekly Routine">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Your Routine</span>
+            </div>
+            <h2 class="reveal">A rhythm<br>you can keep.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                The pipeline works around your schedule, not the other way around. Here's what a typical week looks like.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="timeline" style="position: relative; z-index: 1;">
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Daily (15-20 min)</div>
+                    <div class="timeline-text">Check Approval Queue &mdash; review and approve drafts</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Daily</div>
+                    <div class="timeline-text">Check My Follow-ups &mdash; respond to warm leads</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Daily (~5 min)</div>
+                    <div class="timeline-text">Send LinkedIn messages from the queue</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Weekly (~10 min)</div>
+                    <div class="timeline-text">Create 1-2 new Prospecting Requests to keep the pipeline full</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Monthly (30 min)</div>
+                    <div class="timeline-text">Review call with Cody &mdash; results, targeting adjustments, seasonal planning</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">11 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 12: YOUR DASHBOARD VIEWS
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Dashboard Views">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Your Views</span>
+        </div>
+        <h2 class="reveal">Six views.<br>Everything you need.</h2>
+        <div class="views-grid reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem);">
+            <div class="view-card">
+                <div class="view-freq">Daily</div>
+                <h3>Approval Queue</h3>
+                <p>Drafts waiting for your review. This is your main daily view.</p>
+            </div>
+            <div class="view-card">
+                <div class="view-freq">Daily</div>
+                <h3>My Follow-ups</h3>
+                <p>Warm responses needing your personal touch.</p>
+            </div>
+            <div class="view-card">
+                <div class="view-freq">Daily</div>
+                <h3>LinkedIn Queue</h3>
+                <p>Messages ready to copy and send on LinkedIn.</p>
+            </div>
+            <div class="view-card">
+                <div class="view-freq">Weekly</div>
+                <h3>Pipeline Board</h3>
+                <p>Bird's-eye Kanban view of all leads by stage.</p>
+            </div>
+            <div class="view-card">
+                <div class="view-freq">Weekly</div>
+                <h3>Prospecting Requests</h3>
+                <p>Your targeting requests and their results.</p>
+            </div>
+            <div class="view-card">
+                <div class="view-freq">Monthly</div>
+                <h3>Parked Leads</h3>
+                <p>Lower-scoring leads for occasional review.</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">12 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 13: WHAT YOU DON'T NEED TO WORRY ABOUT
+     =========================================== -->
+<section class="slide" aria-label="What the System Handles">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Handled for You</span>
+            </div>
+            <h2 class="reveal">What you don't<br>need to think about.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                The system handles all of this automatically. You never need to touch these processes or tools directly.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 340px; position: relative; z-index: 1;">
+                <ul class="check-list">
+                    <li class="reveal-left">Finding companies (Discovery Agent + Hunter.io)</li>
+                    <li class="reveal-left">Scoring leads on fit and quality</li>
+                    <li class="reveal-left">Writing personalized draft messages</li>
+                    <li class="reveal-left">Sending email sequences (3 touches over 9 days)</li>
+                    <li class="reveal-left">Tracking opens, clicks, and replies</li>
+                    <li class="reveal-left">Moving leads through pipeline stages</li>
+                    <li class="reveal-left">Handling bounces and unsubscribes</li>
+                    <li class="reveal-left">90-day dormancy cool-off and re-engagement</li>
+                    <li class="reveal-left">Deduplicating leads across searches</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">13 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 14: LET'S GET STARTED
+     =========================================== -->
+<section class="slide full-dark white" aria-label="Next Steps">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff;">Next Steps</span>
+        </div>
+        <h2 class="reveal" style="color: #fff;">Let's get<br>you started.</h2>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 700px);">
+            <div class="feature-card" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.15); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem);">&#9989;</div>
+                <h3 style="color: #fff;">Workspace being configured</h3>
+                <p style="color: rgba(255,255,255,0.55);">Your ClickUp workspace, views, and automations are being set up now.</p>
+            </div>
+            <div class="feature-card" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.15); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem);">&#128231;</div>
+                <h3 style="color: #fff;">Link your sending domains</h3>
+                <p style="color: rgba(255,255,255,0.55);">Connect shopjaydees.ca and .net to Google Workspace for email delivery.</p>
+            </div>
+            <div class="feature-card" style="background: rgba(255,255,255,0.1); backdrop-filter: blur(12px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.15); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem);">&#128640;</div>
+                <h3 style="color: #fff;">Test batch together</h3>
+                <p style="color: rgba(255,255,255,0.55);">Once domains are linked, we'll run a test batch and walk through it together.</p>
+            </div>
+        </div>
+        <div class="reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); text-align: center;">
+            <p class="body-text" style="color: rgba(255,255,255,0.65);">Questions? Reach out anytime:</p>
+            <p style="font-size: var(--h3-size); font-weight: 700; color: #fff; margin-top: var(--element-gap);">cody@sixohquad.com</p>
+        </div>
+        <p class="small-text reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); color: rgba(255,255,255,0.35);">Prepared by SixOhQuad for ShopJaydees</p>
+    </div>
+    <div class="slide-number" style="color: rgba(255,255,255,0.3);">14 / 14</div>
+</section>
+
+
+<!-- ===========================================
+     JAVASCRIPT: PRESENTATION CONTROLLER
+     =========================================== -->
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.isScrolling = false;
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupProgressBar();
+        this.setupNavDots();
+    }
+
+    setupIntersectionObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const idx = Array.from(this.slides).indexOf(entry.target);
+                    if (idx !== -1) {
+                        this.currentSlide = idx;
+                        this.updateProgressBar();
+                        this.updateNavDots();
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+        this.slides.forEach(slide => observer.observe(slide));
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            switch (e.key) {
+                case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+                    e.preventDefault(); this.goTo(this.currentSlide + 1); break;
+                case 'ArrowUp': case 'ArrowLeft': case 'PageUp':
+                    e.preventDefault(); this.goTo(this.currentSlide - 1); break;
+                case 'Home': e.preventDefault(); this.goTo(0); break;
+                case 'End': e.preventDefault(); this.goTo(this.slides.length - 1); break;
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let startY = 0;
+        document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = startY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                diff > 0 ? this.goTo(this.currentSlide + 1) : this.goTo(this.currentSlide - 1);
+            }
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let lastWheel = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastWheel < 800) return;
+            lastWheel = now;
+            if (e.deltaY > 20) this.goTo(this.currentSlide + 1);
+            else if (e.deltaY < -20) this.goTo(this.currentSlide - 1);
+        }, { passive: true });
+    }
+
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        if (!this.progressBar) return;
+        const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = pct + '%';
+    }
+
+    setupNavDots() {
+        this.navDotsContainer = document.getElementById('navDots');
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.innerHTML = '';
+        this.slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+            dot.addEventListener('click', () => this.goTo(i));
+            this.navDotsContainer.appendChild(dot);
+        });
+    }
+
+    updateNavDots() {
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.querySelectorAll('.nav-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === this.currentSlide);
+        });
+    }
+
+    goTo(idx) {
+        if (idx < 0 || idx >= this.slides.length) return;
+        this.currentSlide = idx;
+        this.slides[idx].scrollIntoView({ behavior: 'smooth' });
+        this.updateProgressBar();
+        this.updateNavDots();
+    }
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.editToggle = document.getElementById('editToggle');
+        this.editBanner = document.getElementById('editBanner');
+        this.storageKey = 'shopjaydees-clickup-walkthrough-edits';
+        this.setupControls();
+        this.loadEdits();
+    }
+
+    setupControls() {
+        const hotzone = document.getElementById('editHotzone');
+        let hideTimeout = null;
+
+        this.editToggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+
+        hotzone.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            this.editToggle.classList.add('show');
+        });
+        hotzone.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+        this.editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+        this.editToggle.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                this.toggleEditMode();
+            }
+            if (e.ctrlKey && e.key === 's' && this.isActive) {
+                e.preventDefault();
+                this.exportFile();
+            }
+        });
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('edit-active', this.isActive);
+        this.editToggle.classList.toggle('active', this.isActive);
+        this.editBanner.classList.toggle('active', this.isActive);
+
+        const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .flow-label, .flow-desc, .metric-value, .metric-label, .timeline-period, .timeline-text, .cu-draft-text, .cu-field-value, .cu-toolbar-title, .view-freq');
+        editables.forEach(el => {
+            if (this.isActive) {
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('input', () => this.saveEdits());
+            } else {
+                el.removeAttribute('contenteditable');
+            }
+        });
+    }
+
+    saveEdits() {
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        const data = {};
+        editables.forEach((el, i) => { data[i] = el.innerHTML; });
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    loadEdits() {
+        const raw = localStorage.getItem(this.storageKey);
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .flow-label, .flow-desc, .metric-value, .metric-label, .timeline-period, .timeline-text, .cu-draft-text, .cu-field-value, .cu-toolbar-title, .view-freq');
+            editables.forEach((el, i) => { if (data[i] !== undefined) el.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+
+    exportFile() {
+        const editableEls = Array.from(document.querySelectorAll('[contenteditable]'));
+        editableEls.forEach(el => el.removeAttribute('contenteditable'));
+        document.body.classList.remove('edit-active');
+        this.editToggle.classList.remove('active', 'show');
+        this.editBanner.classList.remove('active', 'show');
+
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+        document.body.classList.add('edit-active');
+        editableEls.forEach(el => el.setAttribute('contenteditable', 'true'));
+        this.editToggle.classList.add('active');
+        this.editBanner.classList.add('active');
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'clickup-walkthrough.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+const presentation = new SlidePresentation();
+const editor = new InlineEditor();
+</script>
+
+</body>
+</html>

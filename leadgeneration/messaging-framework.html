@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outreach Messaging Framework — ShopJaydees</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --title-size: clamp(2rem, 5.5vw, 4.5rem);
+    --h2-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    --h3-size: clamp(1rem, 2vw, 1.5rem);
+    --subtitle-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    --body-size: clamp(0.75rem, 1.3vw, 1rem);
+    --small-size: clamp(0.65rem, 1vw, 0.85rem);
+
+    --slide-padding: clamp(1.5rem, 4vw, 4rem);
+    --content-gap: clamp(0.8rem, 2vw, 1.5rem);
+    --element-gap: clamp(0.3rem, 1vw, 0.8rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.6s;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+.slide {
+    width: 100vw; height: 100vh; height: 100dvh;
+    overflow: hidden; scroll-snap-align: start;
+    display: flex; flex-direction: column; position: relative;
+}
+.slide-content {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: center; max-height: 100%;
+    overflow: hidden; padding: var(--slide-padding);
+}
+.card, .container, .content-box {
+    max-width: min(90vw, 1000px);
+    max-height: min(80vh, 700px);
+}
+.feature-list, .bullet-list { gap: clamp(0.4rem, 1vh, 1rem); }
+.feature-list li, .bullet-list li { font-size: var(--body-size); line-height: 1.4; }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+img, .image-container {
+    max-width: 100%; max-height: min(50vh, 400px); object-fit: contain;
+}
+
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+        --h2-size: clamp(1rem, 3vw, 1.75rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+}
+@media (max-width: 600px) {
+    :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); }
+    .grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+
+body { font-family: var(--font-body); color: var(--text-dark); background: var(--bg-peach); }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
+@media (max-width: 768px) {
+    .split { grid-template-columns: 1fr; }
+    .split .panel-right { display: none; }
+}
+.panel-left {
+    background: var(--bg-peach);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--slide-padding); position: relative;
+}
+.panel-right {
+    background: var(--bg-lavender);
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center; padding: var(--slide-padding);
+    position: relative; overflow: hidden;
+}
+.panel-right::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 24px 24px; pointer-events: none;
+}
+
+.full-peach { background: var(--bg-peach); }
+.full-lavender { background: var(--bg-lavender); }
+.full-warm { background: var(--bg-warm); }
+.full-dark { background: var(--accent-dark); color: #ffffff; }
+
+.centered-content {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center; padding: var(--slide-padding);
+    height: 100%; max-height: 100%;
+}
+
+h1 { font-family: var(--font-display); font-size: var(--title-size); font-weight: 800; line-height: 1; color: var(--text-dark); }
+h2 { font-family: var(--font-display); font-size: var(--h2-size); font-weight: 700; line-height: 1.1; color: var(--text-dark); }
+h3 { font-family: var(--font-display); font-size: var(--h3-size); font-weight: 600; line-height: 1.2; color: var(--text-dark); }
+.subtitle { font-size: var(--subtitle-size); color: var(--text-mid); line-height: 1.6; max-width: 36ch; }
+.body-text { font-size: var(--body-size); color: var(--text-mid); line-height: 1.6; }
+.small-text { font-size: var(--small-size); color: var(--text-light); }
+.white h1, .white h2, .white h3 { color: #ffffff; }
+.white .subtitle { color: rgba(255,255,255,0.7); }
+.white .body-text { color: rgba(255,255,255,0.6); }
+
+.badges { display: flex; flex-wrap: wrap; gap: clamp(0.3rem, 0.6vw, 0.5rem); margin-bottom: clamp(0.8rem, 2vw, 1.5rem); }
+.badge {
+    display: inline-block;
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.6rem, 1vw, 0.9rem);
+    border-radius: var(--radius-pill); font-size: var(--small-size);
+    font-weight: 500; color: var(--text-dark);
+}
+.badge.mint { background: var(--badge-mint); }
+.badge.yellow { background: var(--badge-yellow); }
+.badge.pink { background: var(--badge-pink); }
+.badge.blue { background: var(--badge-blue); }
+.badge.peach { background: var(--badge-peach); }
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(180px, 20vw, 260px)), 1fr));
+    gap: clamp(0.6rem, 1.5vw, 1rem); width: 100%; max-width: min(90vw, 900px);
+}
+.feature-card {
+    background: rgba(255,255,255,0.55); border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem); backdrop-filter: blur(8px); text-align: center;
+}
+.feature-card .card-icon {
+    width: clamp(32px, 4vw, 44px); height: clamp(32px, 4vw, 44px);
+    border-radius: 12px; display: grid; place-items: center;
+    font-size: clamp(1rem, 2vw, 1.4rem); line-height: 1;
+    margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);
+}
+.feature-card h3 { font-size: clamp(0.8rem, 1.3vw, 1rem); margin-bottom: clamp(0.2rem, 0.5vw, 0.3rem); }
+.feature-card p { font-size: var(--small-size); color: var(--text-light); line-height: 1.4; }
+
+.metric-row {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: clamp(0.6rem, 1.5vw, 1.2rem); width: 100%; max-width: min(90vw, 800px);
+}
+.metric-card {
+    background: rgba(255,255,255,0.55); border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem) clamp(1rem, 2vw, 1.8rem);
+    text-align: center; backdrop-filter: blur(8px);
+    flex: 1; min-width: clamp(100px, 15vw, 160px);
+}
+.metric-value { font-size: clamp(1.5rem, 3.5vw, 2.5rem); font-weight: 800; color: var(--text-dark); line-height: 1; }
+.metric-label { font-size: var(--small-size); color: var(--text-light); margin-top: clamp(0.2rem, 0.5vw, 0.4rem); }
+
+.check-list { list-style: none; display: flex; flex-direction: column; gap: clamp(0.4rem, 1vh, 0.8rem); }
+.check-list li {
+    display: flex; align-items: flex-start; gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    font-size: var(--body-size); color: var(--text-mid); line-height: 1.5;
+}
+.check-list li::before { content: '\2192'; color: var(--accent-warm); font-weight: 700; flex-shrink: 0; }
+
+.data-table { width: 100%; max-width: min(90vw, 700px); border-collapse: collapse; }
+.data-table th, .data-table td {
+    text-align: left;
+    padding: clamp(0.4rem, 1vw, 0.7rem) clamp(0.5rem, 1.2vw, 1rem);
+    font-size: var(--small-size); border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.data-table th {
+    font-weight: 600; color: var(--text-mid);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    font-size: clamp(0.55rem, 0.9vw, 0.7rem);
+}
+
+/* Email preview card */
+.email-preview {
+    background: #ffffff; border-radius: var(--radius);
+    padding: clamp(1rem, 2vw, 1.6rem); width: 100%;
+    max-width: min(88vw, 480px); text-align: left;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    position: relative; z-index: 1;
+}
+.email-preview .email-subject {
+    font-size: var(--body-size); font-weight: 700; color: var(--text-dark);
+    margin-bottom: clamp(0.3rem, 0.8vw, 0.6rem);
+    padding-bottom: clamp(0.3rem, 0.8vw, 0.6rem);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.email-preview .email-body {
+    font-size: var(--small-size); color: var(--text-mid);
+    line-height: 1.65; white-space: pre-line;
+}
+.email-preview .email-body .highlight {
+    background: var(--badge-yellow); padding: 1px 4px; border-radius: 3px;
+    font-size: inherit;
+}
+.email-preview .email-body .wif-highlight {
+    background: var(--badge-mint); padding: 1px 4px; border-radius: 3px;
+    font-size: inherit;
+}
+
+/* Stacked layers visual */
+.layer-stack {
+    display: flex; flex-direction: column; gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    width: 100%; max-width: 320px; position: relative; z-index: 1;
+}
+.layer-item {
+    background: rgba(255,255,255,0.65); border-radius: var(--radius-sm);
+    padding: clamp(0.5rem, 1.2vw, 0.9rem) clamp(0.7rem, 1.4vw, 1.1rem);
+    backdrop-filter: blur(8px); display: flex; align-items: center;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+}
+.layer-num {
+    width: clamp(24px, 2.5vw, 32px); height: clamp(24px, 2.5vw, 32px);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: var(--small-size); color: var(--text-dark); flex-shrink: 0;
+}
+.layer-label { font-weight: 600; font-size: var(--body-size); }
+.layer-desc { font-size: var(--small-size); color: var(--text-light); margin-top: 1px; }
+
+.reveal {
+    opacity: 0; transform: translateY(clamp(15px, 3vw, 30px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal { opacity: 1; transform: translateY(0); }
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+.reveal:nth-child(5) { transition-delay: 0.5s; }
+.reveal:nth-child(6) { transition-delay: 0.6s; }
+
+.reveal-left {
+    opacity: 0; transform: translateX(clamp(20px, 4vw, 40px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal-left { opacity: 1; transform: translateX(0); }
+.reveal-left:nth-child(1) { transition-delay: 0.15s; }
+.reveal-left:nth-child(2) { transition-delay: 0.3s; }
+.reveal-left:nth-child(3) { transition-delay: 0.45s; }
+.reveal-left:nth-child(4) { transition-delay: 0.6s; }
+
+.progress-bar {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: var(--accent-warm); z-index: 9999; width: 0;
+    transition: width 0.3s ease;
+}
+.nav-dots {
+    position: fixed; right: clamp(0.8rem, 2vw, 1.5rem);
+    top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 0.8vh, 10px); z-index: 9998;
+}
+.nav-dot {
+    width: clamp(8px, 1vw, 10px); height: clamp(8px, 1vw, 10px);
+    border-radius: 50%; background: rgba(0,0,0,0.15);
+    cursor: pointer; transition: background 0.3s ease, transform 0.3s ease;
+    border: none; padding: 0;
+}
+.nav-dot.active { background: var(--accent-warm); transform: scale(1.3); }
+.nav-dot:hover { background: var(--accent-warm); }
+.slide-number {
+    position: absolute; bottom: clamp(0.8rem, 2vw, 1.5rem);
+    right: clamp(0.8rem, 2vw, 1.5rem); font-size: var(--small-size);
+    color: var(--text-light); font-weight: 500; opacity: 0.5;
+}
+
+.edit-hotzone {
+    position: fixed; top: 0; left: 0; width: 80px; height: 80px;
+    z-index: 10000; cursor: pointer;
+}
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px; width: 40px; height: 40px;
+    border-radius: 50%; border: none; background: var(--text-dark); color: #fff;
+    font-size: 16px; cursor: pointer; opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease; z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.edit-toggle.show, .edit-toggle.active { opacity: 1; pointer-events: auto; }
+.edit-toggle.active { background: var(--accent-warm); }
+.edit-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--accent-warm); color: #fff; text-align: center;
+    font-size: var(--small-size); font-weight: 500;
+    padding: clamp(0.3rem, 0.5vw, 0.4rem); z-index: 9999;
+    transform: translateY(-100%); transition: transform 0.3s ease;
+}
+.edit-banner.active { transform: translateY(0); }
+body.edit-active [contenteditable="true"] {
+    outline: 2px dashed rgba(212,133,106,0.4); outline-offset: 4px; border-radius: 4px; cursor: text;
+}
+body.edit-active [contenteditable="true"]:focus { outline-color: var(--accent-warm); }
+</style>
+</head>
+
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)" aria-label="Toggle edit mode">&#9998;</button>
+<div class="edit-banner" id="editBanner">Edit Mode &mdash; Click any text to edit &middot; Ctrl+S to save</div>
+
+
+<!-- SLIDE 1: TITLE -->
+<section class="slide" aria-label="Title">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Messaging</span>
+                <span class="badge pink">Strategy</span>
+            </div>
+            <h1 class="reveal">How we talk<br>to your<br>prospects.</h1>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">Your outreach messaging framework &mdash; how we research, personalize, and write messages that feel genuine and get responses.</p>
+        </div>
+        <div class="panel-right">
+            <div class="layer-stack">
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-blue);">1</div>
+                    <div><div class="layer-label">Research</div><div class="layer-desc">Learn about the prospect</div></div>
+                </div>
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-mint);">2</div>
+                    <div><div class="layer-label">Personalize</div><div class="layer-desc">Tailor the message to them</div></div>
+                </div>
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-yellow);">3</div>
+                    <div><div class="layer-label">Send</div><div class="layer-desc">3 touches over 9 days</div></div>
+                </div>
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-pink);">4</div>
+                    <div><div class="layer-label">Connect</div><div class="layer-desc">You take over warm leads</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">01 / 12</div>
+</section>
+
+
+<!-- SLIDE 2: RESEARCH -->
+<section class="slide full-warm" aria-label="Prospect Research">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">Before We Write</span>
+        </div>
+        <h2 class="reveal">Every message<br>starts with research.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 46ch;">
+            Before the AI writes a single word, it gathers real context about each prospect. No generic blasts.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 700px);">
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-blue);">&#128269;</div>
+                <h3>Hunter.io Data</h3>
+                <p>Company name, domain, decision-maker name &amp; title, industry, verified email</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-mint);">&#127760;</div>
+                <h3>Website Scan</h3>
+                <p>What they do, their services, recent events or news, general brand presence</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-pink);">&#129309;</div>
+                <h3>Community Signals</h3>
+                <p>Sponsorships, charity work, causes they support &mdash; natural bridges to Wear It Forward</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">02 / 12</div>
+</section>
+
+
+<!-- SLIDE 3: TONE & VOICE -->
+<section class="slide" aria-label="Tone and Voice">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge peach">Voice</span>
+            </div>
+            <h2 class="reveal">Friendly first.<br>Always genuine.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Every message sounds like a local business owner reaching out to another &mdash; warm, direct, and real. Never salesy or corporate.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="layer-stack">
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-mint);">&#9829;</div>
+                    <div><div class="layer-label">Friendly</div><div class="layer-desc">Warm and approachable first</div></div>
+                </div>
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-blue);">&#9733;</div>
+                    <div><div class="layer-label">Professional</div><div class="layer-desc">Clear and direct, not stiff</div></div>
+                </div>
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-yellow);">&#9786;</div>
+                    <div><div class="layer-label">Casual</div><div class="layer-desc">First-name, no jargon or buzzwords</div></div>
+                </div>
+                <div class="layer-item reveal-left">
+                    <div class="layer-num" style="background: var(--badge-pink);">&#127793;</div>
+                    <div><div class="layer-label">Community</div><div class="layer-desc">Local values woven naturally</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">03 / 12</div>
+</section>
+
+
+<!-- SLIDE 4: MESSAGE STRUCTURE -->
+<section class="slide full-lavender" aria-label="Message Structure">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">Structure</span>
+        </div>
+        <h2 class="reveal">Value first.<br>Impact second.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 46ch;">
+            Every message leads with what Jaydees does for them specifically, then brings in Wear It Forward as a meaningful differentiator.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 700px);">
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-mint); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);">1</div>
+                <h3>Open With Value</h3>
+                <p>What Jaydees does for their specific type of organization &mdash; reference their business directly</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-yellow); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);">2</div>
+                <h3>Wear It Forward</h3>
+                <p>Bridge naturally to community impact &mdash; not the headline, but a genuine reason to choose Jaydees</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-pink); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);">3</div>
+                <h3>Soft Ask</h3>
+                <p>"Worth a quick chat?" &mdash; no pressure, no urgency tactics, just a genuine invitation to connect</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">04 / 12</div>
+</section>
+
+
+<!-- SLIDE 5: PERSONALIZATION LAYERS -->
+<section class="slide" aria-label="Personalization">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Personalization</span>
+            </div>
+            <h2 class="reveal">Four layers<br>make it real.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Each message is built from a segment template plus four layers of personalization &mdash; so nothing reads like a mass email.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 320px; position: relative; z-index: 1;">
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <h3>Segment Template</h3>
+                    <p>Value prop tuned for schools, teams, or businesses</p>
+                </div>
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <h3>Business Context</h3>
+                    <p>References their name, what they do, their specific situation</p>
+                </div>
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <h3>Community Signals</h3>
+                    <p>Connects their visible community involvement to Wear It Forward</p>
+                </div>
+                <div class="feature-card reveal-left">
+                    <h3>Seasonal Timing</h3>
+                    <p>Ties to what's relevant now &mdash; fall sports, back to school, year-end</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">05 / 12</div>
+</section>
+
+
+<!-- SLIDE 6: SOCIAL PROOF -->
+<section class="slide full-warm" aria-label="Social Proof">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Credibility</span>
+        </div>
+        <h2 class="reveal">Proof that<br>backs it up.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            Each segment gets social proof that's authentic and relevant &mdash; no name-dropping, just real credibility.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 800px);">
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-yellow);">&#127979;</div>
+                <h3>Schools</h3>
+                <p>"We work with over 100 schools in the Lower Mainland"</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-pink);">&#9917;</div>
+                <h3>Teams</h3>
+                <p>"We've helped teams raise thousands through apparel-based fundraising &mdash; no inventory, no hassle"</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-mint);">&#127970;</div>
+                <h3>Businesses</h3>
+                <p>"We frequently work with businesses with anywhere from 12 to 250+ employees"</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">06 / 12</div>
+</section>
+
+
+<!-- SLIDE 7: 3-TOUCH OVERVIEW -->
+<section class="slide full-lavender" aria-label="3-Touch Sequence">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">The Sequence</span>
+        </div>
+        <h2 class="reveal">Three touches.<br>Nine days.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 46ch;">
+            Each touch adds value and builds the relationship. No repeated pitches. No pressure. After Touch 3 with no response, the lead cools off for 90 days.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 700px);">
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-mint); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem); font-weight: 700;">1</div>
+                <h3>Day 0 &mdash; Intro</h3>
+                <p>Personalized value prop + Wear It Forward + soft CTA</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-yellow); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem); font-weight: 700;">2</div>
+                <h3>Day 4 &mdash; Value</h3>
+                <p>Share something useful &mdash; a specific idea for their situation, no hard sell</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-pink); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem); font-weight: 700;">3</div>
+                <h3>Day 9 &mdash; Open Door</h3>
+                <p>Lighter tone, circle back with a different angle, genuinely leave the door open</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">07 / 12</div>
+</section>
+
+
+<!-- SLIDE 8: EXAMPLE — SCHOOL EMAIL -->
+<section class="slide" aria-label="School Email Example">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge yellow">Schools</span>
+                <span class="badge mint">Touch 1</span>
+            </div>
+            <h2 class="reveal">What a school<br>email looks like.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                <span class="highlight" style="background: var(--badge-yellow); padding: 1px 6px; border-radius: 3px;">Yellow</span> = personalized from research<br>
+                <span class="highlight" style="background: var(--badge-mint); padding: 1px 6px; border-radius: 3px;">Green</span> = Wear It Forward angle
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="email-preview reveal-left">
+                <div class="email-subject">Spirit wear that gives back &mdash; for <span class="highlight">Rosewood Elementary</span></div>
+                <div class="email-body">Hi <span class="highlight">Sarah</span>,
+
+I came across <span class="highlight">Rosewood Elementary</span> and <span class="highlight">noticed your PAC has been running some great community events this year</span>. I'm Jay from Jaydees &mdash; we work with over 100 schools in the Lower Mainland to create custom spirit wear, grad gear, and team apparel.
+
+<span class="wif-highlight">What makes us a bit different is our Wear It Forward program &mdash; a portion of every order goes back to your school or a community cause you choose. It's an easy way to build school pride and raise funds at the same time.</span>
+
+We handle everything: design, online ordering, and delivery sorted by student and classroom. No extra work for admin or volunteers.
+
+Worth a quick chat to see if it'd be a fit?
+
+Jay
+Jaydees Apparel</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">08 / 12</div>
+</section>
+
+
+<!-- SLIDE 9: EXAMPLE — CORPORATE EMAIL -->
+<section class="slide" aria-label="Corporate Email Example">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Corporate</span>
+                <span class="badge blue">Touch 1</span>
+            </div>
+            <h2 class="reveal">What a business<br>email looks like.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Leads with professional value, bridges to community impact through Wear It Forward.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="email-preview reveal-left">
+                <div class="email-subject">Branded gear for <span class="highlight">Westridge Plumbing</span>'s crew</div>
+                <div class="email-body">Hi <span class="highlight">Mike</span>,
+
+I saw that <span class="highlight">Westridge Plumbing has been growing across the Fraser Valley &mdash; congrats on the Abbotsford expansion</span>. I'm Jay from Jaydees &mdash; we help businesses with 12 to 250+ employees get custom branded apparel that's consistent, durable, and professional.
+
+<span class="wif-highlight">Beyond the gear itself, every order through Jaydees supports community causes through our Wear It Forward program. It's a simple way to look sharp and give back at the same time.</span>
+
+We handle design, ordering, and delivery &mdash; sorted and labelled so distribution is painless.
+
+Would it be worth a quick conversation?
+
+Jay
+Jaydees Apparel</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">09 / 12</div>
+</section>
+
+
+<!-- SLIDE 10: EXAMPLE — TEAM EMAIL -->
+<section class="slide" aria-label="Team Email Example">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Teams</span>
+                <span class="badge peach">Touch 1</span>
+            </div>
+            <h2 class="reveal">What a team<br>email looks like.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Leads with custom gear + easy fundraising &mdash; two things every team needs.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="email-preview reveal-left">
+                <div class="email-subject">Custom jerseys + fundraising for <span class="highlight">Valley United FC</span></div>
+                <div class="email-body">Hi <span class="highlight">Coach Preet</span>,
+
+I noticed <span class="highlight">Valley United FC is gearing up for the fall season &mdash; looks like a strong group of players this year</span>. I'm Jay from Jaydees &mdash; we create custom jerseys, team apparel, and fan gear for sports teams across the Lower Mainland.
+
+<span class="wif-highlight">What teams love most is that we make fundraising easy &mdash; supporters order directly during a set window, and a portion of every sale goes back to your team through our Wear It Forward program. No inventory, no hassle.</span>
+
+We've helped teams raise thousands this way, and we handle all the production, sorting, and delivery.
+
+Worth a quick chat to see if it'd work for your season?
+
+Jay
+Jaydees Apparel</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">10 / 12</div>
+</section>
+
+
+<!-- SLIDE 11: LINKEDIN + FOLLOW-UPS -->
+<section class="slide full-peach" aria-label="LinkedIn and Follow-ups">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">Beyond Email</span>
+        </div>
+        <h2 class="reveal">LinkedIn &amp;<br>follow-ups.</h2>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 800px);">
+            <div class="feature-card" style="text-align: left;">
+                <h3 style="margin-bottom: var(--element-gap);">LinkedIn Request</h3>
+                <p style="line-height: 1.6;">Short, personal, not a pitch. Just a friendly connection referencing something specific about their organization. You send these manually &mdash; keeps it human.</p>
+            </div>
+            <div class="feature-card" style="text-align: left;">
+                <h3 style="margin-bottom: var(--element-gap);">Touch 2 (Day 4)</h3>
+                <p style="line-height: 1.6;">Share something genuinely useful &mdash; a specific idea for their situation, like how similar schools use spirit wear as ongoing fundraisers, or how consistent branded gear helps at job sites.</p>
+            </div>
+            <div class="feature-card" style="text-align: left;">
+                <h3 style="margin-bottom: var(--element-gap);">Touch 3 (Day 9)</h3>
+                <p style="line-height: 1.6;">Brief, friendly check-in. Different angle, lighter tone. "If the timing isn't right, no worries &mdash; happy to connect whenever it makes sense." Genuinely leave the door open.</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">11 / 12</div>
+</section>
+
+
+<!-- SLIDE 12: YOUR CONTROL -->
+<section class="slide full-dark white" aria-label="Your Control">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff;">Your Call</span>
+        </div>
+        <h2 class="reveal" style="color: #fff;">You approve<br>everything.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch; color: rgba(255,255,255,0.65);">
+            Every message lands in your ClickUp queue before it sends. You can approve, edit, reject, or flag &ldquo;I know this person.&rdquo; Over time, your feedback tunes the AI to match your voice.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 650px);">
+            <div class="feature-card" style="background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.12); color: #fff;">&#9989;</div>
+                <h3 style="color: #fff;">Approve</h3>
+                <p style="color: rgba(255,255,255,0.5);">Send as-is</p>
+            </div>
+            <div class="feature-card" style="background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.12); color: #fff;">&#9998;</div>
+                <h3 style="color: #fff;">Edit</h3>
+                <p style="color: rgba(255,255,255,0.5);">Tweak &amp; send</p>
+            </div>
+            <div class="feature-card" style="background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.12); color: #fff;">&#10060;</div>
+                <h3 style="color: #fff;">Reject</h3>
+                <p style="color: rgba(255,255,255,0.5);">Skip this one</p>
+            </div>
+            <div class="feature-card" style="background: rgba(255,255,255,0.08); backdrop-filter: blur(8px);">
+                <div class="card-icon" style="background: rgba(255,255,255,0.12); color: #fff;">&#128075;</div>
+                <h3 style="color: #fff;">I Know Them</h3>
+                <p style="color: rgba(255,255,255,0.5);">Switch to warm intro</p>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); color: rgba(255,255,255,0.35);">Presented by SixOhQuad for ShopJaydees</p>
+    </div>
+    <div class="slide-number" style="color: rgba(255,255,255,0.3);">12 / 12</div>
+</section>
+
+
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupProgressBar();
+        this.setupNavDots();
+    }
+
+    setupIntersectionObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const idx = Array.from(this.slides).indexOf(entry.target);
+                    if (idx !== -1) {
+                        this.currentSlide = idx;
+                        this.updateProgressBar();
+                        this.updateNavDots();
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+        this.slides.forEach(slide => observer.observe(slide));
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            switch (e.key) {
+                case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+                    e.preventDefault(); this.goTo(this.currentSlide + 1); break;
+                case 'ArrowUp': case 'ArrowLeft': case 'PageUp':
+                    e.preventDefault(); this.goTo(this.currentSlide - 1); break;
+                case 'Home': e.preventDefault(); this.goTo(0); break;
+                case 'End': e.preventDefault(); this.goTo(this.slides.length - 1); break;
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let startY = 0;
+        document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = startY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                diff > 0 ? this.goTo(this.currentSlide + 1) : this.goTo(this.currentSlide - 1);
+            }
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let lastWheel = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastWheel < 800) return;
+            lastWheel = now;
+            if (e.deltaY > 20) this.goTo(this.currentSlide + 1);
+            else if (e.deltaY < -20) this.goTo(this.currentSlide - 1);
+        }, { passive: true });
+    }
+
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        if (!this.progressBar) return;
+        const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = pct + '%';
+    }
+
+    setupNavDots() {
+        this.navDotsContainer = document.getElementById('navDots');
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.innerHTML = '';
+        this.slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+            dot.addEventListener('click', () => this.goTo(i));
+            this.navDotsContainer.appendChild(dot);
+        });
+    }
+
+    updateNavDots() {
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.querySelectorAll('.nav-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === this.currentSlide);
+        });
+    }
+
+    goTo(idx) {
+        if (idx < 0 || idx >= this.slides.length) return;
+        this.currentSlide = idx;
+        this.slides[idx].scrollIntoView({ behavior: 'smooth' });
+        this.updateProgressBar();
+        this.updateNavDots();
+    }
+}
+
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.editToggle = document.getElementById('editToggle');
+        this.editBanner = document.getElementById('editBanner');
+        this.storageKey = 'shopjaydees-messaging-edits';
+        this.setupControls();
+        this.loadEdits();
+    }
+
+    setupControls() {
+        const hotzone = document.getElementById('editHotzone');
+        let hideTimeout = null;
+
+        this.editToggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+
+        hotzone.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            this.editToggle.classList.add('show');
+        });
+        hotzone.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+        this.editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+        this.editToggle.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                this.toggleEditMode();
+            }
+            if (e.ctrlKey && e.key === 's' && this.isActive) {
+                e.preventDefault();
+                this.exportFile();
+            }
+        });
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('edit-active', this.isActive);
+        this.editToggle.classList.toggle('active', this.isActive);
+        this.editBanner.classList.toggle('active', this.isActive);
+
+        const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .layer-label, .layer-desc, .metric-value, .metric-label, .email-subject, .email-body');
+        editables.forEach(el => {
+            if (this.isActive) {
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('input', () => this.saveEdits());
+            } else {
+                el.removeAttribute('contenteditable');
+            }
+        });
+    }
+
+    saveEdits() {
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        const data = {};
+        editables.forEach((el, i) => { data[i] = el.innerHTML; });
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    loadEdits() {
+        const raw = localStorage.getItem(this.storageKey);
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .layer-label, .layer-desc, .metric-value, .metric-label, .email-subject, .email-body');
+            editables.forEach((el, i) => { if (data[i] !== undefined) el.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+
+    exportFile() {
+        const editableEls = Array.from(document.querySelectorAll('[contenteditable]'));
+        editableEls.forEach(el => el.removeAttribute('contenteditable'));
+        document.body.classList.remove('edit-active');
+        this.editToggle.classList.remove('active', 'show');
+        this.editBanner.classList.remove('active', 'show');
+
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+        document.body.classList.add('edit-active');
+        editableEls.forEach(el => el.setAttribute('contenteditable', 'true'));
+        this.editToggle.classList.add('active');
+        this.editBanner.classList.add('active');
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'messaging-framework.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+const presentation = new SlidePresentation();
+const editor = new InlineEditor();
+</script>
+
+</body>
+</html>

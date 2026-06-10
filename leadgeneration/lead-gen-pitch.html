@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automated Lead Generation — ShopJaydees</title>
+
+<!-- Fonts: Outfit from Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (SPLIT PASTEL THEME)
+   Change these to change the whole look
+   =========================================== */
+:root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --title-size: clamp(2rem, 5.5vw, 4.5rem);
+    --h2-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    --h3-size: clamp(1rem, 2vw, 1.5rem);
+    --subtitle-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    --body-size: clamp(0.75rem, 1.3vw, 1rem);
+    --small-size: clamp(0.65rem, 1vw, 0.85rem);
+
+    --slide-padding: clamp(1.5rem, 4vw, 4rem);
+    --content-gap: clamp(0.8rem, 2vw, 1.5rem);
+    --element-gap: clamp(0.3rem, 1vw, 0.8rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.6s;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+}
+
+/* ===========================================
+   BASE STYLES
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES
+   =========================================== */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+}
+.card, .container, .content-box {
+    max-width: min(90vw, 1000px);
+    max-height: min(80vh, 700px);
+}
+.feature-list, .bullet-list {
+    gap: clamp(0.4rem, 1vh, 1rem);
+}
+.feature-list li, .bullet-list li {
+    font-size: var(--body-size);
+    line-height: 1.4;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+img, .image-container {
+    max-width: 100%;
+    max-height: min(50vh, 400px);
+    object-fit: contain;
+}
+
+/* Short viewports */
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+        --h2-size: clamp(1rem, 3vw, 1.75rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+}
+@media (max-width: 600px) {
+    :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); }
+    .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   SPLIT PASTEL LAYOUT SYSTEM
+   =========================================== */
+body {
+    font-family: var(--font-body);
+    color: var(--text-dark);
+    background: var(--bg-peach);
+}
+
+/* === Split layout (peach | lavender) === */
+.split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+}
+@media (max-width: 768px) {
+    .split { grid-template-columns: 1fr; }
+    .split .panel-right { display: none; }
+}
+.panel-left {
+    background: var(--bg-peach);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--slide-padding);
+    position: relative;
+}
+.panel-right {
+    background: var(--bg-lavender);
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center;
+    padding: var(--slide-padding);
+    position: relative; overflow: hidden;
+}
+.panel-right::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+}
+
+/* === Full-width slide variant === */
+.full-peach { background: var(--bg-peach); }
+.full-lavender { background: var(--bg-lavender); }
+.full-warm { background: var(--bg-warm); }
+.full-dark {
+    background: var(--accent-dark);
+    color: #ffffff;
+}
+
+.centered-content {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: var(--slide-padding);
+    height: 100%;
+    max-height: 100%;
+}
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+h1 {
+    font-family: var(--font-display);
+    font-size: var(--title-size);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-dark);
+}
+h2 {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
+h3 {
+    font-family: var(--font-display);
+    font-size: var(--h3-size);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-dark);
+}
+.subtitle {
+    font-size: var(--subtitle-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+    max-width: 36ch;
+}
+.body-text {
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+}
+.small-text {
+    font-size: var(--small-size);
+    color: var(--text-light);
+}
+.white h1, .white h2, .white h3 { color: #ffffff; }
+.white .subtitle { color: rgba(255,255,255,0.7); }
+.white .body-text { color: rgba(255,255,255,0.6); }
+
+/* ===========================================
+   BADGE PILLS
+   =========================================== */
+.badges {
+    display: flex; flex-wrap: wrap;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-bottom: clamp(0.8rem, 2vw, 1.5rem);
+}
+.badge {
+    display: inline-block;
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.6rem, 1vw, 0.9rem);
+    border-radius: var(--radius-pill);
+    font-size: var(--small-size);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+.badge.mint { background: var(--badge-mint); }
+.badge.yellow { background: var(--badge-yellow); }
+.badge.pink { background: var(--badge-pink); }
+.badge.blue { background: var(--badge-blue); }
+.badge.peach { background: var(--badge-peach); }
+
+/* ===========================================
+   PIPELINE STEPS
+   =========================================== */
+.pipeline {
+    display: flex; flex-direction: column;
+    gap: clamp(0.6rem, 1.5vw, 1rem);
+    width: 100%; max-width: 340px;
+    position: relative; z-index: 1;
+}
+.step {
+    display: flex; align-items: center;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius);
+    padding: clamp(0.5rem, 1.2vw, 0.9rem) clamp(0.7rem, 1.4vw, 1.1rem);
+    backdrop-filter: blur(8px);
+}
+.step-num {
+    width: clamp(28px, 3vw, 38px); height: clamp(28px, 3vw, 38px);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: var(--small-size);
+    color: var(--text-dark); flex-shrink: 0;
+}
+.step-label { font-weight: 600; font-size: var(--body-size); }
+.step-desc { font-size: var(--small-size); color: var(--text-light); margin-top: 1px; }
+
+/* ===========================================
+   FEATURE CARDS
+   =========================================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(180px, 20vw, 260px)), 1fr));
+    gap: clamp(0.6rem, 1.5vw, 1rem);
+    width: 100%;
+    max-width: min(90vw, 900px);
+}
+.feature-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    backdrop-filter: blur(8px);
+    text-align: center;
+}
+.feature-card .card-icon {
+    width: clamp(32px, 4vw, 44px); height: clamp(32px, 4vw, 44px);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    line-height: 1;
+    margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);
+}
+.feature-card h3 {
+    font-size: clamp(0.8rem, 1.3vw, 1rem);
+    margin-bottom: clamp(0.2rem, 0.5vw, 0.3rem);
+}
+.feature-card p {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* ===========================================
+   DATA TABLE
+   =========================================== */
+.data-table {
+    width: 100%; max-width: min(90vw, 700px);
+    border-collapse: collapse;
+}
+.data-table th, .data-table td {
+    text-align: left;
+    padding: clamp(0.4rem, 1vw, 0.7rem) clamp(0.5rem, 1.2vw, 1rem);
+    font-size: var(--small-size);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.data-table th {
+    font-weight: 600;
+    color: var(--text-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: clamp(0.55rem, 0.9vw, 0.7rem);
+}
+
+/* ===========================================
+   METRIC CARDS
+   =========================================== */
+.metric-row {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: clamp(0.6rem, 1.5vw, 1.2rem);
+    width: 100%; max-width: min(90vw, 800px);
+}
+.metric-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem) clamp(1rem, 2vw, 1.8rem);
+    text-align: center;
+    backdrop-filter: blur(8px);
+    flex: 1; min-width: clamp(100px, 15vw, 160px);
+}
+.metric-value {
+    font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+}
+.metric-label {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    margin-top: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+
+/* ===========================================
+   BULLET LIST
+   =========================================== */
+.check-list {
+    list-style: none;
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vh, 0.8rem);
+}
+.check-list li {
+    display: flex; align-items: flex-start;
+    gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.5;
+}
+.check-list li::before {
+    content: '→';
+    color: var(--accent-warm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* ===========================================
+   CTA BUTTON
+   =========================================== */
+.cta-btn {
+    display: inline-flex; align-items: center; gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    background: var(--text-dark);
+    color: #ffffff;
+    border: none; border-radius: var(--radius-pill);
+    padding: clamp(0.6rem, 1.2vw, 0.9rem) clamp(1.2rem, 2.5vw, 2rem);
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s var(--ease-out-expo), box-shadow 0.3s ease;
+}
+.cta-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* ===========================================
+   TIMELINE
+   =========================================== */
+.timeline {
+    display: flex; flex-direction: column;
+    gap: clamp(0.5rem, 1.2vw, 0.9rem);
+    width: 100%; max-width: min(90vw, 600px);
+    position: relative;
+    padding-left: clamp(1.5rem, 3vw, 2.5rem);
+}
+.timeline::before {
+    content: ''; position: absolute;
+    left: clamp(0.5rem, 1vw, 0.8rem); top: 0; bottom: 0;
+    width: 2px; background: rgba(0,0,0,0.08);
+}
+.timeline-item {
+    position: relative;
+}
+.timeline-item::before {
+    content: ''; position: absolute;
+    left: calc(-1 * clamp(1.5rem, 3vw, 2.5rem) + clamp(0.3rem, 0.6vw, 0.5rem));
+    top: clamp(0.3rem, 0.6vw, 0.5rem);
+    width: clamp(8px, 1vw, 10px); height: clamp(8px, 1vw, 10px);
+    border-radius: 50%; background: var(--accent-warm);
+}
+.timeline-period {
+    font-size: var(--small-size);
+    font-weight: 600;
+    color: var(--accent-warm);
+}
+.timeline-text {
+    font-size: var(--small-size);
+    color: var(--text-mid);
+    margin-top: 2px;
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(clamp(15px, 3vw, 30px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+.reveal:nth-child(5) { transition-delay: 0.5s; }
+.reveal:nth-child(6) { transition-delay: 0.6s; }
+
+.reveal-left {
+    opacity: 0;
+    transform: translateX(clamp(20px, 4vw, 40px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal-left {
+    opacity: 1; transform: translateX(0);
+}
+.reveal-left:nth-child(1) { transition-delay: 0.15s; }
+.reveal-left:nth-child(2) { transition-delay: 0.3s; }
+.reveal-left:nth-child(3) { transition-delay: 0.45s; }
+.reveal-left:nth-child(4) { transition-delay: 0.6s; }
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: var(--accent-warm);
+    z-index: 9999; width: 0;
+    transition: width 0.3s ease;
+}
+
+/* ===========================================
+   NAVIGATION DOTS
+   =========================================== */
+.nav-dots {
+    position: fixed;
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 0.8vh, 10px);
+    z-index: 9998;
+}
+.nav-dot {
+    width: clamp(8px, 1vw, 10px);
+    height: clamp(8px, 1vw, 10px);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    border: none; padding: 0;
+}
+.nav-dot.active {
+    background: var(--accent-warm);
+    transform: scale(1.3);
+}
+.nav-dot:hover { background: var(--accent-warm); }
+
+/* ===========================================
+   SLIDE NUMBER
+   =========================================== */
+.slide-number {
+    position: absolute;
+    bottom: clamp(0.8rem, 2vw, 1.5rem);
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    font-size: var(--small-size);
+    color: var(--text-light);
+    font-weight: 500;
+    opacity: 0.5;
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone {
+    position: fixed; top: 0; left: 0;
+    width: 80px; height: 80px;
+    z-index: 10000; cursor: pointer;
+}
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    width: 40px; height: 40px;
+    border-radius: 50%; border: none;
+    background: var(--text-dark); color: #fff;
+    font-size: 16px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.edit-toggle.show, .edit-toggle.active {
+    opacity: 1; pointer-events: auto;
+}
+.edit-toggle.active { background: var(--accent-warm); }
+.edit-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--accent-warm); color: #fff;
+    text-align: center;
+    font-size: var(--small-size); font-weight: 500;
+    padding: clamp(0.3rem, 0.5vw, 0.4rem);
+    z-index: 9999;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+.edit-banner.active { transform: translateY(0); }
+body.edit-active [contenteditable="true"] {
+    outline: 2px dashed rgba(212,133,106,0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
+    cursor: text;
+}
+body.edit-active [contenteditable="true"]:focus {
+    outline-color: var(--accent-warm);
+}
+</style>
+</head>
+
+<body>
+
+<!-- === PROGRESS BAR === -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- === NAVIGATION DOTS === -->
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<!-- === INLINE EDITING CONTROLS === -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)" aria-label="Toggle edit mode">&#9998;</button>
+<div class="edit-banner" id="editBanner">Edit Mode — Click any text to edit &middot; Ctrl+S to save</div>
+
+
+<!-- ===========================================
+     SLIDE 1: TITLE
+     =========================================== -->
+<section class="slide" aria-label="Title">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Businesses</span>
+                <span class="badge yellow">Schools</span>
+                <span class="badge pink">Teams</span>
+            </div>
+            <h1 class="reveal">Leads on<br>Autopilot</h1>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">An AI-powered lead generation pipeline built for ShopJaydees — find, qualify, and reach the right prospects every week.</p>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">1</div>
+                    <div><div class="step-label">Discover</div><div class="step-desc">Find new prospects</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">2</div>
+                    <div><div class="step-label">Enrich</div><div class="step-desc">Research &amp; score</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">3</div>
+                    <div><div class="step-label">Personalize</div><div class="step-desc">AI-crafted messages</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">4</div>
+                    <div><div class="step-label">Outreach</div><div class="step-desc">Send &amp; track</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">01 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 2: THE PROBLEM
+     =========================================== -->
+<section class="slide full-warm" aria-label="The Problem">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge pink">The Challenge</span>
+        </div>
+        <h2 class="reveal">Great product.<br>No pipeline.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            Right now, new business comes from referrals alone. There's no structured way to find prospects, reach out, or follow up — which means missed opportunities every week.
+        </p>
+        <div class="metric-row reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem);">
+            <div class="metric-card">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Outbound sends / week</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">0</div>
+                <div class="metric-label">Prospects discovered</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">100%</div>
+                <div class="metric-label">Reliance on referrals</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">02 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 3: THE SOLUTION
+     =========================================== -->
+<section class="slide" aria-label="The Solution">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">The Solution</span>
+            </div>
+            <h2 class="reveal">An automated pipeline that fills itself.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                AI agents handle the heavy lifting — discovering prospects, researching them, and drafting personalized outreach. You just approve and send.
+            </p>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li>Runs on autopilot, 7 days a week</li>
+                <li>You review everything before it sends</li>
+                <li>15-20 minutes a day is all it takes</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div class="metric-row reveal" style="flex-direction: column; align-items: center; gap: clamp(0.8rem, 2vw, 1.2rem);">
+                <div class="metric-card" style="width: 100%; max-width: 260px;">
+                    <div class="metric-value">50-150</div>
+                    <div class="metric-label">New prospects / week</div>
+                </div>
+                <div class="metric-card" style="width: 100%; max-width: 260px;">
+                    <div class="metric-value">20-80</div>
+                    <div class="metric-label">Outreach sends / week</div>
+                </div>
+                <div class="metric-card" style="width: 100%; max-width: 260px;">
+                    <div class="metric-value">5-15</div>
+                    <div class="metric-label">Conversations / month</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">03 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 4: HOW IT WORKS OVERVIEW
+     =========================================== -->
+<section class="slide full-lavender" aria-label="How It Works">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">How It Works</span>
+        </div>
+        <h2 class="reveal">Four stages.<br>Fully automated.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            Each stage runs on a schedule — from finding prospects to sending personalized messages. ClickUp is your single source of truth for every lead.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 700px);">
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-mint);">&#128269;</div>
+                <h3>Discover</h3>
+                <p>Scrapes Google Maps weekly for prospects in your area</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-yellow);">&#128200;</div>
+                <h3>Enrich</h3>
+                <p>Researches each lead daily — websites, contacts, social</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-pink);">&#9997;</div>
+                <h3>Personalize</h3>
+                <p>Generates custom email + LinkedIn messages per lead</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-blue);">&#128640;</div>
+                <h3>Outreach</h3>
+                <p>Sends approved messages, tracks opens &amp; replies</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">04 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 5: DISCOVER + ENRICH
+     =========================================== -->
+<section class="slide" aria-label="Discover and Enrich">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Stage 1</span>
+            </div>
+            <h2 class="reveal">Discover</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                An AI agent searches Google Maps every week for businesses, schools, and teams in your target geography.
+            </p>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li>50-150 raw prospects per week</li>
+                <li>Deduplicates against existing contacts</li>
+                <li>Categorized by segment automatically</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 300px;">
+                <div class="badges reveal-left">
+                    <span class="badge yellow">Stage 2</span>
+                </div>
+                <h3 class="reveal-left" style="margin-bottom: var(--element-gap);">Enrich</h3>
+                <p class="body-text reveal-left" style="margin-bottom: var(--content-gap);">Each prospect gets researched daily:</p>
+                <ul class="check-list reveal-left" style="font-size: var(--small-size);">
+                    <li>Decision-maker name &amp; email</li>
+                    <li>Company size &amp; branding quality</li>
+                    <li>Recent news &amp; social activity</li>
+                    <li>Fit score from 1-5</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">05 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 6: PERSONALIZE + OUTREACH
+     =========================================== -->
+<section class="slide" aria-label="Personalize and Outreach">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Stage 3</span>
+            </div>
+            <h2 class="reveal">Personalize</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                AI generates a 3-touch email sequence plus a LinkedIn connection note — tailored to each prospect.
+            </p>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li>References their business by name</li>
+                <li>Connects to their industry &amp; season</li>
+                <li>Mentions Wear It Forward where relevant</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 300px;">
+                <div class="badges reveal-left">
+                    <span class="badge blue">Stage 4</span>
+                </div>
+                <h3 class="reveal-left" style="margin-bottom: var(--element-gap);">Outreach</h3>
+                <p class="body-text reveal-left" style="margin-bottom: var(--content-gap);">You review, approve, and the system sends:</p>
+                <ul class="check-list reveal-left" style="font-size: var(--small-size);">
+                    <li>Email delivered via cold email tool</li>
+                    <li>LinkedIn messages drafted for you</li>
+                    <li>Opens &amp; replies tracked automatically</li>
+                    <li>Warm leads flagged for your follow-up</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">06 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 7: THREE SEGMENTS
+     =========================================== -->
+<section class="slide full-peach" aria-label="Target Segments">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge peach">Who We Target</span>
+        </div>
+        <h2 class="reveal">Three segments.<br>One pipeline.</h2>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 800px);">
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-mint);">&#127970;</div>
+                <h3>Businesses</h3>
+                <p>Trades, restaurants, fitness, real estate, auto shops — branded work wear and uniforms</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-yellow);">&#127979;</div>
+                <h3>Schools</h3>
+                <p>Elementary, high schools, private schools, daycares — spirit wear, staff shirts, grad gear</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-pink);">&#9917;</div>
+                <h3>Teams</h3>
+                <p>Youth leagues, adult rec, dance studios, community sport — jerseys, warmups, fan gear</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">07 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 8: GEOGRAPHIC STRATEGY
+     =========================================== -->
+<section class="slide" aria-label="Geography">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">Geography</span>
+            </div>
+            <h2 class="reveal">Start local.<br>Scale wide.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                We begin in the Fraser Valley core and expand outward in phases — building momentum and refining the approach as we go.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="timeline" style="position: relative; z-index: 1;">
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Phase 1</div>
+                    <div class="timeline-text">Surrey, Langley, Abbotsford, Chilliwack, Mission, Maple Ridge</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Phase 2</div>
+                    <div class="timeline-text">Burnaby, New West, Coquitlam, Port Coquitlam, Pitt Meadows</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Phase 3</div>
+                    <div class="timeline-text">Richmond, Delta, North Van, Vancouver proper</div>
+                </div>
+                <div class="timeline-item reveal-left">
+                    <div class="timeline-period">Future</div>
+                    <div class="timeline-text">Rest of BC, then nationwide</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">08 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 9: SEASONAL CALENDAR
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Seasonal Calendar">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Seasonal Playbook</span>
+        </div>
+        <h2 class="reveal">Right message,<br>right season.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            Outreach themes shift throughout the year to match when each segment is buying.
+        </p>
+        <table class="data-table reveal" style="margin-top: clamp(1rem, 2.5vw, 2rem); max-width: min(90vw, 600px);">
+            <thead>
+                <tr><th>Period</th><th>Focus</th><th>Theme</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><strong>Mar–May</strong></td><td>Teams, Trades</td><td>Get ready for the season</td></tr>
+                <tr><td><strong>Jun–Jul</strong></td><td>Schools, Businesses</td><td>Lock in your fall order early</td></tr>
+                <tr><td><strong>Aug–Sep</strong></td><td>Schools, Teams</td><td>Back to school, back to the field</td></tr>
+                <tr><td><strong>Oct–Nov</strong></td><td>Businesses</td><td>Year-end gear &amp; appreciation</td></tr>
+                <tr><td><strong>Dec–Feb</strong></td><td>Schools, Businesses</td><td>New year, fresh look</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="slide-number">09 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 10: PERSONALIZATION DETAIL
+     =========================================== -->
+<section class="slide" aria-label="Personalization">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Smart Messaging</span>
+            </div>
+            <h2 class="reveal">Every message feels handwritten.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Four layers of personalization make each outreach feel genuine — not like mass marketing.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 320px; position: relative; z-index: 1;">
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <h3>Segment Template</h3>
+                    <p>Value prop tuned for their industry</p>
+                </div>
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <h3>Business Context</h3>
+                    <p>References their name, events, news</p>
+                </div>
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <h3>Industry Relevance</h3>
+                    <p>Why apparel matters for them now</p>
+                </div>
+                <div class="feature-card reveal-left">
+                    <h3>Community Connection</h3>
+                    <p>Wear It Forward &amp; local values</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">10 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 11: THE 3-TOUCH SEQUENCE
+     =========================================== -->
+<section class="slide full-warm" aria-label="3-Touch Sequence">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">Outreach Sequence</span>
+        </div>
+        <h2 class="reveal">Three touches.<br>Nine days.</h2>
+        <div class="card-grid reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); max-width: min(90vw, 700px);">
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-mint); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);">1</div>
+                <h3>Day 0 — Intro</h3>
+                <p>Personalized email + LinkedIn request with a soft CTA</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-yellow); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);">2</div>
+                <h3>Day 4 — Value</h3>
+                <p>Follow-up with a relevant example from a similar client</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-pink); margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);">3</div>
+                <h3>Day 9 — Final</h3>
+                <p>Lighter tone, leave the door open. No response = 90-day cool-off</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">11 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 12: WHO DOES WHAT
+     =========================================== -->
+<section class="slide" aria-label="Responsibilities">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">SixOhQuad</span>
+            </div>
+            <h2 class="reveal">We build &amp;<br>maintain it.</h2>
+            <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+                <li>Build the agents &amp; pipeline end-to-end</li>
+                <li>Monitor performance &amp; fix issues</li>
+                <li>Adjust targeting, templates &amp; scoring</li>
+                <li>Monthly review of pipeline metrics</li>
+                <li>Seasonal strategy shifts</li>
+            </ul>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 320px; position: relative; z-index: 1;">
+                <div class="badges reveal-left">
+                    <span class="badge peach">ShopJaydees</span>
+                </div>
+                <h3 class="reveal-left" style="margin-bottom: var(--content-gap);">You run the last mile.</h3>
+                <ul class="check-list reveal-left">
+                    <li>Review &amp; approve drafts in ClickUp daily</li>
+                    <li>Send LinkedIn messages using pre-written copy</li>
+                    <li>Follow up with warm leads who reply</li>
+                    <li>Close deals &amp; build relationships</li>
+                </ul>
+                <div class="metric-card reveal-left" style="margin-top: var(--content-gap); text-align: center;">
+                    <div class="metric-value">15-20 min</div>
+                    <div class="metric-label">Your daily time commitment</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">12 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 13: DAILY CLICKUP ROUTINE
+     =========================================== -->
+<section class="slide full-warm" aria-label="Daily ClickUp Routine">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Your Daily Routine</span>
+        </div>
+        <h2 class="reveal">15 minutes in ClickUp.<br>That's it.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            Each morning, a batch of 10-20 drafted messages is waiting for you. Here's what you do:
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem); max-width: min(90vw, 750px);">
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-mint); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem); font-weight: 700;">1</div>
+                <h3>Open "Ready for Review"</h3>
+                <p>Your approval queue — each card has the prospect info and draft messages</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-yellow); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem); font-weight: 700;">2</div>
+                <h3>Approve, edit, or skip</h3>
+                <p>Approve as-is, tweak wording, reject, or flag "I know this person"</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-pink); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem); font-weight: 700;">3</div>
+                <h3>Send LinkedIn messages</h3>
+                <p>Copy the pre-written note, paste into LinkedIn — 30 seconds each</p>
+            </div>
+            <div class="feature-card" style="text-align: center;">
+                <div class="card-icon" style="background: var(--badge-blue); margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem); font-weight: 700;">4</div>
+                <h3>Reply to warm leads</h3>
+                <p>Check "Responded" status — these are real conversations to continue</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">13 / 17</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 14: WHAT IT COSTS
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Cost">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge peach">Investment</span>
+        </div>
+        <h2 class="reveal">Lean by design.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 40ch;">
+            The entire pipeline runs on affordable, pay-as-you-go tools. No big upfront costs.
+        </p>
+        <div class="card-grid reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem); max-width: min(90vw, 650px);">
+            <div class="feature-card">
+                <div class="metric-value" style="color: var(--accent-warm);">$3,000</div>
+                <div class="metric-label" style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">One-time setup (CAD + tax)</div>
+                <p style="margin-top: var(--element-gap);">Pipeline build, agent development, ClickUp integration, targeting &amp; template config</p>
+            </div>
+            <div class="feature-card">
+                <div class="metric-value" style="color: var(--accent-warm);">$300<span style="font-size: 0.4em; font-weight: 500;">/mo</span></div>
+                <div class="metric-label" style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Ongoing management (CAD + tax)</div>
+                <p style="margin-top: var(--element-gap);">Monitoring, optimization, monthly reviews, seasonal adjustments, support</p>
+            </div>
+        </div>
+        <p class="body-text reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch; color: var(--text-light);">
+            Plus third-party tool subscriptions — see next slide
+        </p>
+    </div>
+    <div class="slide-number">14 / 18</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 15: THIRD-PARTY TOOL COSTS
+     =========================================== -->
+<section class="slide full-warm" aria-label="Third-Party Costs">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Third-Party Services</span>
+        </div>
+        <h2 class="reveal">Tools you'll<br>sign up for.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            These are separate subscriptions you'll hold directly. We'll help you get set up.
+        </p>
+        <table class="data-table reveal" style="margin-top: clamp(1rem, 2.5vw, 2rem); max-width: min(90vw, 550px);">
+            <thead>
+                <tr><th>Service</th><th>What It Does</th><th style="text-align: right;">Monthly</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Instantly or Smartlead</td><td>Cold email sending &amp; warmup</td><td style="text-align: right;">$30–50</td></tr>
+                <tr><td>Hunter.io</td><td>Finding decision-maker emails</td><td style="text-align: right;">$0–49</td></tr>
+                <tr><td>Firecrawl</td><td>Web &amp; Google Maps scraping</td><td style="text-align: right;">$0–20</td></tr>
+                <tr><td>Gemini Flash API</td><td>AI for personalization &amp; parsing</td><td style="text-align: right;">$2–5</td></tr>
+                <tr><td>Google Cloud</td><td>Hosting &amp; scheduling agents</td><td style="text-align: right;">$0–5</td></tr>
+                <tr><td style="font-weight: 600;">Total</td><td></td><td style="text-align: right; font-weight: 700; color: var(--accent-warm);">$32–129/mo</td></tr>
+            </tbody>
+        </table>
+        <p class="small-text reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 40ch; color: var(--text-light);">
+            Most tools have free tiers to start — costs scale with volume
+        </p>
+    </div>
+    <div class="slide-number">15 / 18</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 16: SUCCESS METRICS
+     =========================================== -->
+<section class="slide full-peach" aria-label="Success Metrics">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">90-Day Goals</span>
+        </div>
+        <h2 class="reveal">What success<br>looks like.</h2>
+        <div class="metric-row reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem);">
+            <div class="metric-card">
+                <div class="metric-value">5-15</div>
+                <div class="metric-label">Conversations / month</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">2-3</div>
+                <div class="metric-label">Closed deals</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">80%+</div>
+                <div class="metric-label">Approval rate</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">15 min</div>
+                <div class="metric-label">Your daily time</div>
+            </div>
+        </div>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 44ch;">
+            At 6 months: optimized targeting, seasonal playbooks established, and predictable monthly revenue from the pipeline.
+        </p>
+    </div>
+    <div class="slide-number">16 / 18</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 17: MONTHLY CHECK-IN
+     =========================================== -->
+<section class="slide" aria-label="Monthly Review">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">Ongoing</span>
+            </div>
+            <h2 class="reveal">We review together<br>every month.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                SixOhQuad and ShopJaydees sit down once a month to review what's working, what's not, and what to adjust.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 320px; position: relative; z-index: 1;">
+                <ul class="check-list reveal-left">
+                    <li>Pipeline numbers end-to-end</li>
+                    <li>Which segments convert best</li>
+                    <li>Which messaging angles get replies</li>
+                    <li>Adjust targeting &amp; volume</li>
+                    <li>Plan seasonal shifts ahead</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">17 / 18</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 18: CTA / CLOSING
+     =========================================== -->
+<section class="slide full-dark white" aria-label="Get Started">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff;">Next Steps</span>
+        </div>
+        <h2 class="reveal" style="color: #fff;">Ready to fill<br>your pipeline?</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch; color: rgba(255,255,255,0.65);">
+            We'll build the system, tune the targeting, and have qualified conversations flowing within 90 days.
+        </p>
+        <div class="reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); text-align: center;">
+            <p class="body-text" style="color: rgba(255,255,255,0.8);">To proceed or request more details, reach out to</p>
+            <p style="font-size: var(--h3-size); font-weight: 700; color: #fff; margin-top: var(--element-gap);">cody@sixohquad.com</p>
+        </div>
+        <p class="small-text reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); color: rgba(255,255,255,0.35);">Presented by SixOhQuad</p>
+    </div>
+    <div class="slide-number" style="color: rgba(255,255,255,0.3);">18 / 18</div>
+</section>
+
+
+<!-- ===========================================
+     JAVASCRIPT: PRESENTATION CONTROLLER
+     =========================================== -->
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.isScrolling = false;
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupProgressBar();
+        this.setupNavDots();
+    }
+
+    setupIntersectionObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const idx = Array.from(this.slides).indexOf(entry.target);
+                    if (idx !== -1) {
+                        this.currentSlide = idx;
+                        this.updateProgressBar();
+                        this.updateNavDots();
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+        this.slides.forEach(slide => observer.observe(slide));
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            switch (e.key) {
+                case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+                    e.preventDefault(); this.goTo(this.currentSlide + 1); break;
+                case 'ArrowUp': case 'ArrowLeft': case 'PageUp':
+                    e.preventDefault(); this.goTo(this.currentSlide - 1); break;
+                case 'Home': e.preventDefault(); this.goTo(0); break;
+                case 'End': e.preventDefault(); this.goTo(this.slides.length - 1); break;
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let startY = 0;
+        document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = startY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                diff > 0 ? this.goTo(this.currentSlide + 1) : this.goTo(this.currentSlide - 1);
+            }
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let lastWheel = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastWheel < 800) return;
+            lastWheel = now;
+            if (e.deltaY > 20) this.goTo(this.currentSlide + 1);
+            else if (e.deltaY < -20) this.goTo(this.currentSlide - 1);
+        }, { passive: true });
+    }
+
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        if (!this.progressBar) return;
+        const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = pct + '%';
+    }
+
+    setupNavDots() {
+        this.navDotsContainer = document.getElementById('navDots');
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.innerHTML = '';
+        this.slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+            dot.addEventListener('click', () => this.goTo(i));
+            this.navDotsContainer.appendChild(dot);
+        });
+    }
+
+    updateNavDots() {
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.querySelectorAll('.nav-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === this.currentSlide);
+        });
+    }
+
+    goTo(idx) {
+        if (idx < 0 || idx >= this.slides.length) return;
+        this.currentSlide = idx;
+        this.slides[idx].scrollIntoView({ behavior: 'smooth' });
+        this.updateProgressBar();
+        this.updateNavDots();
+    }
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.editToggle = document.getElementById('editToggle');
+        this.editBanner = document.getElementById('editBanner');
+        this.storageKey = 'shopjaydees-pitch-edits';
+        this.setupControls();
+        this.loadEdits();
+    }
+
+    setupControls() {
+        const hotzone = document.getElementById('editHotzone');
+        let hideTimeout = null;
+
+        this.editToggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+
+        hotzone.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            this.editToggle.classList.add('show');
+        });
+        hotzone.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+        this.editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+        this.editToggle.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                this.toggleEditMode();
+            }
+            if (e.ctrlKey && e.key === 's' && this.isActive) {
+                e.preventDefault();
+                this.exportFile();
+            }
+        });
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('edit-active', this.isActive);
+        this.editToggle.classList.toggle('active', this.isActive);
+        this.editBanner.classList.toggle('active', this.isActive);
+
+        const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .step-label, .step-desc, .metric-value, .metric-label, .timeline-period, .timeline-text');
+        editables.forEach(el => {
+            if (this.isActive) {
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('input', () => this.saveEdits());
+            } else {
+                el.removeAttribute('contenteditable');
+            }
+        });
+    }
+
+    saveEdits() {
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        const data = {};
+        editables.forEach((el, i) => { data[i] = el.innerHTML; });
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    loadEdits() {
+        const raw = localStorage.getItem(this.storageKey);
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .step-label, .step-desc, .metric-value, .metric-label, .timeline-period, .timeline-text');
+            editables.forEach((el, i) => { if (data[i] !== undefined) el.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+
+    exportFile() {
+        const editableEls = Array.from(document.querySelectorAll('[contenteditable]'));
+        editableEls.forEach(el => el.removeAttribute('contenteditable'));
+        document.body.classList.remove('edit-active');
+        this.editToggle.classList.remove('active', 'show');
+        this.editBanner.classList.remove('active', 'show');
+
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+        document.body.classList.add('edit-active');
+        editableEls.forEach(el => el.setAttribute('contenteditable', 'true'));
+        this.editToggle.classList.add('active');
+        this.editBanner.classList.add('active');
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'lead-gen-pitch.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+const presentation = new SlidePresentation();
+const editor = new InlineEditor();
+</script>
+
+</body>
+</html>

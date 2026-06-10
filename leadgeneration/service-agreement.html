@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Agreement — SixOhQuad Consulting Inc. &amp; Jaydees Apparel</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --ink: #1a1a2e;
+      --muted: #555;
+      --border: #d0d0d0;
+      --accent: #2d5016;
+      --bg: #ffffff;
+      --section-bg: #f8f8f6;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @page {
+      size: letter;
+      margin: 0.75in 0.85in;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 11pt;
+      line-height: 1.6;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    /* Header */
+    .doc-header {
+      text-align: center;
+      padding-bottom: 24px;
+      border-bottom: 2px solid var(--ink);
+      margin-bottom: 28px;
+    }
+
+    .doc-header h1 {
+      font-size: 20pt;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .doc-header .subtitle {
+      font-size: 10pt;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* Sections */
+    .section {
+      margin-bottom: 22px;
+    }
+
+    .section-title {
+      font-size: 11.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-number {
+      color: var(--muted);
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    p, li {
+      margin-bottom: 8px;
+    }
+
+    ol.terms {
+      list-style: none;
+      counter-reset: clause;
+      padding-left: 0;
+    }
+
+    ol.terms > li {
+      counter-increment: clause;
+      padding-left: 24px;
+      position: relative;
+    }
+
+    ol.terms > li::before {
+      content: counter(clause) ".";
+      position: absolute;
+      left: 0;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    ol.sub-terms {
+      list-style: none;
+      counter-reset: subclause;
+      padding-left: 0;
+      margin-top: 8px;
+    }
+
+    ol.sub-terms > li {
+      counter-increment: subclause;
+      padding-left: 20px;
+      position: relative;
+      font-size: 10.5pt;
+    }
+
+    ol.sub-terms > li::before {
+      content: counter(subclause, lower-alpha) ")";
+      position: absolute;
+      left: 0;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    /* Party block */
+    .parties {
+      display: flex;
+      gap: 40px;
+      margin: 16px 0;
+    }
+
+    .party {
+      flex: 1;
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+    }
+
+    .party-label {
+      font-size: 9pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .party-name {
+      font-size: 12pt;
+      font-weight: 700;
+    }
+
+    .party-detail {
+      font-size: 9.5pt;
+      color: var(--muted);
+    }
+
+    /* Payment table */
+    table.payment-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 10.5pt;
+    }
+
+    table.payment-table th {
+      text-align: left;
+      font-weight: 600;
+      padding: 8px 12px;
+      background: var(--section-bg);
+      border: 1px solid var(--border);
+      font-size: 9.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--muted);
+    }
+
+    table.payment-table td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+    }
+
+    table.payment-table tr:last-child td {
+      font-weight: 600;
+    }
+
+    .highlight {
+      font-weight: 600;
+    }
+
+    /* Signatures */
+    .signatures {
+      display: flex;
+      gap: 40px;
+      margin-top: 40px;
+      page-break-inside: avoid;
+    }
+
+    .sig-block {
+      flex: 1;
+    }
+
+    .sig-line {
+      border-top: 1px solid var(--ink);
+      margin-top: 60px;
+      padding-top: 6px;
+      font-size: 10pt;
+    }
+
+    .sig-field {
+      margin-top: 36px;
+    }
+
+    .sig-field .line {
+      border-top: 1px solid var(--ink);
+      padding-top: 6px;
+      font-size: 10pt;
+      margin-bottom: 24px;
+    }
+
+    .effective-date {
+      text-align: center;
+      font-size: 10pt;
+      color: var(--muted);
+      margin: 20px 0 4px;
+    }
+
+    .effective-date-line {
+      text-align: center;
+      font-size: 11pt;
+      font-weight: 600;
+    }
+
+    .effective-date-underline {
+      display: inline-block;
+      border-bottom: 1px solid var(--ink);
+      min-width: 200px;
+      padding-bottom: 2px;
+    }
+
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+
+  <div class="doc-header">
+    <h1>Service Agreement</h1>
+    <div class="subtitle">Lead Generation System &mdash; Design, Build &amp; Ongoing Management</div>
+  </div>
+
+  <!-- Effective Date -->
+  <div class="effective-date">Effective Date</div>
+  <div class="effective-date-line">
+    <span class="effective-date-underline">&nbsp;</span>
+  </div>
+
+  <!-- Parties -->
+  <div class="section" style="margin-top: 24px;">
+    <div class="parties">
+      <div class="party">
+        <div class="party-label">Service Provider</div>
+        <div class="party-name">SixOhQuad Consulting Inc.</div>
+        <div class="party-detail">Cody &mdash; cody@sixohquad.com</div>
+      </div>
+      <div class="party">
+        <div class="party-label">Client</div>
+        <div class="party-name">Jaydees Apparel</div>
+        <div class="party-detail">Jenn Milne</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1. Scope of Work -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">1.</span> Scope of Work</div>
+    <p>SixOhQuad Consulting Inc. (&ldquo;<strong>SixOhQuad</strong>&rdquo;) will design, build, and deploy an automated lead generation system (the &ldquo;<strong>System</strong>&rdquo;) for Jaydees Apparel (the &ldquo;<strong>Client</strong>&rdquo;). The System will perform the following functions:</p>
+    <ol class="sub-terms">
+      <li><strong>Prospect Discovery</strong> &mdash; Automated scraping of Google Maps and other sources to identify potential customers (businesses, schools, and sports teams) across configured geographies in BC&rsquo;s Lower Mainland and Fraser Valley.</li>
+      <li><strong>Lead Enrichment</strong> &mdash; Automated research of discovered prospects including website scraping, decision-maker identification, email discovery, and lead quality scoring.</li>
+      <li><strong>Personalized Outreach</strong> &mdash; AI-generated multi-touch email sequences and LinkedIn connection request copy, tailored to each prospect using segment-specific templates.</li>
+      <li><strong>Outreach Delivery &amp; Tracking</strong> &mdash; Sending approved emails through a cold email platform, tracking opens, replies, and engagement, and flagging warm leads for Client follow-up.</li>
+      <li><strong>Warm Lead Reply Handling</strong> &mdash; All cold outreach will be sent from separate domains (not the Client&rsquo;s primary business domain) to protect the Client&rsquo;s main domain reputation and deliverability. Prospect replies will be collected in the cold email platform&rsquo;s unified inbox (Unibox). When a reply is detected, the System will automatically update the lead&rsquo;s status in ClickUp to flag it for follow-up. The Client will review flagged leads during their daily ClickUp review, respond to warm prospects through the unified inbox, and transition established conversations to their primary business email as appropriate.</li>
+    </ol>
+    <p>The System will be integrated with ClickUp for lead management, approval workflows, and reporting. All pipeline stages will run on scheduled automation with the Client responsible for daily review and approval of outreach drafts and warm lead follow-up (approximately 15&ndash;20 minutes per day).</p>
+  </div>
+
+  <!-- 2. Deliverables -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">2.</span> Deliverables</div>
+    <ol class="sub-terms">
+      <li>A fully functional lead generation agent deployed on Google Cloud, performing discovery, enrichment, personalization, and outreach across all configured segments and geographies.</li>
+      <li>ClickUp workspace configuration with statuses, custom fields, and approval workflows.</li>
+      <li>Cold email platform setup with domain warmup and campaign configuration.</li>
+      <li>Targeting configuration for Phase 1 geographies (Surrey, Langley, Abbotsford, Chilliwack, Mission, Maple Ridge) across business, school, and team segments.</li>
+      <li>Segment-specific outreach templates with seasonal variation.</li>
+      <li>A walkthrough session with the Client covering daily operations, the approval workflow, and system overview.</li>
+    </ol>
+  </div>
+
+  <!-- 3. Timeline -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">3.</span> Timeline</div>
+    <p>SixOhQuad will deliver the System within <strong>four to six (4&ndash;6) weeks</strong> of receiving all required account credentials and access from the Client (see Section 7). This timeline is an estimate, not a guarantee, and may be adjusted if the scope of work changes or the Client is delayed in providing required access or feedback.</p>
+  </div>
+
+  <!-- 4. Fees & Payment -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">4.</span> Fees &amp; Payment</div>
+
+    <p><strong>4.1 &ensp; Setup Fee</strong></p>
+    <table class="payment-table">
+      <thead>
+        <tr>
+          <th>Milestone</th>
+          <th>Amount (CAD)</th>
+          <th>GST (5%)</th>
+          <th>Total (CAD)</th>
+          <th>Due</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Down payment</td>
+          <td>$1,500.00</td>
+          <td>$75.00</td>
+          <td>$1,575.00</td>
+          <td>On signing of this Agreement</td>
+        </tr>
+        <tr>
+          <td>Final payment</td>
+          <td>$1,500.00</td>
+          <td>$75.00</td>
+          <td>$1,575.00</td>
+          <td>On delivery of the System</td>
+        </tr>
+        <tr>
+          <td><strong>Total setup</strong></td>
+          <td><strong>$3,000.00</strong></td>
+          <td><strong>$150.00</strong></td>
+          <td><strong>$3,150.00</strong></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>&ldquo;<strong>Delivery</strong>&rdquo; means the System is deployed, operational, and a walkthrough session has been completed with the Client.</p>
+
+    <p style="margin-top: 14px;"><strong>4.2 &ensp; Monthly Management Fee</strong></p>
+    <p><strong>$300.00 CAD + GST ($315.00 CAD total)</strong> per month, beginning on the date of Delivery. This fee covers:</p>
+    <ol class="sub-terms">
+      <li>Ongoing monitoring and maintenance of the System.</li>
+      <li>Performance optimization and targeting adjustments.</li>
+      <li>Monthly review sessions with the Client.</li>
+      <li>Seasonal campaign adjustments and template updates.</li>
+      <li>Technical support and troubleshooting.</li>
+    </ol>
+    <p>Monthly invoices will be issued on the Delivery date anniversary each month and are due within fourteen (14) days of invoice date.</p>
+
+    <p style="margin-top: 14px;"><strong>4.3 &ensp; Late Payment</strong></p>
+    <p>Invoices unpaid after thirty (30) days may result in suspension of the monthly management services until the outstanding balance is resolved. SixOhQuad reserves the right to pause automated system operations during any period of suspended service.</p>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 5. Third-Party Tools & Subscriptions -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">5.</span> Third-Party Tools &amp; Subscriptions</div>
+    <p>The System relies on third-party services that require paid subscriptions. The Client is solely responsible for maintaining and paying for the following accounts:</p>
+    <ol class="sub-terms">
+      <li><strong>ClickUp</strong> &mdash; Lead management and approval workflows.</li>
+      <li><strong>Instantly</strong> (or equivalent) &mdash; Cold email delivery and warmup.</li>
+      <li><strong>Hunter.io</strong> &mdash; Email discovery and verification.</li>
+      <li><strong>Firecrawl</strong> &mdash; Web scraping for prospect discovery and enrichment.</li>
+      <li><strong>Google Cloud Platform</strong> &mdash; Agent hosting, scheduling, and AI processing (Gemini API).</li>
+    </ol>
+    <p>Estimated cost for these services is <strong>$32&ndash;129 USD per month</strong>, depending on usage volume and plan selections. SixOhQuad is not responsible for price changes, service disruptions, or terms-of-service modifications by third-party providers.</p>
+  </div>
+
+  <!-- 6. Term & Termination -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">6.</span> Term &amp; Termination</div>
+    <ol class="sub-terms">
+      <li><strong>Initial Term.</strong> The monthly management component has a minimum commitment of <strong>six (6) months</strong> from the date of Delivery.</li>
+      <li><strong>Renewal.</strong> After the initial six-month term, the monthly management will continue on a month-to-month basis.</li>
+      <li><strong>Cancellation.</strong> After the initial term, either party may terminate the monthly management component with <strong>thirty (30) days written notice</strong>.</li>
+      <li><strong>Effect of Termination.</strong> Upon termination of the monthly management:
+        <ul style="margin-top: 6px; padding-left: 18px; list-style: disc;">
+          <li>The Client retains full ownership of the System, all code, configurations, and data.</li>
+          <li>SixOhQuad will provide a reasonable transition period (up to 14 days) to transfer any remaining credentials or documentation.</li>
+          <li>SixOhQuad will cease ongoing monitoring, optimization, and support.</li>
+          <li>The Client assumes sole responsibility for maintaining and operating the System.</li>
+        </ul>
+      </li>
+      <li><strong>Setup Fee.</strong> The down payment of $1,500.00 + GST is non-refundable once work has commenced. If the Client terminates this Agreement before Delivery, any work completed to that point will be delivered to the Client and no further payments will be owed.</li>
+    </ol>
+  </div>
+
+  <!-- 7. Client Responsibilities -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">7.</span> Client Responsibilities</div>
+    <p>The Client agrees to:</p>
+    <ol class="sub-terms">
+      <li>Create accounts for all required third-party services (listed in Section 5) and provide SixOhQuad with necessary access credentials before the build begins.</li>
+      <li>Register and maintain separate domain(s) for cold outreach (distinct from the Client&rsquo;s primary business domain) to protect the reputation and deliverability of the Client&rsquo;s main domain. Provide SixOhQuad with access to the associated email accounts for platform configuration.</li>
+      <li>Review and approve or edit outreach drafts in ClickUp on a daily basis (approximately 15&ndash;20 minutes per day).</li>
+      <li>Personally handle warm lead follow-up conversations and LinkedIn outreach using AI-drafted copy.</li>
+      <li>Maintain active subscriptions for all required third-party tools.</li>
+      <li>Respond to SixOhQuad requests for feedback or approvals within a reasonable timeframe.</li>
+    </ol>
+  </div>
+
+  <!-- 8. Intellectual Property -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">8.</span> Intellectual Property</div>
+    <ol class="sub-terms">
+      <li><strong>Ownership.</strong> Upon full payment of the setup fee, the Client will own all custom code, configurations, templates, and other deliverables created specifically for this project (the &ldquo;<strong>Work Product</strong>&rdquo;).</li>
+      <li><strong>Pre-existing IP.</strong> SixOhQuad retains ownership of any pre-existing tools, libraries, frameworks, or methodologies used in the creation of the System. The Client is granted a perpetual, non-exclusive license to use any such pre-existing IP as incorporated into the Work Product.</li>
+      <li><strong>Portfolio Rights.</strong> SixOhQuad may reference this project in its portfolio and marketing materials, without disclosing confidential business information.</li>
+    </ol>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- 9. Confidentiality -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">9.</span> Confidentiality</div>
+    <p>Both parties agree to keep confidential any proprietary or sensitive business information shared during the course of this engagement. This includes, but is not limited to, customer lists, prospect data, pricing information, business strategies, and system credentials. This obligation survives termination of this Agreement.</p>
+  </div>
+
+  <!-- 10. Limitation of Liability -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">10.</span> Limitation of Liability</div>
+    <ol class="sub-terms">
+      <li><strong>No Guaranteed Results.</strong> The System is a lead generation tool. SixOhQuad does not guarantee any specific number of leads, response rates, conversion rates, or revenue outcomes. Results depend on many factors outside SixOhQuad&rsquo;s control, including market conditions, the Client&rsquo;s products and pricing, the Client&rsquo;s responsiveness to warm leads, and third-party platform performance.</li>
+      <li><strong>Best Efforts.</strong> SixOhQuad will use commercially reasonable efforts to build and maintain the System in accordance with the specifications discussed and documented. SixOhQuad will optimize the System based on performance data during the monthly management period.</li>
+      <li><strong>Cap on Liability.</strong> SixOhQuad&rsquo;s total liability under this Agreement, for any and all claims, shall not exceed the total fees actually paid by the Client to SixOhQuad in the twelve (12) months preceding the claim.</li>
+      <li><strong>Exclusion of Damages.</strong> In no event shall SixOhQuad be liable for indirect, incidental, consequential, special, or punitive damages, including but not limited to loss of revenue, loss of profits, or loss of business opportunities, regardless of whether such damages were foreseeable.</li>
+      <li><strong>Third-Party Services.</strong> SixOhQuad is not liable for outages, data loss, policy changes, or service modifications by any third-party platform used in the System. The Client acknowledges that cold email outreach and automated scraping are subject to the terms of service of the respective platforms.</li>
+    </ol>
+  </div>
+
+  <!-- 11. Compliance & Acceptable Use -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">11.</span> Compliance &amp; Acceptable Use</div>
+    <p>The Client acknowledges that automated outreach is subject to Canada&rsquo;s Anti-Spam Legislation (CASL) and applicable platform terms of service. SixOhQuad will configure the System with reasonable compliance measures (e.g., unsubscribe mechanisms, sending limits), but the Client is ultimately responsible for ensuring their outreach practices comply with all applicable laws and regulations.</p>
+  </div>
+
+  <!-- 12. Dispute Resolution -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">12.</span> Dispute Resolution</div>
+    <p>The parties agree to attempt to resolve any dispute arising under this Agreement through good-faith negotiation. If a resolution cannot be reached within thirty (30) days, either party may pursue remedies available under the laws of the Province of British Columbia, Canada.</p>
+  </div>
+
+  <!-- 13. General Provisions -->
+  <div class="section">
+    <div class="section-title"><span class="section-number">13.</span> General Provisions</div>
+    <ol class="sub-terms">
+      <li><strong>Entire Agreement.</strong> This Agreement constitutes the entire agreement between the parties and supersedes all prior discussions, representations, and agreements relating to the subject matter herein.</li>
+      <li><strong>Amendments.</strong> This Agreement may only be amended in writing, signed by both parties.</li>
+      <li><strong>Governing Law.</strong> This Agreement is governed by the laws of the Province of British Columbia and the federal laws of Canada applicable therein.</li>
+      <li><strong>Severability.</strong> If any provision of this Agreement is found to be unenforceable, the remaining provisions shall continue in full force and effect.</li>
+      <li><strong>Independent Contractor.</strong> SixOhQuad is an independent contractor. Nothing in this Agreement creates an employment, partnership, or agency relationship between the parties.</li>
+      <li><strong>Notices.</strong> All notices under this Agreement shall be in writing and delivered by email to the addresses listed on the first page of this Agreement.</li>
+    </ol>
+  </div>
+
+  <!-- Signatures -->
+  <div class="section" style="margin-top: 40px; page-break-inside: avoid;">
+    <div class="section-title">Signatures</div>
+    <p>By signing below, both parties agree to the terms and conditions set forth in this Agreement.</p>
+
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="party-label" style="margin-bottom: 4px;">Service Provider</div>
+        <strong>SixOhQuad Consulting Inc.</strong>
+        <div class="sig-line">Signature</div>
+        <div class="sig-field">
+          <div class="line">Name &amp; Title</div>
+          <div class="line">Date</div>
+        </div>
+      </div>
+      <div class="sig-block">
+        <div class="party-label" style="margin-bottom: 4px;">Client</div>
+        <strong>Jaydees Apparel</strong>
+        <div class="sig-line">Signature</div>
+        <div class="sig-field">
+          <div class="line">Name &amp; Title</div>
+          <div class="line">Date</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

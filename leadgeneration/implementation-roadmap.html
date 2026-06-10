@@ -1,0 +1,1434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Implementation Roadmap — ShopJaydees Lead Generation</title>
+
+<!-- Fonts: Outfit from Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (SPLIT PASTEL — ROADMAP VARIANT)
+   Same palette as the pitch deck, adjusted layout emphasis
+   =========================================== */
+:root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --title-size: clamp(2rem, 5.5vw, 4.5rem);
+    --h2-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    --h3-size: clamp(1rem, 2vw, 1.5rem);
+    --subtitle-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    --body-size: clamp(0.75rem, 1.3vw, 1rem);
+    --small-size: clamp(0.65rem, 1vw, 0.85rem);
+
+    --slide-padding: clamp(1.5rem, 4vw, 4rem);
+    --content-gap: clamp(0.8rem, 2vw, 1.5rem);
+    --element-gap: clamp(0.3rem, 1vw, 0.8rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.6s;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+}
+
+/* ===========================================
+   BASE STYLES
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES
+   =========================================== */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+}
+.card, .container, .content-box {
+    max-width: min(90vw, 1000px);
+    max-height: min(80vh, 700px);
+}
+.feature-list, .bullet-list {
+    gap: clamp(0.4rem, 1vh, 1rem);
+}
+.feature-list li, .bullet-list li {
+    font-size: var(--body-size);
+    line-height: 1.4;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+img, .image-container {
+    max-width: 100%;
+    max-height: min(50vh, 400px);
+    object-fit: contain;
+}
+
+/* Short viewports */
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+        --h2-size: clamp(1rem, 3vw, 1.75rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+}
+@media (max-width: 600px) {
+    :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); }
+    .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   SPLIT LAYOUT SYSTEM
+   =========================================== */
+body {
+    font-family: var(--font-body);
+    color: var(--text-dark);
+    background: var(--bg-peach);
+}
+
+.split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+}
+@media (max-width: 768px) {
+    .split { grid-template-columns: 1fr; }
+    .split .panel-right { display: none; }
+}
+.panel-left {
+    background: var(--bg-peach);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--slide-padding);
+    position: relative;
+}
+.panel-right {
+    background: var(--bg-lavender);
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center;
+    padding: var(--slide-padding);
+    position: relative; overflow: hidden;
+}
+.panel-right::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+}
+
+/* Full-width slide backgrounds */
+.full-peach { background: var(--bg-peach); }
+.full-lavender { background: var(--bg-lavender); }
+.full-warm { background: var(--bg-warm); }
+.full-dark {
+    background: var(--accent-dark);
+    color: #ffffff;
+}
+
+.centered-content {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: var(--slide-padding);
+    height: 100%;
+    max-height: 100%;
+}
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+h1 {
+    font-family: var(--font-display);
+    font-size: var(--title-size);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-dark);
+}
+h2 {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
+h3 {
+    font-family: var(--font-display);
+    font-size: var(--h3-size);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-dark);
+}
+.subtitle {
+    font-size: var(--subtitle-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+    max-width: 36ch;
+}
+.body-text {
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+}
+.small-text {
+    font-size: var(--small-size);
+    color: var(--text-light);
+}
+.white h1, .white h2, .white h3 { color: #ffffff; }
+.white .subtitle { color: rgba(255,255,255,0.7); }
+.white .body-text { color: rgba(255,255,255,0.6); }
+
+/* ===========================================
+   BADGE PILLS
+   =========================================== */
+.badges {
+    display: flex; flex-wrap: wrap;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-bottom: clamp(0.8rem, 2vw, 1.5rem);
+}
+.badge {
+    display: inline-block;
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.6rem, 1vw, 0.9rem);
+    border-radius: var(--radius-pill);
+    font-size: var(--small-size);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+.badge.mint { background: var(--badge-mint); }
+.badge.yellow { background: var(--badge-yellow); }
+.badge.pink { background: var(--badge-pink); }
+.badge.blue { background: var(--badge-blue); }
+.badge.peach { background: var(--badge-peach); }
+
+/* ===========================================
+   PHASE BUILD STEPS (TITLE SLIDE RIGHT PANEL)
+   =========================================== */
+.build-phases {
+    display: flex; flex-direction: column;
+    gap: clamp(0.6rem, 1.5vw, 1rem);
+    width: 100%; max-width: 340px;
+    position: relative; z-index: 1;
+}
+.build-phase {
+    display: flex; align-items: center;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius);
+    padding: clamp(0.5rem, 1.2vw, 0.9rem) clamp(0.7rem, 1.4vw, 1.1rem);
+    backdrop-filter: blur(8px);
+}
+.build-phase-num {
+    width: clamp(28px, 3vw, 38px); height: clamp(28px, 3vw, 38px);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: var(--small-size);
+    color: var(--text-dark); flex-shrink: 0;
+}
+.build-phase-label { font-weight: 600; font-size: var(--body-size); }
+.build-phase-week { font-size: var(--small-size); color: var(--text-light); margin-top: 1px; }
+
+/* ===========================================
+   PHASE PROGRESS DOTS
+   Small indicator showing which build phase you're viewing
+   =========================================== */
+.phase-progress {
+    display: flex;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-bottom: clamp(0.5rem, 1vw, 0.8rem);
+}
+.phase-dot {
+    width: clamp(8px, 0.8vw, 12px);
+    height: clamp(8px, 0.8vw, 12px);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.1);
+}
+.phase-dot.active {
+    background: var(--accent-warm);
+}
+.phase-dot.done {
+    background: var(--badge-mint);
+}
+
+/* ===========================================
+   PHASE WATERMARK
+   Large semi-transparent number behind phase content
+   =========================================== */
+.phase-watermark {
+    position: absolute;
+    right: var(--slide-padding);
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--font-display);
+    font-size: clamp(8rem, 22vw, 18rem);
+    font-weight: 800;
+    opacity: 0.04;
+    line-height: 1;
+    color: var(--text-dark);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===========================================
+   DELIVERABLE CALLOUT
+   Highlighted card showing what the client receives
+   =========================================== */
+.deliverable {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius-sm);
+    padding: clamp(0.5rem, 1vw, 0.8rem) clamp(0.7rem, 1.2vw, 1rem);
+    backdrop-filter: blur(8px);
+    border-left: 3px solid var(--accent-warm);
+    max-width: min(90vw, 500px);
+}
+.deliverable-label {
+    font-size: var(--small-size);
+    font-weight: 600;
+    color: var(--accent-warm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.deliverable-text {
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.4;
+}
+
+/* ===========================================
+   FLOW DIAGRAM
+   Three-column system overview (accounts → agents → results)
+   =========================================== */
+.flow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.4rem, 1vw, 0.8rem);
+    width: 100%;
+    max-width: min(90vw, 800px);
+    flex-wrap: wrap;
+}
+.flow-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.5vw, 1.2rem);
+    text-align: center;
+    backdrop-filter: blur(8px);
+    flex: 1;
+    min-width: clamp(120px, 18vw, 200px);
+    max-width: 240px;
+}
+.flow-card .flow-icon {
+    width: clamp(32px, 4vw, 44px); height: clamp(32px, 4vw, 44px);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    line-height: 1;
+    margin: 0 auto clamp(0.3rem, 0.8vw, 0.5rem);
+}
+.flow-card h3 {
+    font-size: clamp(0.8rem, 1.3vw, 1rem);
+    margin-bottom: clamp(0.15rem, 0.4vw, 0.25rem);
+}
+.flow-card p {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    line-height: 1.3;
+}
+.flow-arrow {
+    font-size: clamp(1rem, 2vw, 1.6rem);
+    color: var(--accent-warm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+@media (max-width: 600px) {
+    .flow-diagram { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+}
+
+/* ===========================================
+   STATUS FLOW
+   ClickUp pipeline status visualization
+   =========================================== */
+.status-flow {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(0.2rem, 0.5vw, 0.4rem);
+    width: 100%;
+    max-width: min(90vw, 600px);
+}
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255,255,255,0.6);
+    border-radius: var(--radius-pill);
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.5rem, 0.9vw, 0.7rem);
+    font-size: clamp(0.55rem, 0.9vw, 0.75rem);
+    font-weight: 500;
+    backdrop-filter: blur(8px);
+    white-space: nowrap;
+}
+.status-pill.highlight {
+    background: rgba(212, 133, 106, 0.15);
+    border: 1.5px solid rgba(212, 133, 106, 0.35);
+    font-weight: 600;
+}
+.status-arrow {
+    font-size: clamp(0.6rem, 0.9vw, 0.8rem);
+    color: var(--accent-warm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* ===========================================
+   FEATURE CARDS
+   =========================================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(180px, 20vw, 260px)), 1fr));
+    gap: clamp(0.6rem, 1.5vw, 1rem);
+    width: 100%;
+    max-width: min(90vw, 900px);
+}
+.feature-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    backdrop-filter: blur(8px);
+    text-align: center;
+}
+.feature-card .card-icon {
+    width: clamp(32px, 4vw, 44px); height: clamp(32px, 4vw, 44px);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    line-height: 1;
+    margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);
+}
+.feature-card h3 {
+    font-size: clamp(0.8rem, 1.3vw, 1rem);
+    margin-bottom: clamp(0.2rem, 0.5vw, 0.3rem);
+}
+.feature-card p {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* ===========================================
+   METRIC CARDS
+   =========================================== */
+.metric-row {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: clamp(0.6rem, 1.5vw, 1.2rem);
+    width: 100%; max-width: min(90vw, 800px);
+}
+.metric-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem) clamp(1rem, 2vw, 1.8rem);
+    text-align: center;
+    backdrop-filter: blur(8px);
+    flex: 1; min-width: clamp(100px, 15vw, 160px);
+}
+.metric-value {
+    font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+}
+.metric-label {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    margin-top: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+
+/* ===========================================
+   BULLET LIST (arrow style)
+   =========================================== */
+.check-list {
+    list-style: none;
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vh, 0.8rem);
+}
+.check-list li {
+    display: flex; align-items: flex-start;
+    gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.5;
+}
+.check-list li::before {
+    content: '\2192';
+    color: var(--accent-warm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+/* ===========================================
+   SETUP CHECKLIST
+   Checkbox-style items for account setup
+   =========================================== */
+.setup-checklist {
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vw, 0.7rem);
+    width: 100%;
+    max-width: min(90vw, 520px);
+    text-align: left;
+}
+.setup-item {
+    display: flex; align-items: flex-start;
+    gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.4;
+}
+.setup-box {
+    width: clamp(14px, 1.5vw, 20px);
+    height: clamp(14px, 1.5vw, 20px);
+    border: 2px solid var(--accent-warm);
+    border-radius: 3px;
+    flex-shrink: 0;
+    margin-top: clamp(2px, 0.3vw, 4px);
+}
+.setup-item strong {
+    color: var(--text-dark);
+}
+
+/* ===========================================
+   HORIZONTAL TIMELINE
+   Visual build progress from left to right
+   =========================================== */
+.h-timeline {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    max-width: min(90vw, 750px);
+}
+.h-timeline-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: clamp(55px, 10vw, 100px);
+    z-index: 1;
+}
+.h-timeline-dot {
+    width: clamp(12px, 1.5vw, 18px);
+    height: clamp(12px, 1.5vw, 18px);
+    border-radius: 50%;
+    background: var(--accent-warm);
+    flex-shrink: 0;
+}
+.h-timeline-dot.start {
+    background: var(--badge-mint);
+    box-shadow: 0 0 0 clamp(3px, 0.4vw, 5px) rgba(200, 240, 216, 0.35);
+}
+.h-timeline-dot.end {
+    background: var(--accent-warm);
+    box-shadow: 0 0 0 clamp(3px, 0.4vw, 5px) rgba(212, 133, 106, 0.3);
+}
+.h-timeline-label {
+    font-size: var(--small-size);
+    font-weight: 600;
+    margin-top: clamp(0.3rem, 0.6vw, 0.5rem);
+    color: var(--text-dark);
+}
+.h-timeline-sub {
+    font-size: clamp(0.5rem, 0.8vw, 0.7rem);
+    color: var(--text-light);
+    margin-top: 1px;
+}
+.h-timeline-line {
+    flex: 1;
+    height: 2px;
+    background: rgba(0,0,0,0.1);
+    margin-top: clamp(5px, 0.7vw, 8px);
+}
+@media (max-width: 500px) {
+    .h-timeline { flex-direction: column; align-items: flex-start; gap: clamp(0.3rem, 0.8vw, 0.5rem); }
+    .h-timeline-node { flex-direction: row; gap: clamp(0.3rem, 0.6vw, 0.5rem); text-align: left; }
+    .h-timeline-line { width: 2px; height: clamp(12px, 2vw, 20px); margin-top: 0; margin-left: clamp(5px, 0.7vw, 8px); }
+}
+
+/* ===========================================
+   WEEK BADGE (used on phase slides)
+   =========================================== */
+.week-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: clamp(0.2rem, 0.4vw, 0.3rem);
+    background: rgba(255,255,255,0.6);
+    border-radius: var(--radius-pill);
+    padding: clamp(0.2rem, 0.4vw, 0.35rem) clamp(0.5rem, 0.9vw, 0.7rem);
+    font-size: var(--small-size);
+    font-weight: 600;
+    color: var(--accent-warm);
+    backdrop-filter: blur(8px);
+    margin-bottom: clamp(0.3rem, 0.6vw, 0.5rem);
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(clamp(15px, 3vw, 30px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+.reveal:nth-child(5) { transition-delay: 0.5s; }
+.reveal:nth-child(6) { transition-delay: 0.6s; }
+
+.reveal-left {
+    opacity: 0;
+    transform: translateX(clamp(20px, 4vw, 40px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal-left {
+    opacity: 1; transform: translateX(0);
+}
+.reveal-left:nth-child(1) { transition-delay: 0.15s; }
+.reveal-left:nth-child(2) { transition-delay: 0.3s; }
+.reveal-left:nth-child(3) { transition-delay: 0.45s; }
+.reveal-left:nth-child(4) { transition-delay: 0.6s; }
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: var(--accent-warm);
+    z-index: 9999; width: 0;
+    transition: width 0.3s ease;
+}
+
+/* ===========================================
+   NAVIGATION DOTS
+   =========================================== */
+.nav-dots {
+    position: fixed;
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 0.8vh, 10px);
+    z-index: 9998;
+}
+.nav-dot {
+    width: clamp(8px, 1vw, 10px);
+    height: clamp(8px, 1vw, 10px);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    border: none; padding: 0;
+}
+.nav-dot.active {
+    background: var(--accent-warm);
+    transform: scale(1.3);
+}
+.nav-dot:hover { background: var(--accent-warm); }
+
+/* ===========================================
+   SLIDE NUMBER
+   =========================================== */
+.slide-number {
+    position: absolute;
+    bottom: clamp(0.8rem, 2vw, 1.5rem);
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    font-size: var(--small-size);
+    color: var(--text-light);
+    font-weight: 500;
+    opacity: 0.5;
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone {
+    position: fixed; top: 0; left: 0;
+    width: 80px; height: 80px;
+    z-index: 10000; cursor: pointer;
+}
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    width: 40px; height: 40px;
+    border-radius: 50%; border: none;
+    background: var(--text-dark); color: #fff;
+    font-size: 16px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.edit-toggle.show, .edit-toggle.active {
+    opacity: 1; pointer-events: auto;
+}
+.edit-toggle.active { background: var(--accent-warm); }
+.edit-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--accent-warm); color: #fff;
+    text-align: center;
+    font-size: var(--small-size); font-weight: 500;
+    padding: clamp(0.3rem, 0.5vw, 0.4rem);
+    z-index: 9999;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+.edit-banner.active { transform: translateY(0); }
+body.edit-active [contenteditable="true"] {
+    outline: 2px dashed rgba(212,133,106,0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
+    cursor: text;
+}
+body.edit-active [contenteditable="true"]:focus {
+    outline-color: var(--accent-warm);
+}
+</style>
+</head>
+
+<body>
+
+<!-- === PROGRESS BAR === -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- === NAVIGATION DOTS === -->
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<!-- === INLINE EDITING CONTROLS === -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)" aria-label="Toggle edit mode">&#9998;</button>
+<div class="edit-banner" id="editBanner">Edit Mode &mdash; Click any text to edit &middot; Ctrl+S to save</div>
+
+
+<!-- ===========================================
+     SLIDE 1: TITLE
+     =========================================== -->
+<section class="slide" aria-label="Title">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge peach">Implementation Roadmap</span>
+            </div>
+            <h1 class="reveal">Building Your<br>Pipeline</h1>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">A week-by-week guide to launching your automated lead generation system.</p>
+        </div>
+        <div class="panel-right">
+            <div class="build-phases">
+                <div class="build-phase reveal-left">
+                    <div class="build-phase-num" style="background: var(--badge-mint);">1</div>
+                    <div><div class="build-phase-label">Foundation</div><div class="build-phase-week">Week 1</div></div>
+                </div>
+                <div class="build-phase reveal-left">
+                    <div class="build-phase-num" style="background: var(--badge-yellow);">2</div>
+                    <div><div class="build-phase-label">Intelligence</div><div class="build-phase-week">Week 1&ndash;2</div></div>
+                </div>
+                <div class="build-phase reveal-left">
+                    <div class="build-phase-num" style="background: var(--badge-pink);">3</div>
+                    <div><div class="build-phase-label">Outreach Engine</div><div class="build-phase-week">Week 2&ndash;3</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">01 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 2: WHERE WE ARE
+     =========================================== -->
+<section class="slide full-warm" aria-label="Current Status">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">Current Status</span>
+        </div>
+        <h2 class="reveal">Here's where<br>things stand.</h2>
+        <div class="card-grid reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem); max-width: min(90vw, 700px);">
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-mint);">&#10003;</div>
+                <h3>Design Complete</h3>
+                <p>Pipeline architecture, targeting strategy, and personalization framework &mdash; all mapped out</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-mint);">&#10003;</div>
+                <h3>Pricing Agreed</h3>
+                <p>$3,000 setup + $300/mo ongoing. Third-party tools $32&ndash;129/mo paid by you</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon" style="background: var(--badge-yellow);">&#10140;</div>
+                <h3>Account Setup</h3>
+                <p>Next step: register your accounts so we can start building</p>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">02 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 3: THE BIG PICTURE
+     =========================================== -->
+<section class="slide full-lavender" aria-label="System Overview">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">How It Works</span>
+        </div>
+        <h2 class="reveal">Your accounts.<br>Our agents.<br>Your pipeline.</h2>
+        <div class="flow-diagram reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem);">
+            <div class="flow-card">
+                <div class="flow-icon" style="background: var(--badge-peach);">&#128273;</div>
+                <h3>Your Accounts</h3>
+                <p>ClickUp, Instantly,<br>Hunter.io, Firecrawl</p>
+            </div>
+            <div class="flow-arrow">&#10132;</div>
+            <div class="flow-card">
+                <div class="flow-icon" style="background: var(--badge-mint);">&#9881;</div>
+                <h3>Our AI Agents</h3>
+                <p>Discover, Enrich,<br>Personalize, Send</p>
+            </div>
+            <div class="flow-arrow">&#10132;</div>
+            <div class="flow-card">
+                <div class="flow-icon" style="background: var(--badge-yellow);">&#128200;</div>
+                <h3>Your Results</h3>
+                <p>Leads, Conversations,<br>Deals</p>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: var(--content-gap); max-width: 44ch;">You own the accounts. We build and maintain the agents. The pipeline runs in your ClickUp.</p>
+    </div>
+    <div class="slide-number">03 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 4: PHASE 1 — FOUNDATION
+     =========================================== -->
+<section class="slide full-peach" aria-label="Phase 1: Foundation">
+    <div class="centered-content" style="align-items: flex-start; text-align: left; max-width: min(90vw, 650px); margin: 0 auto;">
+        <div class="phase-watermark">01</div>
+        <div class="phase-progress reveal">
+            <div class="phase-dot active"></div>
+            <div class="phase-dot"></div>
+            <div class="phase-dot"></div>
+        </div>
+        <div class="week-badge reveal">Week 1</div>
+        <h2 class="reveal">Foundation</h2>
+        <p class="subtitle reveal" style="margin-top: var(--element-gap);">Setting up the backbone of your pipeline.</p>
+        <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+            <li>Your ClickUp workspace configured with the full lead pipeline</li>
+            <li>Discovery engine connected to scrape Google Maps in your target area</li>
+            <li>First batch of raw prospects from Surrey, Langley, and Abbotsford</li>
+        </ul>
+        <div class="deliverable reveal" style="margin-top: var(--content-gap);">
+            <span class="deliverable-label">You'll see:</span>
+            <span class="deliverable-text">Real prospects from your geography appearing in ClickUp.</span>
+        </div>
+    </div>
+    <div class="slide-number">04 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 5: PHASE 2 — INTELLIGENCE
+     =========================================== -->
+<section class="slide full-warm" aria-label="Phase 2: Intelligence">
+    <div class="centered-content" style="align-items: flex-start; text-align: left; max-width: min(90vw, 650px); margin: 0 auto;">
+        <div class="phase-watermark">02</div>
+        <div class="phase-progress reveal">
+            <div class="phase-dot done"></div>
+            <div class="phase-dot active"></div>
+            <div class="phase-dot"></div>
+        </div>
+        <div class="week-badge reveal">Week 1&ndash;2</div>
+        <h2 class="reveal">Intelligence</h2>
+        <p class="subtitle reveal" style="margin-top: var(--element-gap);">Turning names into qualified leads.</p>
+        <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+            <li>Enrichment engine researches each prospect's website and social presence</li>
+            <li>Decision-maker names and emails found automatically via Hunter.io</li>
+            <li>Every lead scored 1&ndash;5 on fit &mdash; only 3+ move forward</li>
+        </ul>
+        <div class="deliverable reveal" style="margin-top: var(--content-gap);">
+            <span class="deliverable-label">You'll see:</span>
+            <span class="deliverable-text">Scored, enriched leads with contact details in ClickUp.</span>
+        </div>
+    </div>
+    <div class="slide-number">05 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 6: PHASE 3 — OUTREACH ENGINE
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Phase 3: Outreach Engine">
+    <div class="centered-content" style="align-items: flex-start; text-align: left; max-width: min(90vw, 650px); margin: 0 auto;">
+        <div class="phase-watermark">03</div>
+        <div class="phase-progress reveal">
+            <div class="phase-dot done"></div>
+            <div class="phase-dot done"></div>
+            <div class="phase-dot active"></div>
+        </div>
+        <div class="week-badge reveal">Week 2&ndash;3</div>
+        <h2 class="reveal">Outreach Engine</h2>
+        <p class="subtitle reveal" style="margin-top: var(--element-gap);">Personalized messages, ready for your approval.</p>
+        <ul class="check-list reveal" style="margin-top: var(--content-gap);">
+            <li>AI drafts a 3-email sequence tailored to each prospect</li>
+            <li>LinkedIn connection request notes generated automatically</li>
+            <li>Cold email tool connected for delivery and domain warmup</li>
+        </ul>
+        <div class="deliverable reveal" style="margin-top: var(--content-gap);">
+            <span class="deliverable-label">You'll see:</span>
+            <span class="deliverable-text">Your approval queue is live &mdash; draft messages waiting each morning.</span>
+        </div>
+    </div>
+    <div class="slide-number">06 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 7: WHAT YOU'LL SEE IN CLICKUP
+     =========================================== -->
+<section class="slide" aria-label="Your ClickUp Dashboard">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge yellow">Your Dashboard</span>
+            </div>
+            <h2 class="reveal">Your daily view<br>in ClickUp.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Each morning, a batch of drafted messages sits in "Ready for Review." You approve, tweak, or skip &mdash; then the system handles the rest.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 320px; position: relative; z-index: 1;">
+                <p class="body-text reveal-left" style="margin-bottom: var(--content-gap); font-weight: 500; color: var(--text-dark);">Leads flow through these statuses:</p>
+                <div style="display: flex; flex-direction: column; gap: clamp(0.3rem, 0.7vw, 0.5rem);">
+                    <div class="status-flow reveal-left" style="flex-direction: column; align-items: stretch; gap: clamp(0.25rem, 0.5vw, 0.4rem);">
+                        <div class="status-pill" style="justify-content: center;">New</div>
+                        <div class="status-arrow" style="text-align: center;">&#8595;</div>
+                        <div class="status-pill" style="justify-content: center;">Enriched &amp; Scored</div>
+                        <div class="status-arrow" style="text-align: center;">&#8595;</div>
+                        <div class="status-pill highlight" style="justify-content: center;">Ready for Review</div>
+                        <div class="status-arrow" style="text-align: center;">&#8595;</div>
+                        <div class="status-pill" style="justify-content: center;">Outreach Active</div>
+                        <div class="status-arrow" style="text-align: center;">&#8595;</div>
+                        <div class="status-pill" style="justify-content: center; background: var(--badge-mint);">Responded</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">07 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 8: TESTING & TUNING
+     =========================================== -->
+<section class="slide" aria-label="Testing and Tuning">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Quality First</span>
+            </div>
+            <h2 class="reveal">Start small.<br>Dial it in.<br>Then scale.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                We don't blast 100 emails on day one. We start with a small test batch, review the results together, and fine-tune before scaling.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div style="width: 100%; max-width: 300px; position: relative; z-index: 1;">
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <div class="card-icon" style="background: var(--badge-mint); font-weight: 700;">1</div>
+                    <h3>Test Batch</h3>
+                    <p>5&ndash;10 sends to validate messaging and deliverability</p>
+                </div>
+                <div class="feature-card reveal-left" style="margin-bottom: var(--element-gap);">
+                    <div class="card-icon" style="background: var(--badge-yellow); font-weight: 700;">2</div>
+                    <h3>Review Together</h3>
+                    <p>Check open rates, reply rates, and messaging quality</p>
+                </div>
+                <div class="feature-card reveal-left">
+                    <div class="card-icon" style="background: var(--badge-pink); font-weight: 700;">3</div>
+                    <h3>Scale Up</h3>
+                    <p>Increase volume once targeting and templates are dialed in</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">08 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 9: GOING LIVE
+     =========================================== -->
+<section class="slide full-peach" aria-label="Going Live">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">End of Week 3</span>
+        </div>
+        <h2 class="reveal">What "done"<br>looks like.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            By the end of week 3, this is your daily reality.
+        </p>
+        <div class="metric-row reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem);">
+            <div class="metric-card">
+                <div class="metric-value">50-150</div>
+                <div class="metric-label">New prospects / week</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">20-80</div>
+                <div class="metric-label">Outreach sends / week</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">5-15</div>
+                <div class="metric-label">Conversations / month</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">15 min</div>
+                <div class="metric-label">Your daily time</div>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            Plus monthly reviews with SixOhQuad to optimize targeting, templates, and volume.
+        </p>
+    </div>
+    <div class="slide-number">09 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 10: ACCOUNT SETUP CHECKLIST
+     =========================================== -->
+<section class="slide full-warm" aria-label="Account Setup Checklist">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge yellow">Your To-Do List</span>
+        </div>
+        <h2 class="reveal">Set up your accounts<br>to unlock the build.</h2>
+        <div class="setup-checklist reveal" style="margin-top: clamp(1rem, 2.5vw, 2rem);">
+            <div class="setup-item">
+                <div class="setup-box"></div>
+                <div><strong>ClickUp</strong> &mdash; Sign up &amp; invite cody@sixohquad.com</div>
+            </div>
+            <div class="setup-item">
+                <div class="setup-box"></div>
+                <div><strong>Instantly</strong> &mdash; Create account &amp; invite cody@sixohquad.com</div>
+            </div>
+            <div class="setup-item">
+                <div class="setup-box"></div>
+                <div><strong>Hunter.io</strong> &mdash; Create account &amp; invite cody@sixohquad.com</div>
+            </div>
+            <div class="setup-item">
+                <div class="setup-box"></div>
+                <div><strong>Firecrawl</strong> &mdash; Create account &amp; share API key</div>
+            </div>
+            <div class="setup-item">
+                <div class="setup-box"></div>
+                <div><strong>Google Cloud</strong> &mdash; Create project &amp; invite cody@sixohquad.com</div>
+            </div>
+            <div class="setup-item">
+                <div class="setup-box"></div>
+                <div><strong>Email Address</strong> &mdash; Set up a dedicated cold outreach address (e.g. jay@shopjaydees.com)</div>
+            </div>
+        </div>
+        <p class="small-text reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            See your Account Setup Guide for step-by-step instructions.
+        </p>
+    </div>
+    <div class="slide-number">10 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 11: WHAT WE NEED FROM YOU
+     =========================================== -->
+<section class="slide full-lavender" aria-label="During the Build">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge blue">During the Build</span>
+        </div>
+        <h2 class="reveal">Minimal asks.<br>Maximum output.</h2>
+        <ul class="check-list reveal" style="margin-top: clamp(1rem, 2.5vw, 2rem); max-width: min(90vw, 450px); text-align: left;">
+            <li><strong>Week 1:</strong> Nothing &mdash; we're building infrastructure</li>
+            <li><strong>Week 2:</strong> Review a few test messages (~10 min, async is fine)</li>
+            <li><strong>Week 2&ndash;3:</strong> Quick check-in on messaging tone and targeting</li>
+            <li><strong>Week 3:</strong> Start using your daily approval queue (15&ndash;20 min/day)</li>
+        </ul>
+        <p class="small-text reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            We handle the technical work. You focus on your business.
+        </p>
+    </div>
+    <div class="slide-number">11 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 12: TIMELINE AT A GLANCE
+     =========================================== -->
+<section class="slide full-peach" aria-label="Timeline">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge peach">The Roadmap</span>
+        </div>
+        <h2 class="reveal">Three weeks to a<br>running pipeline.</h2>
+        <div class="h-timeline reveal" style="margin-top: clamp(1.5rem, 3.5vw, 3rem);">
+            <div class="h-timeline-node">
+                <div class="h-timeline-dot start"></div>
+                <div class="h-timeline-label">Accounts<br>Ready</div>
+            </div>
+            <div class="h-timeline-line"></div>
+            <div class="h-timeline-node">
+                <div class="h-timeline-dot"></div>
+                <div class="h-timeline-label">Week 1</div>
+                <div class="h-timeline-sub">Foundation</div>
+            </div>
+            <div class="h-timeline-line"></div>
+            <div class="h-timeline-node">
+                <div class="h-timeline-dot"></div>
+                <div class="h-timeline-label">Week 2</div>
+                <div class="h-timeline-sub">Intelligence</div>
+            </div>
+            <div class="h-timeline-line"></div>
+            <div class="h-timeline-node">
+                <div class="h-timeline-dot"></div>
+                <div class="h-timeline-label">Week 3</div>
+                <div class="h-timeline-sub">Outreach</div>
+            </div>
+            <div class="h-timeline-line"></div>
+            <div class="h-timeline-node">
+                <div class="h-timeline-dot end"></div>
+                <div class="h-timeline-label">Pipeline<br>Live!</div>
+            </div>
+        </div>
+        <p class="subtitle reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); text-align: center; max-width: 44ch;">
+            The clock starts when your accounts are set up. We'll keep you updated every step of the way.
+        </p>
+    </div>
+    <div class="slide-number">12 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 13: CTA / CLOSING
+     =========================================== -->
+<section class="slide full-dark white" aria-label="Get Started">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff;">Let's Build</span>
+        </div>
+        <h2 class="reveal" style="color: #fff;">Ready to<br>get started?</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch; color: rgba(255,255,255,0.65);">
+            Set up your accounts, and we'll take it from there. Your pipeline will be running within three weeks.
+        </p>
+        <div class="reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); text-align: center;">
+            <p class="body-text" style="color: rgba(255,255,255,0.8);">Questions? Reach out anytime.</p>
+            <p style="font-size: var(--h3-size); font-weight: 700; color: #fff; margin-top: var(--element-gap);">cody@sixohquad.com</p>
+        </div>
+        <p class="small-text reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); color: rgba(255,255,255,0.35);">Presented by SixOhQuad</p>
+    </div>
+    <div class="slide-number" style="color: rgba(255,255,255,0.3);">13 / 13</div>
+</section>
+
+
+<!-- ===========================================
+     JAVASCRIPT: PRESENTATION CONTROLLER
+     =========================================== -->
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.isScrolling = false;
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupProgressBar();
+        this.setupNavDots();
+    }
+
+    setupIntersectionObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const idx = Array.from(this.slides).indexOf(entry.target);
+                    if (idx !== -1) {
+                        this.currentSlide = idx;
+                        this.updateProgressBar();
+                        this.updateNavDots();
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+        this.slides.forEach(slide => observer.observe(slide));
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            switch (e.key) {
+                case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+                    e.preventDefault(); this.goTo(this.currentSlide + 1); break;
+                case 'ArrowUp': case 'ArrowLeft': case 'PageUp':
+                    e.preventDefault(); this.goTo(this.currentSlide - 1); break;
+                case 'Home': e.preventDefault(); this.goTo(0); break;
+                case 'End': e.preventDefault(); this.goTo(this.slides.length - 1); break;
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let startY = 0;
+        document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = startY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                diff > 0 ? this.goTo(this.currentSlide + 1) : this.goTo(this.currentSlide - 1);
+            }
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let lastWheel = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastWheel < 800) return;
+            lastWheel = now;
+            if (e.deltaY > 20) this.goTo(this.currentSlide + 1);
+            else if (e.deltaY < -20) this.goTo(this.currentSlide - 1);
+        }, { passive: true });
+    }
+
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        if (!this.progressBar) return;
+        const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = pct + '%';
+    }
+
+    setupNavDots() {
+        this.navDotsContainer = document.getElementById('navDots');
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.innerHTML = '';
+        this.slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+            dot.addEventListener('click', () => this.goTo(i));
+            this.navDotsContainer.appendChild(dot);
+        });
+    }
+
+    updateNavDots() {
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.querySelectorAll('.nav-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === this.currentSlide);
+        });
+    }
+
+    goTo(idx) {
+        if (idx < 0 || idx >= this.slides.length) return;
+        this.currentSlide = idx;
+        this.slides[idx].scrollIntoView({ behavior: 'smooth' });
+        this.updateProgressBar();
+        this.updateNavDots();
+    }
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.editToggle = document.getElementById('editToggle');
+        this.editBanner = document.getElementById('editBanner');
+        this.storageKey = 'shopjaydees-roadmap-edits';
+        this.setupControls();
+        this.loadEdits();
+    }
+
+    setupControls() {
+        const hotzone = document.getElementById('editHotzone');
+        let hideTimeout = null;
+
+        this.editToggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+
+        hotzone.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            this.editToggle.classList.add('show');
+        });
+        hotzone.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+        this.editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+        this.editToggle.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                this.toggleEditMode();
+            }
+            if (e.ctrlKey && e.key === 's' && this.isActive) {
+                e.preventDefault();
+                this.exportFile();
+            }
+        });
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('edit-active', this.isActive);
+        this.editToggle.classList.toggle('active', this.isActive);
+        this.editBanner.classList.toggle('active', this.isActive);
+
+        const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .build-phase-label, .build-phase-week, .metric-value, .metric-label, .h-timeline-label, .h-timeline-sub, .week-badge, .deliverable-label, .deliverable-text, .setup-item div:last-child, .status-pill');
+        editables.forEach(el => {
+            if (this.isActive) {
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('input', () => this.saveEdits());
+            } else {
+                el.removeAttribute('contenteditable');
+            }
+        });
+    }
+
+    saveEdits() {
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        const data = {};
+        editables.forEach((el, i) => { data[i] = el.innerHTML; });
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    loadEdits() {
+        const raw = localStorage.getItem(this.storageKey);
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .build-phase-label, .build-phase-week, .metric-value, .metric-label, .h-timeline-label, .h-timeline-sub, .week-badge, .deliverable-label, .deliverable-text, .setup-item div:last-child, .status-pill');
+            editables.forEach((el, i) => { if (data[i] !== undefined) el.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+
+    exportFile() {
+        const editableEls = Array.from(document.querySelectorAll('[contenteditable]'));
+        editableEls.forEach(el => el.removeAttribute('contenteditable'));
+        document.body.classList.remove('edit-active');
+        this.editToggle.classList.remove('active', 'show');
+        this.editBanner.classList.remove('active');
+
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+        document.body.classList.add('edit-active');
+        editableEls.forEach(el => el.setAttribute('contenteditable', 'true'));
+        this.editToggle.classList.add('active');
+        this.editBanner.classList.add('active');
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'implementation-roadmap.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+const presentation = new SlidePresentation();
+const editor = new InlineEditor();
+</script>
+
+</body>
+</html>

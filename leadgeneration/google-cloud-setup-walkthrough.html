@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Cloud Setup — ShopJaydees</title>
+
+<!-- Fonts: Outfit from Google Fonts (matches the ShopJaydees pitch deck) -->
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES (SPLIT PASTEL THEME)
+   Change these to change the whole look
+   =========================================== */
+:root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --title-size: clamp(2rem, 5.5vw, 4.5rem);
+    --h2-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    --h3-size: clamp(1rem, 2vw, 1.5rem);
+    --subtitle-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    --body-size: clamp(0.75rem, 1.3vw, 1rem);
+    --small-size: clamp(0.65rem, 1vw, 0.85rem);
+
+    --slide-padding: clamp(1.5rem, 4vw, 4rem);
+    --content-gap: clamp(0.8rem, 2vw, 1.5rem);
+    --element-gap: clamp(0.3rem, 1vw, 0.8rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-normal: 0.6s;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+}
+
+/* ===========================================
+   BASE STYLES
+   =========================================== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES
+   =========================================== */
+html, body {
+    height: 100%;
+    overflow-x: hidden;
+}
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+    padding: var(--slide-padding);
+}
+.card, .container, .content-box {
+    max-width: min(90vw, 1000px);
+    max-height: min(80vh, 700px);
+}
+.feature-list, .bullet-list {
+    gap: clamp(0.4rem, 1vh, 1rem);
+}
+.feature-list li, .bullet-list li {
+    font-size: var(--body-size);
+    line-height: 1.4;
+}
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+}
+img, .image-container {
+    max-width: 100%;
+    max-height: min(50vh, 400px);
+    object-fit: contain;
+}
+
+/* Short viewports */
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(0.75rem, 3vw, 2rem);
+        --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+        --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+        --h2-size: clamp(1rem, 3vw, 1.75rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+        --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+        --title-size: clamp(1.1rem, 4vw, 2rem);
+        --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+    }
+    .nav-dots, .keyboard-hint, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.4rem, 2vw, 1rem);
+        --title-size: clamp(1rem, 3.5vw, 1.5rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+}
+@media (max-width: 600px) {
+    :root { --title-size: clamp(1.25rem, 7vw, 2.5rem); }
+    .grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.2s !important;
+    }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   SPLIT PASTEL LAYOUT SYSTEM
+   =========================================== */
+body {
+    font-family: var(--font-body);
+    color: var(--text-dark);
+    background: var(--bg-peach);
+}
+
+/* === Split layout (peach | lavender) === */
+.split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+}
+/* Unlike the pitch deck, the right panel holds the actual
+   instructions here — on narrow screens stack it, never hide it */
+@media (max-width: 768px) {
+    .split { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .split .panel-left { justify-content: flex-end; padding-bottom: clamp(0.6rem, 2vw, 1rem); }
+}
+.panel-left {
+    background: var(--bg-peach);
+    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--slide-padding);
+    position: relative;
+}
+.panel-right {
+    background: var(--bg-lavender);
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center;
+    padding: var(--slide-padding);
+    position: relative; overflow: hidden;
+}
+.panel-right::before {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+}
+
+/* === Full-width slide variant === */
+.full-peach { background: var(--bg-peach); }
+.full-lavender { background: var(--bg-lavender); }
+.full-warm { background: var(--bg-warm); }
+.full-dark {
+    background: var(--accent-dark);
+    color: #ffffff;
+}
+
+.centered-content {
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    text-align: center;
+    padding: var(--slide-padding);
+    height: 100%;
+    max-height: 100%;
+}
+
+/* ===========================================
+   TYPOGRAPHY
+   =========================================== */
+h1 {
+    font-family: var(--font-display);
+    font-size: var(--title-size);
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-dark);
+}
+h2 {
+    font-family: var(--font-display);
+    font-size: var(--h2-size);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
+h3 {
+    font-family: var(--font-display);
+    font-size: var(--h3-size);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--text-dark);
+}
+.subtitle {
+    font-size: var(--subtitle-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+    max-width: 36ch;
+}
+.body-text {
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.6;
+}
+.small-text {
+    font-size: var(--small-size);
+    color: var(--text-light);
+}
+.white h1, .white h2, .white h3 { color: #ffffff; }
+.white .subtitle { color: rgba(255,255,255,0.7); }
+.white .body-text { color: rgba(255,255,255,0.6); }
+
+/* ===========================================
+   BADGE PILLS
+   =========================================== */
+.badges {
+    display: flex; flex-wrap: wrap;
+    gap: clamp(0.3rem, 0.6vw, 0.5rem);
+    margin-bottom: clamp(0.8rem, 2vw, 1.5rem);
+}
+.badge {
+    display: inline-block;
+    padding: clamp(0.25rem, 0.5vw, 0.4rem) clamp(0.6rem, 1vw, 0.9rem);
+    border-radius: var(--radius-pill);
+    font-size: var(--small-size);
+    font-weight: 500;
+    color: var(--text-dark);
+}
+.badge.mint { background: var(--badge-mint); }
+.badge.yellow { background: var(--badge-yellow); }
+.badge.pink { background: var(--badge-pink); }
+.badge.blue { background: var(--badge-blue); }
+.badge.peach { background: var(--badge-peach); }
+
+/* ===========================================
+   URL PILL — the address Jenn needs to type
+   =========================================== */
+.url-pill {
+    display: inline-block;
+    background: var(--text-dark);
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--body-size);
+    padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.9rem, 1.6vw, 1.3rem);
+    border-radius: var(--radius-pill);
+    margin-top: var(--content-gap);
+    letter-spacing: 0.01em;
+}
+
+/* ===========================================
+   NUMBERED INSTRUCTION STEPS
+   =========================================== */
+.pipeline {
+    display: flex; flex-direction: column;
+    gap: clamp(0.5rem, 1.2vw, 0.9rem);
+    width: 100%; max-width: 420px;
+    position: relative; z-index: 1;
+}
+.step {
+    display: flex; align-items: center;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius);
+    padding: clamp(0.5rem, 1.2vw, 0.9rem) clamp(0.7rem, 1.4vw, 1.1rem);
+    backdrop-filter: blur(8px);
+}
+.step-num {
+    width: clamp(28px, 3vw, 38px); height: clamp(28px, 3vw, 38px);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: var(--small-size);
+    color: var(--text-dark); flex-shrink: 0;
+}
+.step-label { font-weight: 600; font-size: var(--body-size); line-height: 1.3; }
+.step-desc { font-size: var(--small-size); color: var(--text-light); margin-top: 1px; line-height: 1.35; }
+.step b { color: var(--text-dark); font-weight: 600; }
+
+/* === Tip / note box under a step list === */
+.note-box {
+    width: 100%; max-width: 420px;
+    margin-top: clamp(0.6rem, 1.4vw, 1rem);
+    background: rgba(255,255,255,0.4);
+    border-left: 3px solid var(--accent-warm);
+    border-radius: var(--radius-sm);
+    padding: clamp(0.5rem, 1vw, 0.8rem) clamp(0.7rem, 1.4vw, 1rem);
+    font-size: var(--small-size);
+    color: var(--text-mid);
+    line-height: 1.5;
+    position: relative; z-index: 1;
+}
+
+/* ===========================================
+   FEATURE CARDS
+   =========================================== */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(180px, 20vw, 260px)), 1fr));
+    gap: clamp(0.6rem, 1.5vw, 1rem);
+    width: 100%;
+    max-width: min(90vw, 900px);
+}
+.feature-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem);
+    backdrop-filter: blur(8px);
+    text-align: center;
+}
+.feature-card .card-icon {
+    width: clamp(32px, 4vw, 44px); height: clamp(32px, 4vw, 44px);
+    border-radius: 12px;
+    display: grid; place-items: center;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    line-height: 1;
+    margin: 0 auto clamp(0.4rem, 1vw, 0.7rem);
+}
+.feature-card h3 {
+    font-size: clamp(0.8rem, 1.3vw, 1rem);
+    margin-bottom: clamp(0.2rem, 0.5vw, 0.3rem);
+}
+.feature-card p {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* ===========================================
+   METRIC CARDS
+   =========================================== */
+.metric-row {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: clamp(0.6rem, 1.5vw, 1.2rem);
+    width: 100%; max-width: min(90vw, 800px);
+}
+.metric-card {
+    background: rgba(255,255,255,0.55);
+    border-radius: var(--radius);
+    padding: clamp(0.8rem, 1.8vw, 1.4rem) clamp(1rem, 2vw, 1.8rem);
+    text-align: center;
+    backdrop-filter: blur(8px);
+    flex: 1; min-width: clamp(100px, 15vw, 160px);
+}
+.metric-value {
+    font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+}
+.metric-label {
+    font-size: var(--small-size);
+    color: var(--text-light);
+    margin-top: clamp(0.2rem, 0.5vw, 0.4rem);
+}
+
+/* ===========================================
+   BULLET LIST
+   =========================================== */
+.check-list {
+    list-style: none;
+    display: flex; flex-direction: column;
+    gap: clamp(0.4rem, 1vh, 0.8rem);
+}
+.check-list li {
+    display: flex; align-items: flex-start;
+    gap: clamp(0.4rem, 0.8vw, 0.6rem);
+    font-size: var(--body-size);
+    color: var(--text-mid);
+    line-height: 1.5;
+}
+.check-list li::before {
+    content: '→';
+    color: var(--accent-warm);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+/* Checklist variant with checkbox glyphs for the recap slide */
+.tick-list li::before { content: '☐'; color: var(--accent-warm); }
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(clamp(15px, 3vw, 30px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal {
+    opacity: 1;
+    transform: translateY(0);
+}
+.reveal:nth-child(1) { transition-delay: 0.1s; }
+.reveal:nth-child(2) { transition-delay: 0.2s; }
+.reveal:nth-child(3) { transition-delay: 0.3s; }
+.reveal:nth-child(4) { transition-delay: 0.4s; }
+.reveal:nth-child(5) { transition-delay: 0.5s; }
+.reveal:nth-child(6) { transition-delay: 0.6s; }
+
+.reveal-left {
+    opacity: 0;
+    transform: translateX(clamp(20px, 4vw, 40px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal-left {
+    opacity: 1; transform: translateX(0);
+}
+.reveal-left:nth-child(1) { transition-delay: 0.15s; }
+.reveal-left:nth-child(2) { transition-delay: 0.3s; }
+.reveal-left:nth-child(3) { transition-delay: 0.45s; }
+.reveal-left:nth-child(4) { transition-delay: 0.6s; }
+.reveal-left:nth-child(5) { transition-delay: 0.75s; }
+.reveal-left:nth-child(6) { transition-delay: 0.9s; }
+
+/* ===========================================
+   PROGRESS BAR
+   =========================================== */
+.progress-bar {
+    position: fixed; top: 0; left: 0;
+    height: 3px; background: var(--accent-warm);
+    z-index: 9999; width: 0;
+    transition: width 0.3s ease;
+}
+
+/* ===========================================
+   NAVIGATION DOTS
+   =========================================== */
+.nav-dots {
+    position: fixed;
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column;
+    gap: clamp(6px, 0.8vh, 10px);
+    z-index: 9998;
+}
+.nav-dot {
+    width: clamp(8px, 1vw, 10px);
+    height: clamp(8px, 1vw, 10px);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    border: none; padding: 0;
+}
+.nav-dot.active {
+    background: var(--accent-warm);
+    transform: scale(1.3);
+}
+.nav-dot:hover { background: var(--accent-warm); }
+
+/* ===========================================
+   SLIDE NUMBER
+   =========================================== */
+.slide-number {
+    position: absolute;
+    bottom: clamp(0.8rem, 2vw, 1.5rem);
+    right: clamp(0.8rem, 2vw, 1.5rem);
+    font-size: var(--small-size);
+    color: var(--text-light);
+    font-weight: 500;
+    opacity: 0.5;
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone {
+    position: fixed; top: 0; left: 0;
+    width: 80px; height: 80px;
+    z-index: 10000; cursor: pointer;
+}
+.edit-toggle {
+    position: fixed; top: 16px; left: 16px;
+    width: 40px; height: 40px;
+    border-radius: 50%; border: none;
+    background: var(--text-dark); color: #fff;
+    font-size: 16px; cursor: pointer;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+}
+.edit-toggle.show, .edit-toggle.active {
+    opacity: 1; pointer-events: auto;
+}
+.edit-toggle.active { background: var(--accent-warm); }
+.edit-banner {
+    position: fixed; top: 0; left: 0; right: 0;
+    background: var(--accent-warm); color: #fff;
+    text-align: center;
+    font-size: var(--small-size); font-weight: 500;
+    padding: clamp(0.3rem, 0.5vw, 0.4rem);
+    z-index: 9999;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+}
+.edit-banner.active { transform: translateY(0); }
+body.edit-active [contenteditable="true"] {
+    outline: 2px dashed rgba(212,133,106,0.4);
+    outline-offset: 4px;
+    border-radius: 4px;
+    cursor: text;
+}
+body.edit-active [contenteditable="true"]:focus {
+    outline-color: var(--accent-warm);
+}
+</style>
+</head>
+
+<body>
+
+<!-- === PROGRESS BAR === -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- === NAVIGATION DOTS === -->
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<!-- === INLINE EDITING CONTROLS === -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)" aria-label="Toggle edit mode">&#9998;</button>
+<div class="edit-banner" id="editBanner">Edit Mode — Click any text to edit &middot; Ctrl+S to save</div>
+
+
+<!-- ===========================================
+     SLIDE 1: TITLE
+     =========================================== -->
+<section class="slide" aria-label="Title">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">For Jenn</span>
+                <span class="badge yellow">~15 minutes</span>
+            </div>
+            <h1 class="reveal">Google Cloud<br>Setup Guide</h1>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">Four short tasks to power up the AI behind your lead generation pipeline. Click through at your own pace — every step is spelled out.</p>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">1</div>
+                    <div><div class="step-label">Create your account</div><div class="step-desc">Sign up for Google Cloud</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">2</div>
+                    <div><div class="step-label">Set up billing</div><div class="step-desc">Add a payment method</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">3</div>
+                    <div><div class="step-label">Google AI Studio</div><div class="step-desc">Turn on the Gemini AI</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">4</div>
+                    <div><div class="step-label">Invite Cody</div><div class="step-desc">So he can build everything</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">01 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 2: WHY THIS MATTERS
+     =========================================== -->
+<section class="slide full-warm" aria-label="Why This Matters">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge pink">Why This Matters</span>
+        </div>
+        <h2 class="reveal">This is the engine room.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 46ch;">
+            Google Cloud hosts the AI agents that run your pipeline, and Google AI Studio powers Gemini — the AI that writes your personalized outreach. It needs to live under <b>your</b> account so ShopJaydees owns everything.
+        </p>
+        <div class="metric-row reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem);">
+            <div class="metric-card">
+                <div class="metric-value">~15</div>
+                <div class="metric-label">Minutes to complete</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">$2-10</div>
+                <div class="metric-label">Expected USD / month</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">4</div>
+                <div class="metric-label">Tasks, one sitting</div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">02 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 3: BEFORE YOU START
+     =========================================== -->
+<section class="slide" aria-label="Before You Start">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">Before You Start</span>
+            </div>
+            <h2 class="reveal">Grab three things.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Do this on a computer (not your phone) — some Google screens are fiddly on mobile. Keep this guide open beside your browser.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">&#128231;</div>
+                    <div><div class="step-label">Your Google account</div><div class="step-desc">Use your ShopJaydees Google Workspace login — the same one you use for email</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">&#128179;</div>
+                    <div><div class="step-label">A credit card</div><div class="step-desc">For billing setup — charges are tiny, and you'll see them all</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">&#9749;</div>
+                    <div><div class="step-label">15 quiet minutes</div><div class="step-desc">All four tasks fit in one coffee</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">03 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 4: PART 1A — SIGN UP FOR GOOGLE CLOUD
+     =========================================== -->
+<section class="slide" aria-label="Part 1: Create Account">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Part 1 of 4</span>
+            </div>
+            <h2 class="reveal">Create your Google Cloud account.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Google Cloud is where the pipeline's automation will live. Signing in for the first time creates your account automatically.
+            </p>
+            <div class="reveal"><span class="url-pill">console.cloud.google.com</span></div>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">1</div>
+                    <div><div class="step-desc">Open <b>console.cloud.google.com</b> in your browser</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">2</div>
+                    <div><div class="step-desc">Sign in with your <b>ShopJaydees Google account</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">3</div>
+                    <div><div class="step-desc">Choose <b>Canada</b> as your country and agree to the Terms of Service</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">4</div>
+                    <div><div class="step-desc">You'll land on the Console dashboard — that's it, account created</div></div>
+                </div>
+            </div>
+            <div class="note-box reveal-left">
+                &#128161; If Google offers a <b>free trial with $300 in credits</b>, take it! It covers the first months of pipeline costs entirely.
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">04 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 5: PART 1B — CREATE THE PROJECT
+     =========================================== -->
+<section class="slide" aria-label="Part 1: Create Project">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge mint">Part 1 of 4</span>
+                <span class="badge peach">continued</span>
+            </div>
+            <h2 class="reveal">Create a project.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                A "project" is just a labelled box that holds everything — the agents, the AI, the billing. We only need one.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">1</div>
+                    <div><div class="step-desc">In the top bar, click the <b>project picker</b> (it may say "Select a project")</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">2</div>
+                    <div><div class="step-desc">Click <b>New Project</b> in the window that pops up</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">3</div>
+                    <div><div class="step-desc">Name it <b>ShopJaydees Lead Gen</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-mint);">4</div>
+                    <div><div class="step-desc">Click <b>Create</b>, then select the new project so its name shows in the top bar</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">05 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 6: PART 2A — CREATE BILLING ACCOUNT
+     =========================================== -->
+<section class="slide" aria-label="Part 2: Billing Account">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge yellow">Part 2 of 4</span>
+            </div>
+            <h2 class="reveal">Set up billing.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                This is how Google charges the small monthly usage fees. You'll always see every charge, and Cody sets up budget alerts so there are no surprises.
+            </p>
+            <div class="reveal"><span class="url-pill">console.cloud.google.com/billing</span></div>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">1</div>
+                    <div><div class="step-desc">Go to <b>console.cloud.google.com/billing</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">2</div>
+                    <div><div class="step-desc">Click <b>Create account</b> (or <b>Add billing account</b>)</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">3</div>
+                    <div><div class="step-desc">Set country to <b>Canada</b>, fill in the business details</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">4</div>
+                    <div><div class="step-desc">Add your <b>credit card</b> and submit</div></div>
+                </div>
+            </div>
+            <div class="note-box reveal-left">
+                &#128274; Google may place a tiny temporary charge (around $1) to verify the card — it disappears on its own.
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">06 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 7: PART 2B — LINK BILLING TO PROJECT
+     =========================================== -->
+<section class="slide" aria-label="Part 2: Link Billing">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge yellow">Part 2 of 4</span>
+                <span class="badge peach">continued</span>
+            </div>
+            <h2 class="reveal">Link billing to your project.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                One more click so the <b>ShopJaydees Lead Gen</b> project knows which card to bill.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">1</div>
+                    <div><div class="step-desc">On the Billing page, open the <b>My Projects</b> tab</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">2</div>
+                    <div><div class="step-desc">Find <b>ShopJaydees Lead Gen</b> in the list</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">3</div>
+                    <div><div class="step-desc">Click the <b>&#8942; three-dot menu</b> beside it &rarr; <b>Change billing</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-yellow);">4</div>
+                    <div><div class="step-desc">Pick the billing account you just created &rarr; <b>Set account</b></div></div>
+                </div>
+            </div>
+            <div class="note-box reveal-left">
+                &#128176; Expected costs: <b>$2-5/mo</b> for Gemini AI + <b>$0-5/mo</b> for hosting. That's the whole Google bill.
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">07 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 8: PART 3 — GOOGLE AI STUDIO
+     =========================================== -->
+<section class="slide" aria-label="Part 3: Google AI Studio">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge pink">Part 3 of 4</span>
+            </div>
+            <h2 class="reveal">Set up Google AI Studio.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                AI Studio is the doorway to Gemini — the AI that researches leads and writes your personalized messages. You just need to switch it on.
+            </p>
+            <div class="reveal"><span class="url-pill">aistudio.google.com</span></div>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">1</div>
+                    <div><div class="step-desc">Open <b>aistudio.google.com</b> and sign in with the <b>same Google account</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">2</div>
+                    <div><div class="step-desc">Accept the terms when prompted</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">3</div>
+                    <div><div class="step-desc">Click <b>Get API key</b> &rarr; <b>Create API key</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-pink);">4</div>
+                    <div><div class="step-desc">When asked for a project, choose <b>ShopJaydees Lead Gen</b></div></div>
+                </div>
+            </div>
+            <div class="note-box reveal-left">
+                &#128272; The key is like a password — <b>don't email it or screenshot it</b>. You don't need to save it anywhere; Cody will manage keys securely once he has access.
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">08 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 9: PART 4A — INVITE CODY TO THE PROJECT
+     =========================================== -->
+<section class="slide" aria-label="Part 4: Invite Cody to Project">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">Part 4 of 4</span>
+            </div>
+            <h2 class="reveal">Invite Cody as admin.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                Granting Cody the <b>Owner</b> role — Google Cloud's full-admin access — lets him build and run everything without ever needing your password.
+            </p>
+            <div class="reveal"><span class="url-pill">console.cloud.google.com/iam-admin</span></div>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">1</div>
+                    <div><div class="step-desc">Check the top bar shows <b>ShopJaydees Lead Gen</b>, then go to <b>console.cloud.google.com/iam-admin</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">2</div>
+                    <div><div class="step-desc">Click <b>Grant Access</b> near the top of the page</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">3</div>
+                    <div><div class="step-desc">New principals: <b>cody@sixohquad.com</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">4</div>
+                    <div><div class="step-desc">Role: choose <b>Basic &rarr; Owner</b>, then click <b>Save</b></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">09 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 10: PART 4B — BILLING ACCESS FOR CODY
+     =========================================== -->
+<section class="slide" aria-label="Part 4: Billing Access">
+    <div class="split">
+        <div class="panel-left">
+            <div class="badges reveal">
+                <span class="badge blue">Part 4 of 4</span>
+                <span class="badge peach">continued</span>
+            </div>
+            <h2 class="reveal">And billing access too.</h2>
+            <p class="subtitle reveal" style="margin-top: var(--content-gap);">
+                This lets Cody watch the costs, set budget alerts, and sort out any billing hiccups — your card details stay private to you.
+            </p>
+        </div>
+        <div class="panel-right">
+            <div class="pipeline">
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">1</div>
+                    <div><div class="step-desc">Go back to <b>console.cloud.google.com/billing</b> and open your billing account</div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">2</div>
+                    <div><div class="step-desc">In the left menu, click <b>Account management</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">3</div>
+                    <div><div class="step-desc">Click <b>Add principal</b> (right-hand panel), enter <b>cody@sixohquad.com</b></div></div>
+                </div>
+                <div class="step reveal-left">
+                    <div class="step-num" style="background: var(--badge-blue);">4</div>
+                    <div><div class="step-desc">Role: <b>Billing Account Administrator</b> &rarr; <b>Save</b></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-number">10 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 11: CHECKLIST RECAP
+     =========================================== -->
+<section class="slide full-lavender" aria-label="Checklist">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge mint">Almost Done</span>
+        </div>
+        <h2 class="reveal">The full checklist.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch;">
+            Tick these off as you go. When everything's checked, send Cody a quick email and he takes it from there.
+        </p>
+        <div class="reveal" style="margin-top: clamp(1.2rem, 2.5vw, 2rem); background: rgba(255,255,255,0.55); border-radius: var(--radius); padding: clamp(1rem, 2.5vw, 1.8rem) clamp(1.2rem, 3vw, 2.2rem); backdrop-filter: blur(8px); max-width: min(90vw, 560px);">
+            <ul class="check-list tick-list" style="text-align: left;">
+                <li>Google Cloud account created with your ShopJaydees login</li>
+                <li>Project <b>&nbsp;ShopJaydees Lead Gen&nbsp;</b> created</li>
+                <li>Billing account created and linked to the project</li>
+                <li>Google AI Studio signed in, API key created</li>
+                <li>Cody invited as <b>&nbsp;Owner&nbsp;</b> on the project</li>
+                <li>Cody added as <b>&nbsp;Billing Account Administrator&nbsp;</b></li>
+            </ul>
+        </div>
+    </div>
+    <div class="slide-number">11 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     SLIDE 12: STUCK? / CLOSING
+     =========================================== -->
+<section class="slide full-dark white" aria-label="Done">
+    <div class="centered-content">
+        <div class="badges reveal">
+            <span class="badge" style="background: rgba(255,255,255,0.15); color: #fff;">That's It!</span>
+        </div>
+        <h2 class="reveal" style="color: #fff;">Stuck anywhere?<br>Just send a screenshot.</h2>
+        <p class="subtitle reveal" style="margin-top: var(--content-gap); text-align: center; max-width: 42ch; color: rgba(255,255,255,0.65);">
+            No question is too small. Snap a picture of whatever screen you're on and email it over — we'll sort it out together in minutes.
+        </p>
+        <div class="reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); text-align: center;">
+            <p style="font-size: var(--h3-size); font-weight: 700; color: #fff;">cody@sixohquad.com</p>
+        </div>
+        <p class="small-text reveal" style="margin-top: clamp(1.5rem, 3vw, 2.5rem); color: rgba(255,255,255,0.35);">SixOhQuad &times; ShopJaydees</p>
+    </div>
+    <div class="slide-number" style="color: rgba(255,255,255,0.3);">12 / 12</div>
+</section>
+
+
+<!-- ===========================================
+     JAVASCRIPT: PRESENTATION CONTROLLER
+     =========================================== -->
+<script>
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.isScrolling = false;
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupProgressBar();
+        this.setupNavDots();
+    }
+
+    setupIntersectionObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const idx = Array.from(this.slides).indexOf(entry.target);
+                    if (idx !== -1) {
+                        this.currentSlide = idx;
+                        this.updateProgressBar();
+                        this.updateNavDots();
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+        this.slides.forEach(slide => observer.observe(slide));
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            if (e.target.getAttribute && e.target.getAttribute('contenteditable')) return;
+            switch (e.key) {
+                case 'ArrowDown': case 'ArrowRight': case ' ': case 'PageDown':
+                    e.preventDefault(); this.goTo(this.currentSlide + 1); break;
+                case 'ArrowUp': case 'ArrowLeft': case 'PageUp':
+                    e.preventDefault(); this.goTo(this.currentSlide - 1); break;
+                case 'Home': e.preventDefault(); this.goTo(0); break;
+                case 'End': e.preventDefault(); this.goTo(this.slides.length - 1); break;
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let startY = 0;
+        document.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = startY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                diff > 0 ? this.goTo(this.currentSlide + 1) : this.goTo(this.currentSlide - 1);
+            }
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let lastWheel = 0;
+        document.addEventListener('wheel', (e) => {
+            const now = Date.now();
+            if (now - lastWheel < 800) return;
+            lastWheel = now;
+            if (e.deltaY > 20) this.goTo(this.currentSlide + 1);
+            else if (e.deltaY < -20) this.goTo(this.currentSlide - 1);
+        }, { passive: true });
+    }
+
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        if (!this.progressBar) return;
+        const pct = ((this.currentSlide + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = pct + '%';
+    }
+
+    setupNavDots() {
+        this.navDotsContainer = document.getElementById('navDots');
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.innerHTML = '';
+        this.slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+            dot.addEventListener('click', () => this.goTo(i));
+            this.navDotsContainer.appendChild(dot);
+        });
+    }
+
+    updateNavDots() {
+        if (!this.navDotsContainer) return;
+        this.navDotsContainer.querySelectorAll('.nav-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === this.currentSlide);
+        });
+    }
+
+    goTo(idx) {
+        if (idx < 0 || idx >= this.slides.length) return;
+        this.currentSlide = idx;
+        this.slides[idx].scrollIntoView({ behavior: 'smooth' });
+        this.updateProgressBar();
+        this.updateNavDots();
+    }
+}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.editToggle = document.getElementById('editToggle');
+        this.editBanner = document.getElementById('editBanner');
+        this.storageKey = 'shopjaydees-gcloud-setup-edits';
+        this.setupControls();
+        this.loadEdits();
+    }
+
+    setupControls() {
+        const hotzone = document.getElementById('editHotzone');
+        let hideTimeout = null;
+
+        this.editToggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+
+        hotzone.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            this.editToggle.classList.add('show');
+        });
+        hotzone.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+        this.editToggle.addEventListener('mouseenter', () => clearTimeout(hideTimeout));
+        this.editToggle.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                this.toggleEditMode();
+            }
+            if (e.ctrlKey && e.key === 's' && this.isActive) {
+                e.preventDefault();
+                this.exportFile();
+            }
+        });
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        document.body.classList.toggle('edit-active', this.isActive);
+        this.editToggle.classList.toggle('active', this.isActive);
+        this.editBanner.classList.toggle('active', this.isActive);
+
+        const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .step-label, .step-desc, .metric-value, .metric-label, .note-box');
+        editables.forEach(el => {
+            if (this.isActive) {
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('input', () => this.saveEdits());
+            } else {
+                el.removeAttribute('contenteditable');
+            }
+        });
+    }
+
+    saveEdits() {
+        const editables = document.querySelectorAll('[contenteditable="true"]');
+        const data = {};
+        editables.forEach((el, i) => { data[i] = el.innerHTML; });
+        localStorage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    loadEdits() {
+        const raw = localStorage.getItem(this.storageKey);
+        if (!raw) return;
+        try {
+            const data = JSON.parse(raw);
+            const editables = document.querySelectorAll('h1, h2, h3, p, li, td, th, .step-label, .step-desc, .metric-value, .metric-label, .note-box');
+            editables.forEach((el, i) => { if (data[i] !== undefined) el.innerHTML = data[i]; });
+        } catch (e) {}
+    }
+
+    exportFile() {
+        const editableEls = Array.from(document.querySelectorAll('[contenteditable]'));
+        editableEls.forEach(el => el.removeAttribute('contenteditable'));
+        document.body.classList.remove('edit-active');
+        this.editToggle.classList.remove('active', 'show');
+        this.editBanner.classList.remove('active', 'show');
+
+        const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+        document.body.classList.add('edit-active');
+        editableEls.forEach(el => el.setAttribute('contenteditable', 'true'));
+        this.editToggle.classList.add('active');
+        this.editBanner.classList.add('active');
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'google-cloud-setup-walkthrough.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+}
+
+const presentation = new SlidePresentation();
+const editor = new InlineEditor();
+</script>
+
+</body>
+</html>
