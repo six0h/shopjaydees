@@ -20,6 +20,8 @@ import type {
   LeadPersonalizationResult,
   SendRunResult,
   SendLeadResult,
+  DormancyRunResult,
+  DormancyLeadResult,
 } from "./types.js";
 import { InstantlyApiError, createInstantlyClient } from "./clients/instantly.js";
 import { createFirecrawlClient, findSecondaryPages } from "./clients/firecrawl.js";
@@ -1452,6 +1454,241 @@ ff.http("send", async (req: Request, res: Response) => {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.critical("Unhandled error in Send Agent", { error: errorMsg });
     await alerter.send("Unhandled error in send-agent", errorMsg);
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// =====================================================
+// DORMANCY CHECK
+// =====================================================
+
+// --- Dormancy Check Helpers ---
+
+export function getReactivationCount(task: ClickUpTask): number {
+  let max = 0;
+  for (const tag of task.tags) {
+    const match = tag.name.match(/^reactivation-(\d+)$/);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > max) max = num;
+    }
+  }
+  return max;
+}
+
+export function isDormantEligible(
+  task: ClickUpTask,
+  config: Config,
+  now: Date
+): { eligible: boolean; reason?: string } {
+  const leadScore = getSendLeadScore(task, config.fields.leadScore);
+  if (leadScore < 3) {
+    return { eligible: false, reason: "score_low" };
+  }
+
+  if (task.tags.some((t) => t.name === "do-not-reactivate")) {
+    return { eligible: false, reason: "do_not_reactivate" };
+  }
+
+  if (getReactivationCount(task) >= 2) {
+    return { eligible: false, reason: "max_attempts" };
+  }
+
+  const reactivationDateField = task.custom_fields.find(
+    (f) => f.id === config.outreachFields.dormantReactivationDate
+  );
+  if (reactivationDateField && reactivationDateField.value) {
+    const reactivationTs = parseInt(String(reactivationDateField.value), 10);
+    if (reactivationTs > now.getTime()) {
+      return { eligible: false, reason: "not_yet_due" };
+    }
+  }
+
+  return { eligible: true };
+}
+
+// --- Dormancy Check Core ---
+
+export interface DormancyDeps {
+  config: Config;
+  clickup: ClickUpClient;
+  alerter: Alerter;
+  logger: Logger;
+}
+
+export async function runDormancyCheck(
+  deps: DormancyDeps
+): Promise<DormancyRunResult> {
+  const { config, clickup, alerter, logger } = deps;
+  const now = new Date();
+  const runId = `dormancy-check-${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
+  logger.setRunId(runId);
+  logger.info("Dormancy check starting");
+
+  const result: DormancyRunResult = {
+    runId,
+    timestamp: now.toISOString(),
+    dormantTasksChecked: 0,
+    results: {
+      reactivated: 0,
+      notEligibleScoreLow: 0,
+      notEligibleDoNotReactivate: 0,
+      notEligibleMaxAttempts: 0,
+      notYetDue: 0,
+    },
+    reactivatedLeads: [],
+  };
+
+  const dormantTasks = await clickup.getTasks(config.clickupListId, {
+    statuses: ["Dormant"],
+    includeClosed: true,
+  });
+
+  result.dormantTasksChecked = dormantTasks.length;
+
+  if (dormantTasks.length === 0) {
+    logger.info("No dormant leads found. Exiting.");
+    return result;
+  }
+
+  logger.info("Dormant leads found", { count: dormantTasks.length });
+
+  for (const task of dormantTasks) {
+    const eligibility = isDormantEligible(task, config, now);
+
+    if (!eligibility.eligible) {
+      switch (eligibility.reason) {
+        case "score_low":
+          result.results.notEligibleScoreLow += 1;
+          break;
+        case "do_not_reactivate":
+          result.results.notEligibleDoNotReactivate += 1;
+          break;
+        case "max_attempts":
+          result.results.notEligibleMaxAttempts += 1;
+          break;
+        case "not_yet_due":
+          result.results.notYetDue += 1;
+          break;
+      }
+      logger.debug("Dormant lead not eligible", {
+        taskId: task.id,
+        reason: eligibility.reason,
+      });
+      continue;
+    }
+
+    const currentReactivationCount = getReactivationCount(task);
+    const newReactivationNumber = currentReactivationCount + 1;
+
+    const dormantDateField = task.custom_fields.find(
+      (f) => f.id === config.outreachFields.dormantDate
+    );
+    const dormantSince = dormantDateField?.value
+      ? new Date(parseInt(String(dormantDateField.value), 10)).toISOString().slice(0, 10)
+      : "unknown";
+
+    const companyNameField = task.custom_fields.find(
+      (f) => f.id === config.fields.companyName
+    );
+    const companyName = String(companyNameField?.value ?? task.name);
+
+    try {
+      await clickup.updateTask(task.id, {
+        status: "Enriched",
+        custom_fields: [
+          { id: config.personalizationFields.websiteScrapeSummary, value: "" },
+          { id: config.personalizationFields.communitySignals, value: "" },
+          { id: config.personalizationFields.personalizationHooks, value: "" },
+          { id: config.personalizationFields.emailTouch1, value: "" },
+          { id: config.personalizationFields.emailTouch1Subject, value: "" },
+          { id: config.personalizationFields.emailTouch2, value: "" },
+          { id: config.personalizationFields.emailTouch2Subject, value: "" },
+          { id: config.personalizationFields.emailTouch3, value: "" },
+          { id: config.personalizationFields.emailTouch3Subject, value: "" },
+          { id: config.personalizationFields.linkedinMessage, value: "" },
+          { id: config.personalizationFields.reviewDecision, value: 0 },
+          { id: config.outreachFields.instantlyCampaignId, value: "" },
+          { id: config.outreachFields.instantlyLeadId, value: "" },
+          { id: config.outreachFields.sequenceStatus, value: 0 },
+        ],
+      });
+
+      await clickup.addTag(task.id, "re-engagement");
+      await clickup.addTag(task.id, `reactivation-${newReactivationNumber}`);
+
+      await clickup.addComment(
+        task.id,
+        `Dormancy reactivation: 90-day cool-off complete. Cleared old drafts, moved to Enriched for re-personalization with fresh angle. Reactivation #${newReactivationNumber}.`
+      );
+
+      logger.info("Lead reactivated", {
+        taskId: task.id,
+        company: companyName,
+        reactivationNumber: newReactivationNumber,
+        dormantSince,
+      });
+
+      result.results.reactivated += 1;
+      result.reactivatedLeads.push({
+        taskId: task.id,
+        company: companyName,
+        dormantSince,
+        reactivationNumber: newReactivationNumber,
+      });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      logger.error("Failed to reactivate dormant lead", {
+        taskId: task.id,
+        error: errorMsg,
+      });
+      await alerter.send(
+        `Dormancy reactivation failed for task ${task.id}`,
+        errorMsg
+      );
+    }
+  }
+
+  logger.info("Dormancy check complete", {
+    checked: result.dormantTasksChecked,
+    reactivated: result.results.reactivated,
+    notEligibleScoreLow: result.results.notEligibleScoreLow,
+    notEligibleDoNotReactivate: result.results.notEligibleDoNotReactivate,
+    notEligibleMaxAttempts: result.results.notEligibleMaxAttempts,
+    notYetDue: result.results.notYetDue,
+  });
+
+  return result;
+}
+
+// --- Cloud Function Entry Point ---
+
+ff.http("dormancyCheck", async (req: Request, res: Response) => {
+  const config = loadConfig();
+  const logger = createLogger("dormancy-check");
+  const alerter = createAlerter({
+    alertEmail: config.alertEmail,
+    alertWebhookUrl: config.alertWebhookUrl,
+  });
+  const clickup = createClickUpClient({
+    token: config.clickupApiToken,
+    rateLimit: config.clickupRateLimit,
+    logger,
+  });
+
+  try {
+    const result = await runDormancyCheck({
+      config,
+      clickup,
+      alerter,
+      logger,
+    });
+
+    res.status(200).json(result);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.critical("Unhandled error in Dormancy Check", { error: errorMsg });
+    await alerter.send("Unhandled error in dormancy-check", errorMsg);
     res.status(500).json({ error: errorMsg });
   }
 });
