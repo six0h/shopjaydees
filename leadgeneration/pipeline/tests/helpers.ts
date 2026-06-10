@@ -1,4 +1,4 @@
-import type { ClickUpTask, HunterContact, LeadData, GeminiDraftOutput } from "../src/types.js";
+import type { ClickUpTask, HunterContact, LeadData, GeminiDraftOutput, DiscoverCompany } from "../src/types.js";
 import type { Config } from "../src/config.js";
 
 export function makeClickUpTask(overrides: Partial<ClickUpTask> = {}): ClickUpTask {
@@ -14,12 +14,28 @@ export function makeClickUpTask(overrides: Partial<ClickUpTask> = {}): ClickUpTa
   };
 }
 
+export function makeDiscoverCompany(overrides: Partial<DiscoverCompany> = {}): DiscoverCompany {
+  return {
+    domain: "abcplumbing.ca",
+    organization: "ABC Plumbing",
+    emails_count: { personal: 5, generic: 2, total: 7 },
+    ...overrides,
+  };
+}
+
+export function makeDiscoverResponse(companies: DiscoverCompany[]) {
+  return {
+    data: companies,
+    meta: { results: companies.length, limit: 100, offset: 0, filters: {} },
+  };
+}
+
 export function makeProspectingRequestTask(opts: {
   id?: string;
   segment?: string;
   category?: string;
   city?: string;
-  maxResults?: number;
+  targetVolume?: number;
   status?: string;
   dateUpdated?: string;
 }): ClickUpTask {
@@ -62,9 +78,9 @@ export function makeProspectingRequestTask(opts: {
         },
       },
       {
-        id: "field-max-results",
-        name: "Max Results",
-        value: opts.maxResults ?? null,
+        id: "field-target-volume",
+        name: "Target Volume",
+        value: opts.targetVolume ?? 25,
         type: "number",
       },
     ],

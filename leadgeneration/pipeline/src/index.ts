@@ -29,31 +29,26 @@ import type { FirecrawlClient } from "./clients/firecrawl.js";
 import { createGeminiClient } from "./clients/gemini.js";
 import type { GeminiClient } from "./clients/gemini.js";
 import { scoreLead } from "./scoring.js";
-import { buildSearchQuery, cityToPhase } from "./mapping.js";
+import { categoryToDiscoverFilters, cityToPhase } from "./mapping.js";
 import { loadConfig } from "./config.js";
 import { createLogger } from "./logger.js";
 import { createAlerter } from "./alerting.js";
 import { createClickUpClient } from "./clients/clickup.js";
-import { createHunterClient } from "./clients/hunter.js";
+import { createHunterClient, HunterRateLimitError } from "./clients/hunter.js";
+
+// --- Domain Normalization ---
+
+function normalizeDomain(raw: string): string {
+  return raw
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/+$/, "")
+    .toLowerCase();
+}
 
 // --- Contact Selection ---
 
-const TITLE_PRIORITY: string[][] = [
-  ["owner", "president", "ceo"],
-  ["principal", "head of school", "director"],
-  ["manager", "coordinator"],
-];
-
 const MIN_CONTACT_CONFIDENCE = 40;
-
-function titlePriorityRank(position: string | null): number {
-  if (!position) return TITLE_PRIORITY.length + 1;
-  const lower = position.toLowerCase();
-  for (let i = 0; i < TITLE_PRIORITY.length; i++) {
-    if (TITLE_PRIORITY[i].some((t) => lower.includes(t))) return i;
-  }
-  return TITLE_PRIORITY.length;
-}
 
 export function selectBestContact(
   contacts: HunterContact[]
@@ -62,13 +57,7 @@ export function selectBestContact(
     (c) => c.type === "personal" && c.confidence >= MIN_CONTACT_CONFIDENCE
   );
   if (eligible.length === 0) return null;
-
-  eligible.sort((a, b) => {
-    const rankDiff = titlePriorityRank(a.position) - titlePriorityRank(b.position);
-    if (rankDiff !== 0) return rankDiff;
-    return b.confidence - a.confidence;
-  });
-
+  eligible.sort((a, b) => b.confidence - a.confidence);
   return eligible[0];
 }
 
@@ -99,12 +88,12 @@ function extractRequestFields(task: ClickUpTask): {
   segment: Segment;
   category: Category;
   targetCity: City;
-  maxResults: number;
+  targetVolume: number;
 } {
   let segment: Segment = "Business";
   let category: Category = "Other";
   let targetCity: City = "Surrey";
-  let maxResults = 25;
+  let targetVolume = 25;
 
   for (const field of task.custom_fields) {
     if (field.name === "Segment" && field.type_config?.options) {
@@ -125,12 +114,12 @@ function extractRequestFields(task: ClickUpTask): {
       );
       if (opt) targetCity = opt.name as City;
     }
-    if (field.name === "Max Results" && typeof field.value === "number") {
-      maxResults = field.value;
+    if (field.name === "Target Volume" && typeof field.value === "number") {
+      targetVolume = field.value;
     }
   }
 
-  return { segment, category, targetCity, maxResults };
+  return { segment, category, targetCity, targetVolume };
 }
 
 // --- Discovery Agent Core ---
@@ -200,18 +189,29 @@ export async function runDiscovery(
 
   // Check Hunter.io quota
   const quota = await hunter.getAccountQuota();
-  logger.info("Hunter.io quota", { used: quota.used, available: quota.available });
+  logger.info("Hunter.io quota", { searches: quota.searches, verifications: quota.verifications });
+
+  // Pre-fetch all existing prospect domains for dedup
+  const existingTasks = await clickup.getTasks(config.clickupListId, { includeClosed: true });
+  const knownDomains = new Set<string>();
+  for (const task of existingTasks) {
+    const domainField = task.custom_fields?.find((f: any) => f.id === config.fields.companyDomain);
+    if (domainField?.value) {
+      knownDomains.add(normalizeDomain(domainField.value as string));
+    }
+  }
 
   // Process each request
   for (const requestTask of requests) {
-    const { segment, category, targetCity, maxResults } =
+    const { segment, category, targetCity, targetVolume } =
       extractRequestFields(requestTask);
     const requestResult: RequestResult = {
       requestTaskId: requestTask.id,
       segment,
       category,
       targetCity,
-      resultsFound: 0,
+      companiesDiscovered: 0,
+      companiesSearched: 0,
       leadsCreated: 0,
       leadsParked: 0,
       duplicatesSkipped: 0,
@@ -220,34 +220,55 @@ export async function runDiscovery(
     };
 
     try {
-      // Quota check per request
-      if (quota.available < maxResults) {
-        const msg = `Hunter.io quota insufficient: ${quota.available} available, ${maxResults} needed`;
-        logger.warn(msg);
-        await alerter.send("Hunter.io monthly quota low", msg);
-        requestResult.status = "failed";
-        requestResult.error = msg;
-        result.results.failed += 1;
-        result.requests.push(requestResult);
-        continue;
-      }
-
-      // Step 3: Lock request
       await clickup.updateTask(requestTask.id, { status: "Running" });
 
-      // Step 4: Query Hunter.io
-      const searchQuery = buildSearchQuery(category, targetCity);
-      logger.info("Querying Hunter.io", { searchQuery, maxResults });
-      const hunterResponse = await hunter.searchDomain(searchQuery, maxResults);
-      const companies = hunterResponse.data;
-      requestResult.resultsFound = hunterResponse.meta.results;
+      // Step 1: Discover companies (free)
+      const filters = categoryToDiscoverFilters(category, targetCity);
+      filters.headcount = config.hunterDefaultHeadcount;
+      logger.info("Discovering companies", { category, targetCity, filters });
+      const discoverResponse = await hunter.discover(filters);
+      const discoveredCompanies = discoverResponse.data;
+      requestResult.companiesDiscovered = discoveredCompanies.length;
 
-      // Process the single domain result
-      if (!companies.emails || companies.emails.length === 0) {
-        logger.info("No contacts found", { domain: companies.domain });
-      } else {
-        // Map Hunter response emails to HunterContact (add full_name)
-        const contacts: HunterContact[] = companies.emails.map((e) => ({
+      // Step 2: Filter out known domains before spending credits
+      const newCompanies = discoveredCompanies.filter((c) => {
+        const norm = normalizeDomain(c.domain);
+        if (knownDomains.has(norm)) {
+          logger.info("SKIP: duplicate domain from Discover", { domain: c.domain });
+          requestResult.duplicatesSkipped += 1;
+          return false;
+        }
+        return true;
+      });
+
+      // Step 3: Domain Search each new company (1 credit each)
+      const companiesToSearch = newCompanies.slice(0, targetVolume);
+      const now = new Date();
+      const importBatch = `${now.toISOString().slice(0, 10)}-${category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${targetCity.toLowerCase()}`;
+
+      for (const company of companiesToSearch) {
+        if (quota.searches.available < 1) {
+          logger.warn("Search credits exhausted mid-batch", {
+            domain: company.domain,
+            remaining: companiesToSearch.length - requestResult.companiesSearched,
+          });
+          break;
+        }
+
+        const domainResponse = await hunter.searchDomain(company.domain, {
+          limit: 10,
+          seniority: config.hunterDefaultSeniority,
+        });
+        quota.searches.available -= 1;
+        requestResult.companiesSearched += 1;
+
+        if (!domainResponse.data.emails || domainResponse.data.emails.length === 0) {
+          logger.info("No contacts found", { domain: company.domain });
+          requestResult.noContactSkipped += 1;
+          continue;
+        }
+
+        const contacts: HunterContact[] = domainResponse.data.emails.map((e) => ({
           ...e,
           full_name:
             e.first_name && e.last_name
@@ -255,123 +276,80 @@ export async function runDiscovery(
               : e.first_name ?? e.last_name ?? null,
         }));
 
-        // Step 5: Select best contact
         const bestContact = selectBestContact(contacts);
         if (!bestContact) {
-          logger.info("NO_CONTACT: No suitable decision-maker", {
-            domain: companies.domain,
-          });
+          logger.info("NO_CONTACT: No suitable contact", { domain: company.domain });
           requestResult.noContactSkipped += 1;
-        } else {
-          // Step 6: Dedup check
-          const existing = await clickup.getTasks(config.clickupListId, {
-            customFields: [
-              {
-                field_id: config.fields.companyDomain,
-                operator: "=",
-                value: `https://${companies.domain}`,
-              },
-            ],
-            includeClosed: true,
-          });
-
-          if (existing.length > 0) {
-            logger.info("SKIP: duplicate", {
-              domain: companies.domain,
-              existingTaskId: existing[0].id,
-            });
-            requestResult.duplicatesSkipped += 1;
-          } else {
-            // Step 7: Score
-            const scoreResult = scoreLead({
-              emailConfidence: bestContact.confidence,
-              contactTitle: bestContact.position,
-              headcount: null,
-              hasDomain: !!companies.domain,
-            });
-
-            const status = scoreResult.score >= 3 ? "Enriched" : "Parked";
-            const contactName =
-              bestContact.full_name ??
-              [bestContact.first_name, bestContact.last_name]
-                .filter(Boolean)
-                .join(" ") ??
-              bestContact.value;
-            const taskName = `${companies.organization || companies.domain} — ${contactName}`;
-            const caslSourceUrl = extractCaslSourceUrl(
-              bestContact,
-              companies.domain
-            );
-            const importBatch = `${now.toISOString().slice(0, 10)}-${category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${targetCity.toLowerCase()}`;
-
-            // Step 8: Create ClickUp task
-            if (!config.dryRun) {
-              const segmentIndex = resolveDropdownValue(
-                dropdownOptions[config.fields.segment],
-                segment
-              );
-              const categoryIndex = resolveDropdownValue(
-                dropdownOptions[config.fields.category],
-                category
-              );
-              const cityIndex = resolveDropdownValue(
-                dropdownOptions[config.fields.companyCity],
-                targetCity
-              );
-              const phaseLabel = cityToPhase(targetCity);
-              const phaseIndex = resolveDropdownValue(
-                dropdownOptions[config.fields.geographicPhase],
-                phaseLabel
-              );
-
-              await clickup.createTask(config.clickupListId, {
-                name: taskName,
-                status,
-                custom_fields: [
-                  { id: config.fields.companyName, value: companies.organization || companies.domain },
-                  { id: config.fields.companyDomain, value: `https://${companies.domain}` },
-                  { id: config.fields.companyIndustry, value: "" },
-                  { id: config.fields.companyHeadcount, value: "" },
-                  { id: config.fields.companyCity, value: cityIndex },
-                  { id: config.fields.contactName, value: contactName },
-                  { id: config.fields.contactTitle, value: bestContact.position ?? "" },
-                  { id: config.fields.contactEmail, value: bestContact.value },
-                  { id: config.fields.emailConfidence, value: bestContact.confidence },
-                  { id: config.fields.contactLinkedin, value: bestContact.linkedin ?? "" },
-                  { id: config.fields.contactPhone, value: bestContact.phone_number ?? "" },
-                  { id: config.fields.segment, value: segmentIndex },
-                  { id: config.fields.category, value: categoryIndex },
-                  { id: config.fields.leadScore, value: scoreResult.score },
-                  { id: config.fields.scoreRationale, value: scoreResult.rationale },
-                  { id: config.fields.geographicPhase, value: phaseIndex },
-                  { id: config.fields.caslSourceUrl, value: caslSourceUrl },
-                  { id: config.fields.importBatch, value: importBatch },
-                ],
-              });
-            }
-
-            if (status === "Enriched") {
-              requestResult.leadsCreated += 1;
-            } else {
-              requestResult.leadsParked += 1;
-            }
-
-            logger.info("Lead created", {
-              taskName,
-              score: scoreResult.score,
-              status,
-              dryRun: config.dryRun,
-            });
-          }
+          continue;
         }
+
+        knownDomains.add(normalizeDomain(company.domain));
+
+        const bestEmail = domainResponse.data.emails.find((e) => e.value === bestContact.value);
+        const scoreResult = scoreLead({
+          emailConfidence: bestContact.confidence,
+          contactTitle: bestContact.position,
+          seniority: bestEmail?.seniority ?? null,
+          headcount: config.hunterDefaultHeadcount[0] ?? null,
+          hasDomain: true,
+        });
+
+        const status = scoreResult.score >= 3 ? "Enriched" : "Parked";
+        const contactName =
+          bestContact.full_name ??
+          [bestContact.first_name, bestContact.last_name].filter(Boolean).join(" ") ??
+          bestContact.value;
+        const taskName = `${company.organization || company.domain} — ${contactName}`;
+        const caslSourceUrl = extractCaslSourceUrl(bestContact, company.domain);
+
+        if (!config.dryRun) {
+          const segmentIndex = resolveDropdownValue(dropdownOptions[config.fields.segment], segment);
+          const categoryIndex = resolveDropdownValue(dropdownOptions[config.fields.category], category);
+          const cityIndex = resolveDropdownValue(dropdownOptions[config.fields.companyCity], targetCity);
+          const phaseLabel = cityToPhase(targetCity);
+          const phaseIndex = resolveDropdownValue(dropdownOptions[config.fields.geographicPhase], phaseLabel);
+
+          await clickup.createTask(config.clickupListId, {
+            name: taskName,
+            status,
+            custom_fields: [
+              { id: config.fields.companyName, value: company.organization || company.domain },
+              { id: config.fields.companyDomain, value: `https://${company.domain}` },
+              { id: config.fields.companyIndustry, value: "" },
+              { id: config.fields.companyHeadcount, value: config.hunterDefaultHeadcount.join(", ") },
+              { id: config.fields.companyCity, value: cityIndex },
+              { id: config.fields.contactName, value: contactName },
+              { id: config.fields.contactTitle, value: bestContact.position ?? "" },
+              { id: config.fields.contactEmail, value: bestContact.value },
+              { id: config.fields.emailConfidence, value: bestContact.confidence },
+              { id: config.fields.contactLinkedin, value: bestContact.linkedin ?? "" },
+              { id: config.fields.contactPhone, value: bestContact.phone_number ?? "" },
+              { id: config.fields.segment, value: segmentIndex },
+              { id: config.fields.category, value: categoryIndex },
+              { id: config.fields.leadScore, value: scoreResult.score },
+              { id: config.fields.scoreRationale, value: scoreResult.rationale },
+              { id: config.fields.geographicPhase, value: phaseIndex },
+              { id: config.fields.caslSourceUrl, value: caslSourceUrl },
+              { id: config.fields.importBatch, value: importBatch },
+            ],
+          });
+        }
+
+        if (status === "Enriched") {
+          requestResult.leadsCreated += 1;
+        } else {
+          requestResult.leadsParked += 1;
+        }
+
+        logger.info("Lead created", { taskName, score: scoreResult.score, status, dryRun: config.dryRun });
       }
 
-      // Step 9: Update Prospecting Request
+      // Update Prospecting Request
       if (!config.dryRun) {
         await clickup.updateTask(requestTask.id, {
           status: "Complete",
           custom_fields: [
-            { id: config.prospectingFields.resultsFound, value: requestResult.resultsFound },
+            { id: config.prospectingFields.resultsFound, value: requestResult.companiesDiscovered },
             { id: config.prospectingFields.leadsCreated, value: requestResult.leadsCreated },
             { id: config.prospectingFields.leadsParked, value: requestResult.leadsParked },
             { id: config.prospectingFields.duplicatesSkipped, value: requestResult.duplicatesSkipped },
@@ -379,12 +357,23 @@ export async function runDiscovery(
         });
         await clickup.addComment(
           requestTask.id,
-          `Completed: ${requestResult.resultsFound} companies found, ${requestResult.leadsCreated} leads created (score 3+), ${requestResult.leadsParked} parked (score 1-2), ${requestResult.duplicatesSkipped} duplicates skipped`
+          `Completed: ${requestResult.companiesDiscovered} companies discovered, ${requestResult.companiesSearched} searched, ${requestResult.leadsCreated} leads created (score 3+), ${requestResult.leadsParked} parked (score 1-2), ${requestResult.duplicatesSkipped} duplicates skipped`
         );
       }
 
       result.results.completed += 1;
     } catch (err) {
+      if (err instanceof HunterRateLimitError) {
+        logger.warn("Hunter.io rate limited — aborting remaining requests");
+        await alerter.send("Hunter.io rate limited", "Discovery batch aborted due to 429. Remaining requests will be retried next run.");
+        requestResult.status = "failed";
+        requestResult.error = "Hunter.io rate limited";
+        result.results.failed += 1;
+        result.requests.push(requestResult);
+        result.requestsProcessed += 1;
+        break;
+      }
+
       const errorMsg = err instanceof Error ? err.message : String(err);
       logger.error("Request processing failed", {
         requestTaskId: requestTask.id,
@@ -394,18 +383,14 @@ export async function runDiscovery(
       requestResult.error = errorMsg;
       result.results.failed += 1;
 
-      // Set request to Failed in ClickUp
       try {
         await clickup.updateTask(requestTask.id, { status: "Failed" });
         await clickup.addComment(requestTask.id, `Error: ${errorMsg}`);
       } catch {
-        // Best effort — don't let status update failure mask the real error
+        // Best effort
       }
 
-      await alerter.send(
-        `Discovery agent error on request ${requestTask.id}`,
-        errorMsg
-      );
+      await alerter.send(`Discovery agent error on request ${requestTask.id}`, errorMsg);
     }
 
     result.requests.push(requestResult);
