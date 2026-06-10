@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+pipeline/dist/
+
+# Environment variables (contains API keys)
+pipeline/.env
+
+# Firecrawl cache
+.firecrawl/
+
+# OS files
+.DS_Store
+Thumbs.db
