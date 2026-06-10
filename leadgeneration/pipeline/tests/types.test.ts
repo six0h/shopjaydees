@@ -8,11 +8,17 @@ import {
   type PersonalizationRunResult,
   type LeadPersonalizationResult,
   type FirecrawlScrapeResult,
+  type SendRunResult,
+  type SendLeadResult,
+  type DormancyRunResult,
+  type DormancyLeadResult,
   SEGMENTS,
   PROSPECT_STATUSES,
   PROSPECTING_REQUEST_STATUSES,
   ABOUT_PATH_KEYWORDS,
   COMMUNITY_PATH_KEYWORDS,
+  SENDING_DOMAINS,
+  SEQUENCE_STATUSES,
 } from "../src/types.js";
 
 describe("types", () => {
@@ -54,5 +60,19 @@ describe("types", () => {
     expect(COMMUNITY_PATH_KEYWORDS).toContain("/sponsorship");
     expect(COMMUNITY_PATH_KEYWORDS).toContain("/csr");
     expect(COMMUNITY_PATH_KEYWORDS).toContain("/give-back");
+  });
+
+  it("exports sending domains", () => {
+    expect(SENDING_DOMAINS).toEqual(["shopjaydees.ca", "shopjaydees.net"]);
+  });
+
+  it("exports sequence statuses matching ClickUp data model", () => {
+    expect(SEQUENCE_STATUSES).toContain("Not Started");
+    expect(SEQUENCE_STATUSES).toContain("Touch 1 Sent");
+    expect(SEQUENCE_STATUSES).toContain("Touch 2 Sent");
+    expect(SEQUENCE_STATUSES).toContain("Touch 3 Sent");
+    expect(SEQUENCE_STATUSES).toContain("Sequence Complete");
+    expect(SEQUENCE_STATUSES).toContain("Paused");
+    expect(SEQUENCE_STATUSES).toContain("Cancelled");
   });
 });

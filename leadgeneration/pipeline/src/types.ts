@@ -253,3 +253,66 @@ export interface PersonalizationRunResult {
   leads: LeadPersonalizationResult[];
   deferredRemaining: number;
 }
+
+// --- Send Agent Types ---
+
+export const SENDING_DOMAINS = ["shopjaydees.ca", "shopjaydees.net"] as const;
+export type SendingDomain = (typeof SENDING_DOMAINS)[number];
+
+export const SEQUENCE_STATUSES = [
+  "Not Started",
+  "Touch 1 Sent",
+  "Touch 2 Sent",
+  "Touch 3 Sent",
+  "Sequence Complete",
+  "Paused",
+  "Cancelled",
+] as const;
+export type SequenceStatus = (typeof SEQUENCE_STATUSES)[number];
+
+export interface SendLeadResult {
+  taskId: string;
+  company: string;
+  email: string;
+  status: "sent" | "instantly_duplicate" | "invalid_email" | "deferred_rate_limit" | "error";
+  campaignId: string | null;
+  sendingDomain: string | null;
+  error?: string;
+}
+
+export interface SendRunResult {
+  runId: string;
+  timestamp: string;
+  leadsQueued: number;
+  results: {
+    sent: number;
+    instantlyDuplicate: number;
+    invalidEmail: number;
+    deferredRateLimit: number;
+    errors: number;
+  };
+  leads: SendLeadResult[];
+}
+
+// --- Dormancy Check Types ---
+
+export interface DormancyLeadResult {
+  taskId: string;
+  company: string;
+  dormantSince: string;
+  reactivationNumber: number;
+}
+
+export interface DormancyRunResult {
+  runId: string;
+  timestamp: string;
+  dormantTasksChecked: number;
+  results: {
+    reactivated: number;
+    notEligibleScoreLow: number;
+    notEligibleDoNotReactivate: number;
+    notEligibleMaxAttempts: number;
+    notYetDue: number;
+  };
+  reactivatedLeads: DormancyLeadResult[];
+}
