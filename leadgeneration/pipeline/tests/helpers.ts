@@ -215,6 +215,8 @@ export function makePersonalizationConfig(): Config {
     hunterApiKey: "hunter_test",
     firecrawlApiKey: "fc_test",
     geminiApiKey: "gemini_test",
+    instantlyApiKey: "instantly_test",
+    instantlySendingDomains: ["shopjaydees.ca", "shopjaydees.net"],
     clickupListId: "list_prospects",
     clickupProspectingListId: "list_requests",
     clickupRateLimit: 90,
@@ -264,6 +266,183 @@ export function makePersonalizationConfig(): Config {
       caslConsentBasis: "f-casl-consent",
       caslDateVerified: "f-casl-date",
       reviewDecision: "f-review-decision",
+    },
+    outreachFields: {
+      instantlyCampaignId: "f-campaign-id",
+      instantlyLeadId: "f-lead-id",
+      sendingDomain: "f-sending-domain",
+      sequenceStatus: "f-seq-status",
+      dormantDate: "f-dormant-date",
+      dormantReactivationDate: "f-dormant-react-date",
+    },
+  };
+}
+
+export function makeApprovedLeadTask(opts: {
+  id?: string;
+  companyName?: string;
+  contactName?: string;
+  contactEmail?: string;
+  segment?: string;
+  leadScore?: number;
+  touch1Body?: string;
+  touch1Subject?: string;
+  touch2Body?: string;
+  touch2Subject?: string;
+  touch3Body?: string;
+  touch3Subject?: string;
+} = {}): ClickUpTask {
+  const segmentIndex = { Business: 0, School: 1, Team: 2 }[opts.segment ?? "Business"] ?? 0;
+  return makeClickUpTask({
+    id: opts.id ?? "task_approved_001",
+    name: `${opts.companyName ?? "ABC Plumbing Ltd."} — ${opts.contactName ?? "Mike Thompson"}`,
+    status: { status: "Approved" },
+    custom_fields: [
+      { id: "field-contact-email", name: "Contact Email", value: opts.contactEmail ?? "mike@abcplumbing.ca", type: "email" },
+      { id: "field-contact-name", name: "Contact Name", value: opts.contactName ?? "Mike Thompson", type: "text" },
+      { id: "field-company-name", name: "Company Name", value: opts.companyName ?? "ABC Plumbing Ltd.", type: "text" },
+      {
+        id: "field-segment",
+        name: "Segment",
+        value: segmentIndex,
+        type: "drop_down",
+        type_config: {
+          options: [
+            { id: "opt0", name: "Business", orderindex: 0 },
+            { id: "opt1", name: "School", orderindex: 1 },
+            { id: "opt2", name: "Team", orderindex: 2 },
+          ],
+        },
+      },
+      { id: "field-lead-score", name: "Lead Score", value: opts.leadScore ?? 4, type: "number" },
+      { id: "field-touch-1", name: "Email Touch 1", value: opts.touch1Body ?? "Hi Mike,\n\nI came across ABC Plumbing and loved your community work...", type: "text" },
+      { id: "field-touch-1-subj", name: "Email Touch 1 Subject", value: opts.touch1Subject ?? "Quick question about your crew's gear", type: "text" },
+      { id: "field-touch-2", name: "Email Touch 2", value: opts.touch2Body ?? "Hi Mike,\n\nOne thing we hear from trades companies...", type: "text" },
+      { id: "field-touch-2-subj", name: "Email Touch 2 Subject", value: opts.touch2Subject ?? "An idea for your team", type: "text" },
+      { id: "field-touch-3", name: "Email Touch 3", value: opts.touch3Body ?? "Hi Mike,\n\nJust a quick follow-up...", type: "text" },
+      { id: "field-touch-3-subj", name: "Email Touch 3 Subject", value: opts.touch3Subject ?? "Checking in", type: "text" },
+    ],
+  });
+}
+
+export function makeDormantLeadTask(opts: {
+  id?: string;
+  companyName?: string;
+  leadScore?: number;
+  dormantDate?: string;
+  reactivationDate?: string;
+  tags?: string[];
+} = {}): ClickUpTask {
+  const ninetyOneDaysAgo = Date.now() - 91 * 24 * 60 * 60 * 1000;
+  const yesterday = Date.now() - 1 * 24 * 60 * 60 * 1000;
+
+  return makeClickUpTask({
+    id: opts.id ?? "task_dormant_001",
+    name: `${opts.companyName ?? "Old Lead Corp"} — Jane Doe`,
+    status: { status: "Dormant" },
+    tags: (opts.tags ?? []).map((t) => ({ name: t })),
+    custom_fields: [
+      { id: "field-lead-score", name: "Lead Score", value: opts.leadScore ?? 4, type: "number" },
+      { id: "field-dormant-date", name: "Dormant Date", value: opts.dormantDate ?? String(ninetyOneDaysAgo), type: "date" },
+      { id: "field-dormant-react-date", name: "Dormant Reactivation Date", value: opts.reactivationDate ?? String(yesterday), type: "date" },
+      { id: "field-company-name", name: "Company Name", value: opts.companyName ?? "Old Lead Corp", type: "text" },
+      { id: "field-touch-1", name: "Email Touch 1", value: "Old draft touch 1...", type: "text" },
+      { id: "field-touch-1-subj", name: "Email Touch 1 Subject", value: "Old subject 1", type: "text" },
+      { id: "field-touch-2", name: "Email Touch 2", value: "Old draft touch 2...", type: "text" },
+      { id: "field-touch-2-subj", name: "Email Touch 2 Subject", value: "Old subject 2", type: "text" },
+      { id: "field-touch-3", name: "Email Touch 3", value: "Old draft touch 3...", type: "text" },
+      { id: "field-touch-3-subj", name: "Email Touch 3 Subject", value: "Old subject 3", type: "text" },
+      { id: "field-linkedin-message", name: "LinkedIn Message", value: "Old LinkedIn msg", type: "text" },
+      { id: "field-scrape-summary", name: "Website Scrape Summary", value: "Old summary", type: "text" },
+      { id: "field-community-signals", name: "Community Signals", value: "Old signals", type: "text" },
+      { id: "field-personalization-hooks", name: "Personalization Hooks", value: "Old hooks", type: "text" },
+      { id: "field-campaign-id", name: "Instantly Campaign ID", value: "old_campaign_123", type: "text" },
+      { id: "field-lead-id", name: "Instantly Lead ID", value: "old_lead_456", type: "text" },
+      { id: "field-seq-status", name: "Sequence Status", value: 4, type: "drop_down", type_config: { options: [
+        { id: "ss0", name: "Not Started", orderindex: 0 },
+        { id: "ss1", name: "Touch 1 Sent", orderindex: 1 },
+        { id: "ss2", name: "Touch 2 Sent", orderindex: 2 },
+        { id: "ss3", name: "Touch 3 Sent", orderindex: 3 },
+        { id: "ss4", name: "Sequence Complete", orderindex: 4 },
+        { id: "ss5", name: "Paused", orderindex: 5 },
+        { id: "ss6", name: "Cancelled", orderindex: 6 },
+      ] } },
+      { id: "field-review-decision", name: "Review Decision", value: 1, type: "drop_down", type_config: { options: [
+        { id: "rd0", name: "Pending Review", orderindex: 0 },
+        { id: "rd1", name: "Approved", orderindex: 1 },
+        { id: "rd2", name: "Approved with Edits", orderindex: 2 },
+        { id: "rd3", name: "Rejected", orderindex: 3 },
+        { id: "rd4", name: "I Know This Person", orderindex: 4 },
+      ] } },
+    ],
+  });
+}
+
+export function makeSendConfig(): Config {
+  return {
+    clickupApiToken: "pk_test",
+    hunterApiKey: "hunter_test",
+    firecrawlApiKey: "fc_test",
+    geminiApiKey: "gemini_test",
+    instantlyApiKey: "instantly_test",
+    instantlySendingDomains: ["shopjaydees.ca", "shopjaydees.net"],
+    clickupListId: "list_prospects",
+    clickupProspectingListId: "list_requests",
+    clickupRateLimit: 90,
+    personalizationBatchSize: 15,
+    dryRun: false,
+    alertEmail: "cody@sixohquad.com",
+    alertWebhookUrl: "",
+    fields: {
+      companyName: "field-company-name",
+      companyDomain: "field-company-domain",
+      companyIndustry: "field-company-industry",
+      companyHeadcount: "field-company-headcount",
+      companyCity: "field-company-city",
+      contactName: "field-contact-name",
+      contactTitle: "field-contact-title",
+      contactEmail: "field-contact-email",
+      emailConfidence: "field-email-confidence",
+      contactLinkedin: "field-contact-linkedin",
+      contactPhone: "field-contact-phone",
+      segment: "field-segment",
+      category: "field-category",
+      leadScore: "field-lead-score",
+      scoreRationale: "field-score-rationale",
+      geographicPhase: "field-geo-phase",
+      caslSourceUrl: "field-casl-source",
+      importBatch: "field-import-batch",
+    },
+    prospectingFields: {
+      resultsFound: "field-pr-results",
+      leadsCreated: "field-pr-created",
+      leadsParked: "field-pr-parked",
+      duplicatesSkipped: "field-pr-dupes",
+    },
+    personalizationFields: {
+      websiteScrapeSummary: "field-scrape-summary",
+      communitySignals: "field-community-signals",
+      personalizationHooks: "field-personalization-hooks",
+      emailTouch1: "field-touch-1",
+      emailTouch1Subject: "field-touch-1-subj",
+      emailTouch2: "field-touch-2",
+      emailTouch2Subject: "field-touch-2-subj",
+      emailTouch3: "field-touch-3",
+      emailTouch3Subject: "field-touch-3-subj",
+      linkedinMessage: "field-linkedin-message",
+      caslOptOutCheck: "field-casl-opt-out",
+      caslRelevanceRationale: "field-casl-relevance",
+      caslConsentBasis: "field-casl-consent",
+      caslDateVerified: "field-casl-date",
+      reviewDecision: "field-review-decision",
+    },
+    outreachFields: {
+      instantlyCampaignId: "field-campaign-id",
+      instantlyLeadId: "field-lead-id",
+      sendingDomain: "field-sending-domain",
+      sequenceStatus: "field-seq-status",
+      dormantDate: "field-dormant-date",
+      dormantReactivationDate: "field-dormant-react-date",
     },
   };
 }
