@@ -8,7 +8,7 @@ export const PROSPECT_STATUSES = [
   "Ready for Review",
   "Approved",
   "Outreach Active",
-  "Responded - Owner Follow-up",
+  "Responded - Follow-up",
   "Parked",
   "Won",
   "Lost",
