@@ -21,7 +21,7 @@ This directory contains planning artifacts for a lead generation system designed
 ### Completed
 
 - **Design spec**: Full pipeline architecture documented (`docs/superpowers/specs/2026-05-20-lead-generation-system-design.md`)
-- **Client pitch**: 18-slide HTML presentation delivered (`lead-gen-pitch.html`) — Split Pastel style, covers pipeline overview, targeting, personalization, responsibilities, pricing, and success metrics
+- **Client pitch**: 18-slide HTML presentation delivered (`presentations/lead-gen-pitch.html`) — Split Pastel style, covers pipeline overview, targeting, personalization, responsibilities, pricing, and success metrics
 - **Account setup guide**: Step-by-step guide for client to register third-party accounts and invite Cody (`account-setup-guide.md` / `account-setup-guide.pdf`)
 - **ClickUp data model**: Full workspace schema — 53 custom fields, 13 statuses, 8 automations, 6 Zapier zaps (`docs/superpowers/specs/2026-06-08-clickup-data-model.md`)
 - **API contracts**: Input/output schemas for all pipeline components — discovery agent, personalization agent, send agent, dormancy check (`docs/superpowers/specs/2026-06-08-api-contracts.md`)
