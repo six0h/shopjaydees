@@ -12,6 +12,7 @@ const DECISION_MAKER_TITLES = [
 interface ScoreInput {
   emailConfidence: number;
   contactTitle: string | null;
+  seniority: string | null;
   headcount: string | null;
   hasDomain: boolean;
 }
@@ -73,6 +74,7 @@ export function scoreLead(input: ScoreInput): LeadScoreResult {
   if (
     input.contactTitle !== null &&
     !isDecisionMaker(input.contactTitle) &&
+    input.seniority !== "executive" &&
     isSmallOrUnknownHeadcount(input.headcount)
   ) {
     score -= 1;

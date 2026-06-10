@@ -6,6 +6,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 70,
       contactTitle: null,
+      seniority: null,
       headcount: null,
       hasDomain: true,
     });
@@ -16,6 +17,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 92,
       contactTitle: "Owner",
+      seniority: null,
       headcount: "11-50",
       hasDomain: true,
     });
@@ -28,6 +30,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 95,
       contactTitle: null,
+      seniority: null,
       headcount: null,
       hasDomain: true,
     });
@@ -39,6 +42,7 @@ describe("scoreLead", () => {
       const result = scoreLead({
         emailConfidence: 70,
         contactTitle: title,
+        seniority: null,
         headcount: null,
         hasDomain: true,
       });
@@ -50,6 +54,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 70,
       contactTitle: null,
+      seniority: null,
       headcount: "11-50",
       hasDomain: true,
     });
@@ -60,6 +65,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 45,
       contactTitle: null,
+      seniority: null,
       headcount: null,
       hasDomain: true,
     });
@@ -70,6 +76,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 70,
       contactTitle: null,
+      seniority: null,
       headcount: null,
       hasDomain: true,
     });
@@ -80,6 +87,7 @@ describe("scoreLead", () => {
     const r1 = scoreLead({
       emailConfidence: 70,
       contactTitle: "Manager",
+      seniority: null,
       headcount: "1-10",
       hasDomain: true,
     });
@@ -88,6 +96,7 @@ describe("scoreLead", () => {
     const r2 = scoreLead({
       emailConfidence: 70,
       contactTitle: "Manager",
+      seniority: null,
       headcount: null,
       hasDomain: true,
     });
@@ -98,6 +107,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 30,
       contactTitle: null,
+      seniority: null,
       headcount: "1-10",
       hasDomain: true,
     });
@@ -108,6 +118,7 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 99,
       contactTitle: "CEO",
+      seniority: null,
       headcount: "51-200",
       hasDomain: true,
     });
@@ -118,10 +129,46 @@ describe("scoreLead", () => {
     const result = scoreLead({
       emailConfidence: 91,
       contactTitle: "Owner",
+      seniority: null,
       headcount: "11-50",
       hasDomain: true,
     });
     expect(result.rationale).toMatch(/Auto-scored:/);
     expect(result.rationale).toContain("-> 5");
+  });
+});
+
+describe("seniority-based scoring", () => {
+  it("+1 for executive seniority with DM title", () => {
+    const result = scoreLead({
+      emailConfidence: 80,
+      contactTitle: "CEO",
+      seniority: "executive",
+      headcount: "11-50",
+      hasDomain: true,
+    });
+    expect(result.score).toBe(5);
+  });
+
+  it("seniority 'senior' still gets DM bonus if title matches", () => {
+    const result = scoreLead({
+      emailConfidence: 80,
+      contactTitle: "Director of Operations",
+      seniority: "senior",
+      headcount: "11-50",
+      hasDomain: true,
+    });
+    expect(result.score).toBeGreaterThanOrEqual(4);
+  });
+
+  it("no penalty for unknown headcount when seniority is executive", () => {
+    const result = scoreLead({
+      emailConfidence: 80,
+      contactTitle: "Founder",
+      seniority: "executive",
+      headcount: null,
+      hasDomain: true,
+    });
+    expect(result.score).toBeGreaterThanOrEqual(3);
   });
 });
