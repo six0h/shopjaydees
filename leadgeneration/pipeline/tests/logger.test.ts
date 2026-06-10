@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createLogger } from "../src/logger.js";
 
 describe("createLogger", () => {
@@ -6,6 +6,10 @@ describe("createLogger", () => {
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   it("logs structured JSON with severity and component", () => {
