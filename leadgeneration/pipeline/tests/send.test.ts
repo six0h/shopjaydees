@@ -343,6 +343,24 @@ describe("runSend", () => {
     expect(result.results.errors).toBe(1);
   });
 
+  it("skips leads with missing email", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    (clickup.getTasks as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      makeApprovedLeadTask({ contactEmail: "" }),
+    ]);
+
+    const result = await runSend({ config, clickup, instantly, alerter, logger });
+
+    expect(result.results.invalidEmail).toBe(1);
+    expect(instantly.addLeadToCampaign).not.toHaveBeenCalled();
+    expect(clickup.addTag).toHaveBeenCalledWith("task_approved_001", "invalid-email");
+  });
+
   it("exits cleanly when no approved leads exist", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();

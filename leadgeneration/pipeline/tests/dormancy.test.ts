@@ -270,6 +270,25 @@ describe("runDormancyCheck", () => {
     expect(result.reactivatedLeads).toHaveLength(2);
   });
 
+  it("skips ClickUp writes in DRY_RUN mode but still counts", async () => {
+    const config = { ...makeSendConfig(), dryRun: true };
+    const clickup = makeMockClickUp();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    (clickup.getTasks as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      makeDormantLeadTask({}),
+    ]);
+
+    const result = await runDormancyCheck({ config, clickup, alerter, logger });
+
+    expect(result.results.reactivated).toBe(1);
+    expect(result.reactivatedLeads).toHaveLength(1);
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(clickup.addTag).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+  });
+
   it("continues processing when one lead fails", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();

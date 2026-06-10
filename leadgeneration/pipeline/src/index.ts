@@ -1260,6 +1260,21 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
       leadResult.company = leadData.companyName;
       leadResult.email = leadData.contactEmail;
 
+      if (!leadData.contactEmail || !leadData.contactEmail.includes("@")) {
+        logger.warn("Missing or invalid email, skipping", {
+          taskId: task.id,
+          email: leadData.contactEmail,
+        });
+        if (!config.dryRun) {
+          await clickup.addTag(task.id, "invalid-email");
+          await clickup.updateTask(task.id, { status: "Bounced" });
+        }
+        leadResult.status = "invalid_email";
+        result.results.invalidEmail += 1;
+        result.leads.push(leadResult);
+        continue;
+      }
+
       const sendingDomain = config.instantlySendingDomains[i % config.instantlySendingDomains.length];
       leadResult.sendingDomain = sendingDomain;
 
@@ -1594,33 +1609,41 @@ export async function runDormancyCheck(
     const companyName = String(companyNameField?.value ?? task.name);
 
     try {
-      await clickup.updateTask(task.id, {
-        status: "Enriched",
-        custom_fields: [
-          { id: config.personalizationFields.websiteScrapeSummary, value: "" },
-          { id: config.personalizationFields.communitySignals, value: "" },
-          { id: config.personalizationFields.personalizationHooks, value: "" },
-          { id: config.personalizationFields.emailTouch1, value: "" },
-          { id: config.personalizationFields.emailTouch1Subject, value: "" },
-          { id: config.personalizationFields.emailTouch2, value: "" },
-          { id: config.personalizationFields.emailTouch2Subject, value: "" },
-          { id: config.personalizationFields.emailTouch3, value: "" },
-          { id: config.personalizationFields.emailTouch3Subject, value: "" },
-          { id: config.personalizationFields.linkedinMessage, value: "" },
-          { id: config.personalizationFields.reviewDecision, value: 0 },
-          { id: config.outreachFields.instantlyCampaignId, value: "" },
-          { id: config.outreachFields.instantlyLeadId, value: "" },
-          { id: config.outreachFields.sequenceStatus, value: 0 },
-        ],
-      });
+      if (!config.dryRun) {
+        await clickup.updateTask(task.id, {
+          status: "Enriched",
+          custom_fields: [
+            { id: config.personalizationFields.websiteScrapeSummary, value: "" },
+            { id: config.personalizationFields.communitySignals, value: "" },
+            { id: config.personalizationFields.personalizationHooks, value: "" },
+            { id: config.personalizationFields.emailTouch1, value: "" },
+            { id: config.personalizationFields.emailTouch1Subject, value: "" },
+            { id: config.personalizationFields.emailTouch2, value: "" },
+            { id: config.personalizationFields.emailTouch2Subject, value: "" },
+            { id: config.personalizationFields.emailTouch3, value: "" },
+            { id: config.personalizationFields.emailTouch3Subject, value: "" },
+            { id: config.personalizationFields.linkedinMessage, value: "" },
+            { id: config.personalizationFields.reviewDecision, value: 0 },
+            { id: config.outreachFields.instantlyCampaignId, value: "" },
+            { id: config.outreachFields.instantlyLeadId, value: "" },
+            { id: config.outreachFields.sequenceStatus, value: 0 },
+          ],
+        });
 
-      await clickup.addTag(task.id, "re-engagement");
-      await clickup.addTag(task.id, `reactivation-${newReactivationNumber}`);
+        await clickup.addTag(task.id, "re-engagement");
+        await clickup.addTag(task.id, `reactivation-${newReactivationNumber}`);
 
-      await clickup.addComment(
-        task.id,
-        `Dormancy reactivation: 90-day cool-off complete. Cleared old drafts, moved to Enriched for re-personalization with fresh angle. Reactivation #${newReactivationNumber}.`
-      );
+        await clickup.addComment(
+          task.id,
+          `Dormancy reactivation: 90-day cool-off complete. Cleared old drafts, moved to Enriched for re-personalization with fresh angle. Reactivation #${newReactivationNumber}.`
+        );
+      } else {
+        logger.info("DRY_RUN: would reactivate lead", {
+          taskId: task.id,
+          company: companyName,
+          reactivationNumber: newReactivationNumber,
+        });
+      }
 
       logger.info("Lead reactivated", {
         taskId: task.id,
@@ -1677,8 +1700,18 @@ ff.http("dormancyCheck", async (req: Request, res: Response) => {
   });
 
   try {
+    const dryRunOverride =
+      req.body && typeof req.body === "object" && "dry_run" in req.body
+        ? req.body.dry_run === true
+        : undefined;
+
+    const effectiveConfig =
+      dryRunOverride !== undefined
+        ? { ...config, dryRun: dryRunOverride }
+        : config;
+
     const result = await runDormancyCheck({
-      config,
+      config: effectiveConfig,
       clickup,
       alerter,
       logger,
