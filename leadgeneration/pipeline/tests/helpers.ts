@@ -224,6 +224,8 @@ export function makePersonalizationConfig(): Config {
     dryRun: false,
     alertEmail: "cody@sixohquad.com",
     alertWebhookUrl: "",
+    hunterDefaultHeadcount: ["1-10", "11-50", "51-200"],
+    hunterDefaultSeniority: ["executive", "senior"],
     fields: {
       companyName: "f-company-name",
       companyDomain: "f-company-domain",
@@ -393,6 +395,8 @@ export function makeSendConfig(): Config {
     dryRun: false,
     alertEmail: "cody@sixohquad.com",
     alertWebhookUrl: "",
+    hunterDefaultHeadcount: ["1-10", "11-50", "51-200"],
+    hunterDefaultSeniority: ["executive", "senior"],
     fields: {
       companyName: "field-company-name",
       companyDomain: "field-company-domain",

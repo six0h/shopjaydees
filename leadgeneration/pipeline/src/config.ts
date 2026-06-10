@@ -12,6 +12,8 @@ export interface Config {
   dryRun: boolean;
   alertEmail: string;
   alertWebhookUrl: string;
+  hunterDefaultHeadcount: string[];
+  hunterDefaultSeniority: string[];
   fields: ClickUpFieldIds;
   prospectingFields: ProspectingRequestFieldIds;
   personalizationFields: PersonalizationFieldIds;
@@ -98,6 +100,12 @@ export function loadConfig(): Config {
     dryRun: process.env.DRY_RUN === "true",
     alertEmail: required("ALERT_EMAIL"),
     alertWebhookUrl: process.env.ALERT_WEBHOOK_URL ?? "",
+    hunterDefaultHeadcount: (process.env.HUNTER_DEFAULT_HEADCOUNT ?? "1-10,11-50,51-200")
+      .split(",")
+      .map((s) => s.trim()),
+    hunterDefaultSeniority: (process.env.HUNTER_DEFAULT_SENIORITY ?? "executive,senior")
+      .split(",")
+      .map((s) => s.trim()),
     fields: {
       companyName: required("CLICKUP_FIELD_COMPANY_NAME"),
       companyDomain: required("CLICKUP_FIELD_COMPANY_DOMAIN"),

@@ -182,6 +182,24 @@ describe("loadConfig", () => {
     expect(config.instantlySendingDomains).toEqual(["shopjaydees.ca", "shopjaydees.net"]);
   });
 
+  it("loads Hunter ICP defaults from env", () => {
+    setRequiredEnv();
+    process.env.HUNTER_DEFAULT_HEADCOUNT = "1-10,11-50,51-200";
+    process.env.HUNTER_DEFAULT_SENIORITY = "executive,senior";
+    const config = loadConfig();
+    expect(config.hunterDefaultHeadcount).toEqual(["1-10", "11-50", "51-200"]);
+    expect(config.hunterDefaultSeniority).toEqual(["executive", "senior"]);
+  });
+
+  it("uses sensible ICP defaults when env vars are absent", () => {
+    setRequiredEnv();
+    delete process.env.HUNTER_DEFAULT_HEADCOUNT;
+    delete process.env.HUNTER_DEFAULT_SENIORITY;
+    const config = loadConfig();
+    expect(config.hunterDefaultHeadcount).toEqual(["1-10", "11-50", "51-200"]);
+    expect(config.hunterDefaultSeniority).toEqual(["executive", "senior"]);
+  });
+
   it("loads outreach tracking field IDs", () => {
     setRequiredEnv();
     const config = loadConfig();
