@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Connecting Your Outreach Aliases to Instantly — ShopJaydees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color: var(--text-dark); }
+
+  body {
+    font-family: var(--font);
+    margin: 0;
+    background: var(--bg-warm);
+    line-height: 1.6;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 50em;
+    margin: 0 auto;
+    padding: 0 3rem 3rem;
+  }
+
+  /* Header band */
+  header {
+    background: linear-gradient(135deg, var(--bg-peach) 0%, var(--bg-lavender) 100%);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 2.4rem 3rem 2rem;
+    margin: 0 -3rem 2.4rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--accent-dark);
+    font-size: 1.05rem;
+    margin-bottom: 1.1rem;
+  }
+  .brand .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--accent-warm);
+    display: inline-block;
+  }
+  header h1 {
+    font-size: 2rem;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.5rem;
+    color: var(--text-dark);
+  }
+  header .sub {
+    font-size: 0.95rem;
+    color: var(--text-mid);
+    margin: 0;
+    max-width: 40em;
+  }
+  .pills { margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .pill {
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius-pill);
+    padding: 0.3rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+    font-family: 'Outfit', monospace;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 2.2rem 0 0.5rem;
+    color: var(--accent-dark);
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  h2 .num {
+    flex: 0 0 auto;
+    background: var(--accent-dark);
+    color: #fff;
+    width: 1.7rem; height: 1.7rem;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(2px);
+  }
+  h2:first-of-type { margin-top: 0.5rem; }
+
+  p { margin: 0.7em 0; }
+  strong { font-weight: 600; }
+
+  a { color: var(--accent-warm); text-decoration: none; font-weight: 600; }
+
+  ol, ul { padding-left: 1.4em; margin: 0.7em 0; }
+  li { margin: 0.4em 0; }
+
+  code {
+    font-family: 'Outfit', ui-monospace, Menlo, monospace;
+    background: var(--bg-lavender);
+    color: var(--accent-dark);
+    padding: 0.08em 0.4em;
+    border-radius: 6px;
+    font-size: 0.92em;
+    font-weight: 600;
+  }
+
+  em { color: var(--text-mid); font-style: italic; }
+
+  /* Callout / blockquote */
+  blockquote {
+    margin: 1.1em 0;
+    padding: 0.9rem 1.1rem;
+    background: var(--bg-warm);
+    border-left: 4px solid var(--accent-warm);
+    border-radius: var(--radius-sm);
+    color: var(--text-mid);
+    font-size: 0.95rem;
+  }
+  blockquote strong { color: var(--accent-dark); }
+  blockquote p { margin: 0.3em 0; }
+
+  /* Tables */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.1em 0;
+    font-size: 0.92rem;
+    background: #fff;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(61,46,92,0.06);
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid #efe8e0;
+    vertical-align: top;
+  }
+  thead th {
+    background: var(--accent-dark);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  tbody tr:nth-child(even) td { background: var(--bg-warm); }
+  tbody tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; color: var(--accent-dark); }
+
+  hr {
+    border: none;
+    border-top: 1px solid #ece4da;
+    margin: 2rem 0 0.5rem;
+  }
+
+  footer {
+    margin-top: 2.4rem;
+    padding-top: 1.2rem;
+    border-top: 2px solid var(--bg-lavender);
+    font-size: 0.9rem;
+    color: var(--text-mid);
+  }
+  footer strong { color: var(--accent-dark); }
+
+  @media print {
+    body { background: #fff; }
+    .page { padding: 0 0 1rem; max-width: none; }
+    header { margin: 0 0 1.8rem; border-radius: 0 0 var(--radius) var(--radius); }
+    h2 { page-break-after: avoid; }
+    table, blockquote, ol, ul { page-break-inside: avoid; }
+  }
+  @page { margin: 14mm 16mm; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="brand"><span class="dot"></span> ShopJaydees &times; SixOhQuad</div>
+  <h1>Connecting Your Outreach Aliases to Instantly</h1>
+  <p class="sub">A 15-minute, three-part setup using IMAP/SMTP. You'll sign Instantly in to your main mailbox, then have it send as each alias.</p>
+  <div class="pills">
+    <span class="pill">ellie@shopjaydees.ca</span>
+    <span class="pill">ellie@shopjaydees.net</span>
+  </div>
+</header>
+
+<p>Two outreach addresses are ready to connect: <strong>ellie@shopjaydees.ca</strong> and <strong>ellie@shopjaydees.net</strong>.</p>
+
+<p>Both are <strong>aliases</strong> of your main mailbox, <strong>hello@shopjaydees.com</strong>. An alias doesn't have its own password or inbox — any email sent to it simply lands in your <code>hello@</code> inbox. So we connect them a little differently than a normal account: we sign Instantly in to your <strong>main mailbox</strong> (<code>hello@</code>), and then tell it to <strong>send as</strong> each alias.</p>
+
+<p>This is completely doable and takes about <strong>15 minutes</strong>. There are three parts: a one-time Google security step, then connecting each alias in Instantly.</p>
+
+<blockquote><p><strong>Questions at any point?</strong> Email <a href="mailto:cody@sixohquad.com">cody@sixohquad.com</a>.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">1</span> Create a Google App Password <em>(one-time)</em></h2>
+
+<p>Because your mailbox uses 2-Step Verification, Instantly can't sign in with your normal password — it needs a special <strong>App Password</strong>. You only need to make <strong>one</strong>; it works for both aliases.</p>
+
+<ol>
+  <li>Sign in to <strong>hello@shopjaydees.com</strong> at <a href="https://myaccount.google.com">myaccount.google.com</a>.</li>
+  <li>If 2-Step Verification isn't already on, turn it on first: <strong>Security</strong> → <strong>2-Step Verification</strong> → <strong>Get Started</strong>, and follow the prompts (you'll confirm a code sent to your phone).</li>
+  <li>Open the App Passwords page directly at <a href="https://myaccount.google.com/apppasswords">myaccount.google.com/apppasswords</a> — or type <strong>"App passwords"</strong> into the search bar at the top of your Google Account.</li>
+  <li>In the <strong>App name</strong> box, type <code>Instantly</code>, then click <strong>Create</strong>.</li>
+  <li>Google shows a <strong>16-character password</strong>. <strong>Copy it now</strong> and keep it handy for Part 2 — you won't be able to see it again after you close the window. (The spaces don't matter.)</li>
+</ol>
+
+<blockquote><p><strong>Note:</strong> You don't need to turn IMAP on anywhere — Google leaves it on by default for all Workspace mailboxes. The App Password is the only thing you need from this step.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">2</span> Connect ellie@shopjaydees.ca in Instantly</h2>
+
+<ol>
+  <li>Go to <a href="https://app.instantly.ai/app/accounts">app.instantly.ai</a> and sign in.</li>
+  <li>Click <strong>Email Accounts</strong> in the left sidebar.</li>
+  <li>Click <strong>Add New</strong>.</li>
+  <li>In the pop-up, choose <strong>Connect existing accounts</strong>, then select <strong>Any provider (IMAP/SMTP)</strong>.<br><em>(Not the "Google" option — we use IMAP/SMTP because we sign in as <code>hello@</code> but send as the alias.)</em></li>
+  <li>Fill in the form exactly as below:</li>
+</ol>
+
+<table>
+  <thead><tr><th>Field</th><th>What to enter</th></tr></thead>
+  <tbody>
+    <tr><td>Email <em>(the address you send from)</em></td><td><code>ellie@shopjaydees.ca</code></td></tr>
+    <tr><td>First name <em>(optional)</em></td><td><code>Ellie</code></td></tr>
+    <tr><td>IMAP username</td><td><code>hello@shopjaydees.com</code> ← your main mailbox, <strong>not</strong> the alias</td></tr>
+    <tr><td>IMAP password</td><td>the App Password from Part 1</td></tr>
+    <tr><td>IMAP host</td><td><code>imap.gmail.com</code></td></tr>
+    <tr><td>IMAP port</td><td><code>993</code></td></tr>
+    <tr><td>SMTP username</td><td><code>hello@shopjaydees.com</code></td></tr>
+    <tr><td>SMTP password</td><td>the App Password from Part 1</td></tr>
+    <tr><td>SMTP host</td><td><code>smtp.gmail.com</code></td></tr>
+    <tr><td>SMTP port</td><td><code>465</code></td></tr>
+  </tbody>
+</table>
+
+<p>6. Click <strong>Connect</strong> (or <strong>Save</strong>). A green check or "connected" status means it worked.</p>
+
+<blockquote><p><strong>The key idea:</strong> the <strong>Email</strong> field is the alias you want to send <em>from</em> (<code>ellie@shopjaydees.ca</code>), but the <strong>username</strong> for both IMAP and SMTP is always your real mailbox login (<code>hello@shopjaydees.com</code>). That pairing is what lets the alias send and receive correctly.</p></blockquote>
+
+<blockquote><p><strong>If it won't connect:</strong> re-check that the App Password was copied with no typos, that the username is <code>hello@shopjaydees.com</code> on <strong>both</strong> the IMAP and SMTP rows, and — if <code>465</code> is rejected — try SMTP port <code>587</code> instead.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">3</span> Connect ellie@shopjaydees.net</h2>
+
+<p>Repeat <strong>all of Part 2</strong>, changing only the <strong>Email</strong> field to:</p>
+
+<ul><li><strong>Email:</strong> <code>ellie@shopjaydees.net</code></li></ul>
+
+<p>Everything else stays identical — same <code>hello@shopjaydees.com</code> username, the same App Password, and the same hosts and ports.</p>
+
+<hr>
+
+<h2><span class="num">4</span> Done — Cody takes it from here</h2>
+
+<p>Once both addresses show as <strong>connected</strong> in your Instantly Email Accounts list, let Cody know. He'll:</p>
+
+<ul>
+  <li>Enable and configure <strong>warmup</strong> on both addresses</li>
+  <li>Monitor deliverability while they build sending reputation</li>
+</ul>
+
+<p>Warmup typically runs <strong>2–3 weeks</strong> before the addresses are ready for real campaigns. During that time they exchange automated emails behind the scenes — nothing you need to do.</p>
+
+<hr>
+
+<h2>Settings at a glance</h2>
+
+<table>
+  <thead><tr><th></th><th>IMAP (receiving)</th><th>SMTP (sending)</th></tr></thead>
+  <tbody>
+    <tr><td>Username</td><td>hello@shopjaydees.com</td><td>hello@shopjaydees.com</td></tr>
+    <tr><td>Password</td><td>your Google App Password</td><td>your Google App Password</td></tr>
+    <tr><td>Host</td><td>imap.gmail.com</td><td>smtp.gmail.com</td></tr>
+    <tr><td>Port</td><td>993</td><td>465 (or 587)</td></tr>
+    <tr><td>Send-from address</td><td>—</td><td>ellie@shopjaydees.ca / .net</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  <strong>Questions at any point?</strong> Email <a href="mailto:cody@sixohquad.com">cody@sixohquad.com</a>.<br>
+  ShopJaydees &times; SixOhQuad — outreach email setup
+</footer>
+
+</div>
+</body>
+</html>
