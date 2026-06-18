@@ -103,12 +103,51 @@ export interface HunterCompany {
   emails: HunterContact[];
 }
 
+export interface DiscoverCompany {
+  domain: string;
+  organization: string;
+  emails_count: {
+    personal: number;
+    generic: number;
+    total: number;
+  };
+}
+
+export interface DiscoverFilters {
+  headquarters_location?: {
+    include?: Array<{ country?: string; city?: string }>;
+  };
+  industry?: {
+    include?: string[];
+  };
+  headcount?: string[];
+  company_type?: {
+    exclude?: string[];
+  };
+  keywords?: {
+    include?: string[];
+    match?: "any" | "all";
+  };
+}
+
+export const HEADCOUNT_RANGES = [
+  "1-10",
+  "11-50",
+  "51-200",
+  "201-500",
+  "501-1000",
+  "1001-5000",
+  "5001-10000",
+  "10001+",
+] as const;
+export type HeadcountRange = (typeof HEADCOUNT_RANGES)[number];
+
 export interface ProspectingRequest {
   taskId: string;
   segment: Segment;
   category: Category;
   targetCity: City;
-  maxResults: number;
+  targetVolume: number;
 }
 
 export interface LeadScoreResult {
@@ -121,7 +160,8 @@ export interface RequestResult {
   segment: Segment;
   category: Category;
   targetCity: City;
-  resultsFound: number;
+  companiesDiscovered: number;
+  companiesSearched: number;
   leadsCreated: number;
   leadsParked: number;
   duplicatesSkipped: number;

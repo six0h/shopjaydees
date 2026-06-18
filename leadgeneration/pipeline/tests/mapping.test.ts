@@ -1,49 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { categoryToSearchQuery, cityToPhase } from "../src/mapping.js";
-
-describe("categoryToSearchQuery", () => {
-  it("maps Trades & Contractors to plumbing/electrical/HVAC terms", () => {
-    const query = categoryToSearchQuery("Trades & Contractors");
-    expect(query).toContain("plumbing");
-  });
-
-  it("maps Elementary & Secondary to education terms", () => {
-    const query = categoryToSearchQuery("Elementary & Secondary");
-    expect(query).toContain("school");
-  });
-
-  it("maps Youth Sports Leagues to sports terms", () => {
-    const query = categoryToSearchQuery("Youth Sports Leagues");
-    expect(query).toContain("sports");
-  });
-
-  it("maps every defined category without throwing", () => {
-    const categories = [
-      "Trades & Contractors",
-      "Restaurants & Hospitality",
-      "Fitness & Wellness",
-      "Real Estate & Property Mgmt",
-      "Auto & Trades Shops",
-      "Elementary & Secondary",
-      "Independent & Private Schools",
-      "Daycares & Preschools",
-      "Post-Secondary Clubs",
-      "Youth Sports Leagues",
-      "Adult Rec Leagues",
-      "Dance & Performance",
-      "Community Sport Orgs",
-    ];
-    for (const cat of categories) {
-      expect(() => categoryToSearchQuery(cat as any)).not.toThrow();
-      expect(categoryToSearchQuery(cat as any).length).toBeGreaterThan(0);
-    }
-  });
-
-  it("returns the input for Other", () => {
-    const query = categoryToSearchQuery("Other");
-    expect(query).toBe("Other");
-  });
-});
+import { categoryToDiscoverFilters, cityToPhase } from "../src/mapping.js";
 
 describe("cityToPhase", () => {
   it("maps Surrey to Phase 1", () => {
@@ -78,5 +34,30 @@ describe("cityToPhase", () => {
     for (const city of ["Richmond", "Delta", "North Vancouver", "Vancouver"]) {
       expect(cityToPhase(city as any)).toBe("Phase 3 - Metro Vancouver");
     }
+  });
+});
+
+describe("categoryToDiscoverFilters", () => {
+  it("returns structured filters for Trades & Contractors", () => {
+    const filters = categoryToDiscoverFilters("Trades & Contractors", "Surrey");
+    expect(filters.keywords?.include).toEqual(
+      expect.arrayContaining(["plumbing", "electrical", "HVAC", "construction", "contractor"])
+    );
+    expect(filters.keywords?.match).toBe("any");
+    expect(filters.headquarters_location?.include).toEqual([{ country: "CA", city: "Surrey" }]);
+    expect(filters.headcount).toBeUndefined();
+  });
+
+  it("returns structured filters for Elementary & Secondary", () => {
+    const filters = categoryToDiscoverFilters("Elementary & Secondary", "Langley");
+    expect(filters.keywords?.include).toEqual(
+      expect.arrayContaining(["school", "elementary", "secondary"])
+    );
+    expect(filters.headquarters_location?.include).toEqual([{ country: "CA", city: "Langley" }]);
+  });
+
+  it("falls back to category name as keyword for unknown categories", () => {
+    const filters = categoryToDiscoverFilters("Other" as any, "Vancouver");
+    expect(filters.keywords?.include).toEqual(["Other"]);
   });
 });

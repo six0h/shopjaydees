@@ -1,32 +1,4 @@
-import type { Category, City, GeographicPhase } from "./types.js";
-
-const CATEGORY_SEARCH_MAP: Record<string, string> = {
-  "Trades & Contractors":
-    "plumbing electrical HVAC construction contractor",
-  "Restaurants & Hospitality":
-    "restaurant food beverage hospitality catering",
-  "Fitness & Wellness": "fitness gym wellness yoga pilates recreation",
-  "Real Estate & Property Mgmt":
-    "real estate property management brokerage",
-  "Auto & Trades Shops": "automotive auto repair mechanic body shop",
-  "Elementary & Secondary":
-    "school elementary secondary high school education",
-  "Independent & Private Schools": "private school independent academy",
-  "Daycares & Preschools": "daycare preschool childcare early learning",
-  "Post-Secondary Clubs":
-    "university college student club association",
-  "Youth Sports Leagues":
-    "youth sports league minor hockey soccer baseball",
-  "Adult Rec Leagues": "adult recreation league sports beer league",
-  "Dance & Performance":
-    "dance studio martial arts performing arts gymnastics",
-  "Community Sport Orgs":
-    "community sport organization recreation association",
-};
-
-export function categoryToSearchQuery(category: Category): string {
-  return CATEGORY_SEARCH_MAP[category] ?? category;
-}
+import type { Category, City, GeographicPhase, DiscoverFilters } from "./types.js";
 
 const PHASE_1_CITIES = new Set([
   "Surrey",
@@ -59,10 +31,29 @@ export function cityToPhase(city: City): GeographicPhase {
   return "Future - Rest of BC+";
 }
 
-export function buildSearchQuery(
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  "Trades & Contractors": ["plumbing", "electrical", "HVAC", "construction", "contractor"],
+  "Restaurants & Hospitality": ["restaurant", "food", "beverage", "hospitality", "catering"],
+  "Fitness & Wellness": ["fitness", "gym", "wellness", "yoga", "pilates", "recreation"],
+  "Real Estate & Property Mgmt": ["real estate", "property management", "brokerage"],
+  "Auto & Trades Shops": ["automotive", "auto repair", "mechanic", "body shop"],
+  "Elementary & Secondary": ["school", "elementary", "secondary", "high school", "education"],
+  "Independent & Private Schools": ["private school", "independent", "academy"],
+  "Daycares & Preschools": ["daycare", "preschool", "childcare", "early learning"],
+  "Post-Secondary Clubs": ["university", "college", "student club", "association"],
+  "Youth Sports Leagues": ["youth sports", "league", "minor hockey", "soccer", "baseball"],
+  "Adult Rec Leagues": ["adult recreation", "league", "sports", "beer league"],
+  "Dance & Performance": ["dance studio", "martial arts", "performing arts", "gymnastics"],
+  "Community Sport Orgs": ["community sport", "organization", "recreation", "association"],
+};
+
+export function categoryToDiscoverFilters(
   category: Category,
   city: City
-): string {
-  const terms = categoryToSearchQuery(category);
-  return `${terms} ${city} BC Canada`;
+): DiscoverFilters {
+  const keywords = CATEGORY_KEYWORDS[category] ?? [category];
+  return {
+    headquarters_location: { include: [{ country: "CA", city }] },
+    keywords: { include: keywords, match: "any" },
+  };
 }
