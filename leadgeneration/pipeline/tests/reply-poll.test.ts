@@ -213,12 +213,44 @@ describe("runReplyPoll — Phase A", () => {
     expect(result.repliesFlagged).toBe(0);
   });
 
-  it("bounce moves to Bounced + tag when not closed", async () => {
+  it("auto-reply is idempotent: already-tagged task gets no addTag or addComment", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
-    ]);
+    // Task already has the auto-reply tag — the guard in applySignal returns early.
+    const task = {
+      ...makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
+      tags: [{ name: "auto-reply" }],
+    };
+    (clickup.getTasks as Mock).mockResolvedValue([task]);
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{
+        from_address_email: "mike@acme.ca",
+        to_address_email_list: "ellie@shopjaydees.ca",
+        subject: "Out of office",
+        body: { text: "I am out of office until next week" },
+      }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+
+    expect(clickup.addTag).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+    expect(result.autoRepliesTagged).toBe(0);
+  });
+
+  it("bounce from mail-daemon currently lands in noMatch (lead identity unresolved — pending Task 9 live validation)", async () => {
+    // findTaskByEmail is called with MAILER-DAEMON@... as the email because normalizeEmail
+    // sets leadEmail = from for inbound. The daemon address never matches a real lead task,
+    // so the lookup returns [] and the signal falls through to noMatch. The Bounced branch in
+    // applySignal is only reachable if a future Instantly payload carries the real lead address
+    // instead — validate this during Task 9 live-traffic review.
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    // Email lookup for the daemon address finds nothing — mirrors production behavior.
+    (clickup.getTasks as Mock).mockResolvedValue([]);
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
     (instantly.listEmails as Mock).mockResolvedValue({
@@ -233,10 +265,9 @@ describe("runReplyPoll — Phase A", () => {
 
     const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
 
-    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
-    expect(upd.status).toBe("Bounced");
-    expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "bounced");
-    expect(result.bounced).toBe(1);
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(result.bounced).toBe(0);
+    expect(result.noMatch).toBe(1);
   });
 
   it("no matching task -> counted in noMatch, no writes", async () => {

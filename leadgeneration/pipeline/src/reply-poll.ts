@@ -208,6 +208,11 @@ async function applySignal(
   } else if (signal.kind === "bounce") {
     if (CLOSED_STATUSES.has(status)) return;
     if (!config.dryRun) {
+      // NOTE: bounce reconciliation depends on the bounced lead's address being recoverable from
+      // the /emails payload. For mail-daemon bounces, `leadEmail` is the daemon address, so
+      // `findTaskByEmail` above returns null and execution never reaches here — these bounces
+      // currently land in `noMatch`. Revisit during Task 9 live validation once the real
+      // Instantly /emails bounce shape is confirmed.
       await clickup.updateTask(task.id, { status: "Bounced" });
       await clickup.addTag(task.id, "bounced");
     }
