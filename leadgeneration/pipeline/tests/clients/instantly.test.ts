@@ -161,6 +161,37 @@ describe("InstantlyClient", () => {
     });
   });
 
+  describe("listEmails", () => {
+    it("GETs /emails filtered by campaign and maps pagination", async () => {
+      const mockFetch = mockFetchResponse(200, {
+        items: [{ id: "e1", from_address_email: "lead@acme.ca" }],
+        next_starting_after: "e1",
+      });
+      const client = createInstantlyClient({ apiKey: "k", fetchFn: mockFetch, logger });
+
+      const page = await client.listEmails("camp_1", { limit: 50 });
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toContain("api.instantly.ai/api/v2/emails");
+      expect(url).toContain("campaign_id=camp_1");
+      expect(url).toContain("limit=50");
+      expect(options.method ?? "GET").toBe("GET");
+      expect(page.items).toHaveLength(1);
+      expect(page.nextStartingAfter).toBe("e1");
+    });
+
+    it("passes starting_after and null-coalesces missing cursor", async () => {
+      const mockFetch = mockFetchResponse(200, { items: [] });
+      const client = createInstantlyClient({ apiKey: "k", fetchFn: mockFetch, logger });
+
+      const page = await client.listEmails("camp_1", { startingAfter: "e9" });
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(url).toContain("starting_after=e9");
+      expect(page.nextStartingAfter).toBeNull();
+    });
+  });
+
   describe("error handling", () => {
     it("throws on 401 (invalid API key)", async () => {
       const mockFetch = mockFetchResponse(401, { error: "Unauthorized" });

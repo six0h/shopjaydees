@@ -22,6 +22,13 @@ export interface InstantlyLeadInput {
   customVariables: Record<string, string>;
 }
 
+export type InstantlyRawEmail = Record<string, unknown>;
+
+export interface InstantlyEmailPage {
+  items: InstantlyRawEmail[];
+  nextStartingAfter: string | null;
+}
+
 export class InstantlyApiError extends Error {
   code: number;
   constructor(message: string, code: number) {
@@ -38,6 +45,10 @@ export interface InstantlyClient {
     campaignId: string,
     lead: InstantlyLeadInput
   ): Promise<InstantlyAddLeadsResponse>;
+  listEmails(
+    campaignId: string,
+    opts?: { startingAfter?: string; limit?: number }
+  ): Promise<InstantlyEmailPage>;
 }
 
 interface InstantlyClientOptions {
@@ -137,6 +148,20 @@ export function createInstantlyClient(
           },
         ],
       })) as InstantlyAddLeadsResponse;
+    },
+
+    async listEmails(campaignId, opts = {}): Promise<InstantlyEmailPage> {
+      const params = new URLSearchParams({ campaign_id: campaignId });
+      params.set("limit", String(opts.limit ?? 100));
+      if (opts.startingAfter) params.set("starting_after", opts.startingAfter);
+      const data = (await request("GET", `/emails?${params.toString()}`)) as {
+        items?: InstantlyRawEmail[];
+        next_starting_after?: string | null;
+      };
+      return {
+        items: data.items ?? [],
+        nextStartingAfter: data.next_starting_after ?? null,
+      };
     },
   };
 }
