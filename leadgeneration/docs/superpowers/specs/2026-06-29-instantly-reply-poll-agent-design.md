@@ -77,12 +77,25 @@ Cloud Scheduler (every ~20m, business hours)
         ▼
 ff.http("replyPoll")  ──►  runReplyPoll(deps)
         │
-        ├─ instantly.listCampaigns()
-        ├─ for each campaign: instantly.listEmails(campaignId, { since: lookback })  (paginated)
-        ├─ classify each item  → reply | auto-reply | bounce | unsubscribe | sequence-complete | ignore
-        ├─ match to ClickUp task by Contact Email
-        └─ apply mapping idempotently (updateTask / addComment / addTag / assign)
+        ├─ Phase A — email events (Instantly API):
+        │     ├─ instantly.listCampaigns()
+        │     ├─ for each campaign: instantly.listEmails(campaignId, { since: lookback })  (paginated)
+        │     ├─ normalizeEmail(raw) → classifyEmail(n) → reply | auto-reply | bounce | unsubscribe | ignore
+        │     ├─ match to ClickUp task by Contact Email
+        │     └─ apply mapping idempotently (updateTask / addComment / addTag / assign)
+        │
+        └─ Phase B — completion sweep (ClickUp only, no Instantly call):
+              ├─ clickup.getTasks(list, { statuses: ["Outreach Active"] })
+              ├─ for each: outreachStartedDate older than SEQUENCE_COMPLETE_AFTER_DAYS?
+              └─ if so → Dormant + dormantDate + dormantReactivationDate(+90d) + Sequence Status=Completed
 ```
+
+Phase B is deliberately **not** driven by the Instantly API: per-lead "sequence finished"
+is poorly exposed on Growth, and a time-based sweep is deterministic, fully unit-testable,
+and needs no external call. The 3-touch sequence spans 9 days (day 0 / 4 / 9), so a default
+threshold of **14 days** safely means "sequence done, no reply." This phase is what finally
+makes the existing — but currently never-triggered — dormancy/reactivation agent fire in
+production.
 
 ### Look-back window, not a cursor
 
@@ -112,18 +125,23 @@ in the next look-back window is a no-op.
 | **Auto-reply** | always | add tag `auto-reply`; add comment with snippet (once — guard on existing tag). **No status change.** |
 | **Bounce** | not already in a closed status | status → **Bounced**; tag `bounced`. |
 | **Unsubscribe** | not already in a closed status | status → **Unsubscribed**; tag `unsubscribed`. |
-| **Sequence completed, no reply** | current status = **Outreach Active** | status → **Dormant**; set `dormantDate` = today; set `dormantReactivationDate` = today + 90 days; set Sequence Status → `Completed`. |
 | Anything else (sent, open, click, manual labels, meetings) | — | ignore (log at debug). |
+
+Sequence completion is handled by the **Phase B time-based sweep**, not the email classifier:
+
+| Sweep condition | Action |
+|---|---|
+| status = **Outreach Active** AND `outreachStartedDate` older than `SEQUENCE_COMPLETE_AFTER_DAYS` (default 14) | status → **Dormant**; set `dormantDate` = today; set `dormantReactivationDate` = today + 90 days; set Sequence Status → `Completed`. |
 
 Notes:
 
-- **Reply wins over completion.** Because the reply branch only fires when status is not
-  already terminal/Responded, and the completion branch only fires when status is still
-  Outreach Active, a lead that replied will not later be flipped to Dormant by a
-  completion signal seen in the same or a later window.
+- **Reply wins over completion.** Phase A runs before Phase B, and the sweep only touches
+  leads still in **Outreach Active** — so a lead flagged **Responded** (or closed) in
+  Phase A is never swept to Dormant.
 - **Dormant hand-off.** `dormantReactivationDate` (+90d) is exactly the field
-  `isDormantEligible()` reads to gate reactivation, so completed leads flow into the
-  existing dormancy agent with no change to it.
+  `isDormantEligible()` reads to gate reactivation, so swept leads flow into the existing
+  dormancy agent with no change to it. This sweep is the trigger that agent has been
+  missing — today nothing moves a lead into Dormant, so reactivation never runs.
 
 ## Idempotency
 
@@ -153,13 +171,32 @@ listEmails(
 for pagination. `GET /emails` is rate-limited to 20 req/min; the client already centralizes
 requests and can surface 429s the same way the Hunter client does.
 
-### Email classifier
+### Email normalizer + classifier (two functions)
 
-The exact `/emails` payload fields that distinguish **inbound reply** vs **bounce** vs
-**auto-reply** vs **sent** are not fully documented and **must be validated against a live
-Instantly API key as the first implementation step** (a short spike: pull a real page of
-emails for a test campaign and inspect the fields). The classifier is therefore isolated
-behind a pure function:
+The only real unknown is the raw `/emails` payload shape — the exact fields that mark an
+item as inbound reply vs bounce vs auto-reply vs sent are not fully documented. That
+uncertainty is quarantined in a single **adapter** so it can't leak into the rest of the
+agent:
+
+```ts
+// Raw shape is unknown until the spike → typed loosely, only the adapter touches it.
+type InstantlyRawEmail = Record<string, unknown>;
+
+interface NormalizedEmail {
+  leadEmail: string;
+  direction: "inbound" | "outbound";
+  isAutoReply: boolean;
+  isBounce: boolean;
+  isUnsubscribe: boolean;
+  subject: string;
+  snippet: string;
+}
+
+function normalizeEmail(raw: InstantlyRawEmail): NormalizedEmail; // finalized by the spike
+```
+
+The classifier then works only on the stable `NormalizedEmail` shape and is fully
+testable today, independent of the live API:
 
 ```ts
 type EmailSignal =
@@ -169,19 +206,13 @@ type EmailSignal =
   | { kind: "unsubscribe"; leadEmail: string }
   | { kind: "ignore" };
 
-function classifyEmail(email: InstantlyEmail): EmailSignal;
+function classifyEmail(n: NormalizedEmail): EmailSignal;
 ```
 
-Keeping classification pure makes it unit-testable from fixtures and confines any
-field-name corrections discovered during the spike to one function.
-
-> Sequence-completion is detected per-lead, which may not appear in `/emails`. The spike
-> also confirms the source for "lead finished the sequence with no reply" — candidate
-> sources are the leads endpoint lead status or `campaigns/search-by-contact`. The design
-> treats it as a separate detector (`detectCompletions(campaignId)`) with the same
-> pure-function + fixture-test shape; if the live API makes per-lead completion
-> impractical on Growth, completion-based Dormant transitions fall back to the existing
-> time-based behavior and this branch is deferred (documented, not silently dropped).
+The spike (first implementation task) captures a real page of `/emails` JSON as test
+fixtures and finalizes only `normalizeEmail` against them; `classifyEmail` and everything
+downstream never change. Sequence-completion is **not** detected here — it is the Phase B
+time-based sweep (see Architecture), which needs no Instantly call.
 
 ### ClickUp client (`src/clients/clickup.ts`)
 
@@ -190,21 +221,32 @@ Add assignee support, needed for the reply hand-off. Either extend `updateTask` 
 dedicated `assignTask(taskId, userId)`. Prefer extending `updateTask` so status + assignee
 happen in one call.
 
+### Send agent (`runSend` in `src/index.ts`) — one-line addition
+
+When the send agent moves a lead to **Outreach Active**, it must also stamp
+`outreachStartedDate` = today (epoch ms) in the same `updateTask` custom-fields array it
+already writes (campaign id, lead id, sequence status). This date is the input the Phase B
+sweep reads to decide "sequence done." No other send-agent behavior changes.
+
 ### Config (`src/config.ts`)
 
 - `ownerUserId: number` ← `CLICKUP_OWNER_USER_ID` (Jenn's ClickUp user id; required).
 - `replyPollLookbackMinutes: number` ← `REPLY_POLL_LOOKBACK_MINUTES` (default 90).
+- `sequenceCompleteAfterDays: number` ← `SEQUENCE_COMPLETE_AFTER_DAYS` (default 14).
 - `outreachFields.lastReplyDate` ← `CLICKUP_FIELD_LAST_REPLY_DATE` (required).
+- `outreachFields.outreachStartedDate` ← `CLICKUP_FIELD_OUTREACH_STARTED_DATE` (required).
 
 ### ClickUp workspace
 
 - New custom field on the Prospects list: **Last Reply Date** (Date).
+- New custom field on the Prospects list: **Outreach Started Date** (Date).
 - **Sequence Status** dropdown gains a `Completed` option (it already has `Not Started`).
 
 ### `.env.example`
 
-Add `CLICKUP_OWNER_USER_ID`, `REPLY_POLL_LOOKBACK_MINUTES`, `CLICKUP_FIELD_LAST_REPLY_DATE`.
-The `INSTANTLY_SENDING_DOMAINS` / `INSTANTLY_API_KEY` entries are reused; no webhook secret.
+Add `CLICKUP_OWNER_USER_ID`, `REPLY_POLL_LOOKBACK_MINUTES`, `SEQUENCE_COMPLETE_AFTER_DAYS`,
+`CLICKUP_FIELD_LAST_REPLY_DATE`, `CLICKUP_FIELD_OUTREACH_STARTED_DATE`. The
+`INSTANTLY_API_KEY` entry is reused; no webhook secret.
 
 ### Zapier
 
@@ -237,22 +279,30 @@ and `errors` — for logging and for the HTTP response body.
 New `tests/reply-poll.test.ts` + helpers, following the `runSend` test style (mock
 clickup/instantly/alerter, `createLogger("test")`):
 
-- `classifyEmail` — one test per signal kind, from fixtures (drives out the spike findings).
+- `normalizeEmail` — maps captured raw `/emails` fixtures to `NormalizedEmail` (the spike's
+  fixtures become these tests).
+- `classifyEmail` — one test per signal kind, from `NormalizedEmail` inputs (no live API).
 - Reply → Responded + assign + Last Reply Date + comment.
 - Reply when already Responded → no-op (idempotency: no duplicate comment, no re-assign).
 - Auto-reply → tag only, no status change; second pass adds nothing.
 - Bounce → Bounced + tag; already-closed → no-op.
 - Unsubscribe → Unsubscribed + tag.
-- Sequence complete + status Outreach Active → Dormant with dormantDate +
-  dormantReactivationDate(+90d); complete when already Responded → no-op.
+- **Phase B sweep:** Outreach Active + `outreachStartedDate` older than threshold → Dormant
+  with dormantDate + dormantReactivationDate(+90d) + Sequence Status Completed; Outreach
+  Active but within threshold → untouched; a lead flagged Responded in Phase A is never
+  swept (Phase A precedes Phase B).
 - No matching ClickUp task → skipped, counted in `noMatch`.
 - Look-back re-run over the same window → zero net changes.
 - Dry run → no write calls.
 - Run-level Instantly failure → alerter called, surfaced as run error.
 
+Send-agent test (`tests/send.test.ts`): moving a lead to Outreach Active now also writes
+`outreachStartedDate` — extend the existing assertion.
+
 ## Open validation item (carried into the plan)
 
-The single piece of real uncertainty is the `/emails` payload shape and the per-lead
-completion source. The implementation plan's first task is a live-API spike to capture
-real fixtures and finalize `classifyEmail` / `detectCompletions`; everything downstream is
-mechanical given those fixtures.
+The single remaining piece of real uncertainty is the raw `GET /emails` payload shape. The
+implementation plan's first task is a live-API spike to capture real fixtures and finalize
+**only** `normalizeEmail` against them; `classifyEmail`, the Phase B sweep, and everything
+else are mechanical and testable independent of the live API. (Sequence completion no
+longer depends on the API — Phase B is time-based — so that uncertainty is removed.)
