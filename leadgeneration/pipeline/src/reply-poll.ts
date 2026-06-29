@@ -16,7 +16,7 @@ export type EmailSignal =
   | { kind: "ignore" };
 
 // NOTE: raw field names are best-effort vs Instantly docs — validate live (plan Task 9).
-const AUTO_REPLY_RE = /(out of office|automatic reply|auto-?reply|away from|on vacation)/i;
+const AUTO_REPLY_RE = /(out of office|automatic reply|auto-?reply|on vacation|away from (the |my )?(office|desk))/i;
 const BOUNCE_FROM_RE = /(mailer-daemon|postmaster)/i;
 const BOUNCE_SUBJECT_RE = /(delivery status notification|undeliverable|delivery has failed|returned mail)/i;
 
@@ -43,6 +43,7 @@ export function normalizeEmail(
   const ours = new Set(sendingDomains.map((d) => d.toLowerCase()));
   const direction: "inbound" | "outbound" = ours.has(domainOf(from)) ? "outbound" : "inbound";
   // The lead is whichever party is not us.
+  // Outbound: use first recipient — safe because outbound emails are classified as `ignore` downstream, so this value is never consumed.
   const leadEmail = direction === "outbound" ? (toList[0] ?? "") : from;
 
   return {

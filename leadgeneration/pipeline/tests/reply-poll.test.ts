@@ -36,6 +36,22 @@ describe("normalizeEmail", () => {
     expect(n.isAutoReply).toBe(true);
   });
 
+  it("does NOT flag genuine reply about moving away from a vendor as auto-reply", () => {
+    const n = normalizeEmail(
+      { from_address_email: "mike@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "moving away from our old vendor" },
+      DOMAINS
+    );
+    expect(n.isAutoReply).toBe(false);
+  });
+
+  it("flags 'away from the office' subject as auto-reply", () => {
+    const n = normalizeEmail(
+      { from_address_email: "mike@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Away from the office until Monday" },
+      DOMAINS
+    );
+    expect(n.isAutoReply).toBe(true);
+  });
+
   it("flags bounces from mailer-daemon", () => {
     const n = normalizeEmail(
       { from_address_email: "MAILER-DAEMON@googlemail.com", to_address_email_list: "ellie@shopjaydees.ca", subject: "Delivery Status Notification (Failure)" },
