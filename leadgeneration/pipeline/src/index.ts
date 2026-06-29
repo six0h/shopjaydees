@@ -1335,6 +1335,7 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
               { id: config.outreachFields.instantlyLeadId, value: instantlyResponse.upload_id },
               { id: config.outreachFields.sendingDomain, value: sendingDomainIndex },
               { id: config.outreachFields.sequenceStatus, value: notStartedIndex },
+              { id: config.outreachFields.outreachStartedDate, value: Date.now() },
             ],
           });
           clickupSuccess = true;

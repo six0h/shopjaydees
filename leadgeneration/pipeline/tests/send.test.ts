@@ -170,6 +170,15 @@ describe("runSend", () => {
         status: "Outreach Active",
       })
     );
+
+    const updateArg = (clickup.updateTask as ReturnType<typeof vi.fn>).mock.calls
+      .map((c) => c[1])
+      .find((u) => u.status === "Outreach Active");
+    const startedField = updateArg.custom_fields.find(
+      (f: { id: string }) => f.id === "field-outreach-started-date"
+    );
+    expect(startedField).toBeDefined();
+    expect(typeof startedField.value).toBe("number");
   });
 
   it("reuses existing campaign when one matches segment-month", async () => {
