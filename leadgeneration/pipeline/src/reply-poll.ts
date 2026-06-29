@@ -95,6 +95,16 @@ export interface ReplyPollRunResult {
   errors: number;
 }
 
+export function isSequenceComplete(task: ClickUpTask, config: Config, now: Date): boolean {
+  if (statusOf(task) !== "Outreach Active") return false;
+  const field = task.custom_fields.find((f) => f.id === config.outreachFields.outreachStartedDate);
+  if (!field?.value) return false;
+  const started = parseInt(String(field.value), 10);
+  if (Number.isNaN(started)) return false;
+  const ageMs = now.getTime() - started;
+  return ageMs >= config.sequenceCompleteAfterDays * 24 * 60 * 60 * 1000;
+}
+
 const CLOSED_STATUSES = new Set(["Won", "Lost", "Unsubscribed", "Bounced"]);
 const TERMINAL_FOR_REPLY = new Set([
   "Responded - Owner Follow-up",
@@ -168,7 +178,35 @@ export async function runReplyPoll(deps: ReplyPollDeps): Promise<ReplyPollRunRes
     await alerter.send("Reply-poll agent error (Instantly polling)", msg);
   }
 
-  // Phase B added in Task 8.
+  // ---- Phase B: time-based completion sweep ----
+  try {
+    const active = await deps.clickup.getTasks(config.clickupListId, { statuses: ["Outreach Active"] });
+    for (const task of active) {
+      if (!isSequenceComplete(task, config, now)) continue;
+      try {
+        if (!config.dryRun) {
+          const reactivation = now.getTime() + 90 * 24 * 60 * 60 * 1000;
+          await deps.clickup.updateTask(task.id, {
+            status: "Dormant",
+            custom_fields: [
+              { id: config.outreachFields.dormantDate, value: now.getTime() },
+              { id: config.outreachFields.dormantReactivationDate, value: reactivation },
+            ],
+          });
+        }
+        result.dormant += 1;
+      } catch (sweepErr) {
+        result.errors += 1;
+        logger.warn("Phase B sweep item failed", { taskId: task.id, error: sweepErr instanceof Error ? sweepErr.message : String(sweepErr) });
+      }
+    }
+  } catch (err) {
+    result.errors += 1;
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.critical("Reply-poll Phase B failed", { error: msg });
+    await alerter.send("Reply-poll agent error (completion sweep)", msg);
+  }
+
   logger.info("Reply-poll complete", { ...result });
   return result;
 }

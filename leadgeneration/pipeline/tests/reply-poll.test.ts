@@ -138,14 +138,15 @@ describe("runReplyPoll — Phase A", () => {
   it("flags a genuine reply: Responded + assign + last-reply date + comment", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({
-        id: "lead_1",
-        email: "mike@acme.ca",
-        contactEmailFieldId: config.fields.contactEmail,
-        outreachStartedFieldId: config.outreachFields.outreachStartedDate,
-      }),
-    ]);
+    const theLead = makeOutreachActiveLeadTask({
+      id: "lead_1",
+      email: "mike@acme.ca",
+      contactEmailFieldId: config.fields.contactEmail,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+    );
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
     (instantly.listEmails as Mock).mockResolvedValue({
@@ -166,14 +167,15 @@ describe("runReplyPoll — Phase A", () => {
   it("is idempotent: a reply on an already-Responded lead does nothing", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({
-        id: "lead_1",
-        email: "mike@acme.ca",
-        status: "Responded - Owner Follow-up",
-        contactEmailFieldId: config.fields.contactEmail,
-      }),
-    ]);
+    const theLead = makeOutreachActiveLeadTask({
+      id: "lead_1",
+      email: "mike@acme.ca",
+      status: "Responded - Owner Follow-up",
+      contactEmailFieldId: config.fields.contactEmail,
+    });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+    );
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "c", status: "active" }]);
     (instantly.listEmails as Mock).mockResolvedValue({
@@ -189,9 +191,10 @@ describe("runReplyPoll — Phase A", () => {
   it("auto-reply only tags and comments, no status change", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
-    ]);
+    const theLead = makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+    );
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
     (instantly.listEmails as Mock).mockResolvedValue({
@@ -221,7 +224,9 @@ describe("runReplyPoll — Phase A", () => {
       ...makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
       tags: [{ name: "auto-reply" }],
     };
-    (clickup.getTasks as Mock).mockResolvedValue([task]);
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([task]) : Promise.resolve([])
+    );
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
     (instantly.listEmails as Mock).mockResolvedValue({
@@ -292,9 +297,10 @@ describe("runReplyPoll — Phase A", () => {
   it("dry run performs no writes", async () => {
     const config = { ...makeSendConfig(), dryRun: true };
     const clickup = makeMockClickUp();
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
-    ]);
+    const theLead = makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+    );
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
     (instantly.listEmails as Mock).mockResolvedValue({
@@ -322,5 +328,42 @@ describe("runReplyPoll — Phase A", () => {
 
     expect(alerter.send).toHaveBeenCalled();
     expect(result.errors).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runReplyPoll — Phase B sweep
+// ---------------------------------------------------------------------------
+
+describe("runReplyPoll — Phase B sweep", () => {
+  it("moves an Outreach Active lead past the threshold to Dormant with +90d reactivation", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([]); // skip Phase A
+    // Phase B query for Outreach Active:
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({ id: "old_1", startedDaysAgo: 20, outreachStartedFieldId: config.outreachFields.outreachStartedDate }),
+    ]);
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "old_1")![1];
+    expect(upd.status).toBe("Dormant");
+    const fids = upd.custom_fields.map((f: { id: string }) => f.id);
+    expect(fids).toContain(config.outreachFields.dormantDate);
+    expect(fids).toContain(config.outreachFields.dormantReactivationDate);
+    expect(result.dormant).toBe(1);
+  });
+
+  it("leaves an Outreach Active lead within the threshold untouched", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([]);
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({ id: "fresh_1", startedDaysAgo: 3, outreachStartedFieldId: config.outreachFields.outreachStartedDate }),
+    ]);
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(result.dormant).toBe(0);
   });
 });
