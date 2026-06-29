@@ -68,6 +68,10 @@ describe("loadConfig", () => {
     process.env.CLICKUP_FIELD_SEQUENCE_STATUS = "field-seq-status";
     process.env.CLICKUP_FIELD_DORMANT_DATE = "field-dormant-date";
     process.env.CLICKUP_FIELD_DORMANT_REACTIVATION_DATE = "field-dormant-react-date";
+    // Reply-poll fields
+    process.env.CLICKUP_OWNER_USER_ID = "42";
+    process.env.CLICKUP_FIELD_LAST_REPLY_DATE = "field-last-reply-date";
+    process.env.CLICKUP_FIELD_OUTREACH_STARTED_DATE = "field-outreach-started-date";
   }
 
   it("loads all required environment variables", () => {
@@ -209,5 +213,20 @@ describe("loadConfig", () => {
     expect(config.outreachFields.sequenceStatus).toBe("field-seq-status");
     expect(config.outreachFields.dormantDate).toBe("field-dormant-date");
     expect(config.outreachFields.dormantReactivationDate).toBe("field-dormant-react-date");
+  });
+
+  it("loads reply-poll config with defaults", () => {
+    setRequiredEnv();
+    process.env.CLICKUP_OWNER_USER_ID = "42";
+    process.env.CLICKUP_FIELD_LAST_REPLY_DATE = "f-last-reply";
+    process.env.CLICKUP_FIELD_OUTREACH_STARTED_DATE = "f-outreach-started";
+    delete process.env.REPLY_POLL_LOOKBACK_MINUTES;
+    delete process.env.SEQUENCE_COMPLETE_AFTER_DAYS;
+    const config = loadConfig();
+    expect(config.ownerUserId).toBe(42);
+    expect(config.replyPollLookbackMinutes).toBe(90);
+    expect(config.sequenceCompleteAfterDays).toBe(14);
+    expect(config.outreachFields.lastReplyDate).toBe("f-last-reply");
+    expect(config.outreachFields.outreachStartedDate).toBe("f-outreach-started");
   });
 });

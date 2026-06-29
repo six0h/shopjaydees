@@ -14,6 +14,9 @@ export interface Config {
   alertWebhookUrl: string;
   hunterDefaultHeadcount: string[];
   hunterDefaultSeniority: string[];
+  ownerUserId: number;
+  replyPollLookbackMinutes: number;
+  sequenceCompleteAfterDays: number;
   fields: ClickUpFieldIds;
   prospectingFields: ProspectingRequestFieldIds;
   personalizationFields: PersonalizationFieldIds;
@@ -55,6 +58,8 @@ export interface OutreachTrackingFieldIds {
   sequenceStatus: string;
   dormantDate: string;
   dormantReactivationDate: string;
+  lastReplyDate: string;
+  outreachStartedDate: string;
 }
 
 export interface PersonalizationFieldIds {
@@ -106,6 +111,9 @@ export function loadConfig(): Config {
     hunterDefaultSeniority: (process.env.HUNTER_DEFAULT_SENIORITY ?? "executive,senior")
       .split(",")
       .map((s) => s.trim()),
+    ownerUserId: parseInt(required("CLICKUP_OWNER_USER_ID"), 10),
+    replyPollLookbackMinutes: parseInt(process.env.REPLY_POLL_LOOKBACK_MINUTES ?? "90", 10),
+    sequenceCompleteAfterDays: parseInt(process.env.SEQUENCE_COMPLETE_AFTER_DAYS ?? "14", 10),
     fields: {
       companyName: required("CLICKUP_FIELD_COMPANY_NAME"),
       companyDomain: required("CLICKUP_FIELD_COMPANY_DOMAIN"),
@@ -156,6 +164,8 @@ export function loadConfig(): Config {
       sequenceStatus: required("CLICKUP_FIELD_SEQUENCE_STATUS"),
       dormantDate: required("CLICKUP_FIELD_DORMANT_DATE"),
       dormantReactivationDate: required("CLICKUP_FIELD_DORMANT_REACTIVATION_DATE"),
+      lastReplyDate: required("CLICKUP_FIELD_LAST_REPLY_DATE"),
+      outreachStartedDate: required("CLICKUP_FIELD_OUTREACH_STARTED_DATE"),
     },
   };
 }

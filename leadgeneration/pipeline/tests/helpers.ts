@@ -242,6 +242,9 @@ export function makePersonalizationConfig(): Config {
     alertWebhookUrl: "",
     hunterDefaultHeadcount: ["1-10", "11-50", "51-200"],
     hunterDefaultSeniority: ["executive", "senior"],
+    ownerUserId: 42,
+    replyPollLookbackMinutes: 90,
+    sequenceCompleteAfterDays: 14,
     fields: {
       companyName: "f-company-name",
       companyDomain: "f-company-domain",
@@ -292,6 +295,8 @@ export function makePersonalizationConfig(): Config {
       sequenceStatus: "f-seq-status",
       dormantDate: "f-dormant-date",
       dormantReactivationDate: "f-dormant-react-date",
+      lastReplyDate: "field-last-reply-date",
+      outreachStartedDate: "field-outreach-started-date",
     },
   };
 }
@@ -413,6 +418,9 @@ export function makeSendConfig(): Config {
     alertWebhookUrl: "",
     hunterDefaultHeadcount: ["1-10", "11-50", "51-200"],
     hunterDefaultSeniority: ["executive", "senior"],
+    ownerUserId: 42,
+    replyPollLookbackMinutes: 90,
+    sequenceCompleteAfterDays: 14,
     fields: {
       companyName: "field-company-name",
       companyDomain: "field-company-domain",
@@ -463,6 +471,8 @@ export function makeSendConfig(): Config {
       sequenceStatus: "field-seq-status",
       dormantDate: "field-dormant-date",
       dormantReactivationDate: "field-dormant-react-date",
+      lastReplyDate: "field-last-reply-date",
+      outreachStartedDate: "field-outreach-started-date",
     },
   };
 }
