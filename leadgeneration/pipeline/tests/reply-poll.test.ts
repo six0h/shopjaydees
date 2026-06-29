@@ -1,7 +1,55 @@
-import { describe, it, expect } from "vitest";
-import { normalizeEmail, classifyEmail } from "../src/reply-poll.js";
+import { describe, it, expect, vi } from "vitest";
+import type { Mock } from "vitest";
+import type { ClickUpClient } from "../src/clients/clickup.js";
+import type { InstantlyClient } from "../src/clients/instantly.js";
+import type { Alerter } from "../src/alerting.js";
+import { createLogger } from "../src/logger.js";
+import { normalizeEmail, classifyEmail, runReplyPoll } from "../src/reply-poll.js";
+import { makeOutreachActiveLeadTask, makeSendConfig } from "./helpers.js";
 
 const DOMAINS = ["shopjaydees.ca", "shopjaydees.net"];
+
+vi.spyOn(console, "log").mockImplementation(() => {});
+
+// ---------------------------------------------------------------------------
+// Local mock factories
+// ---------------------------------------------------------------------------
+
+function makeMockClickUp(): ClickUpClient {
+  return {
+    getTasks: vi.fn().mockResolvedValue([]),
+    createTask: vi.fn().mockResolvedValue({
+      id: "new_task",
+      name: "Test",
+      status: { status: "Enriched" },
+      date_created: String(Date.now()),
+      date_updated: String(Date.now()),
+      custom_fields: [],
+      tags: [],
+    }),
+    updateTask: vi.fn().mockResolvedValue({}),
+    addComment: vi.fn().mockResolvedValue(undefined),
+    addTag: vi.fn().mockResolvedValue(undefined),
+    getFields: vi.fn().mockResolvedValue([]),
+  };
+}
+
+function makeMockInstantly(): InstantlyClient {
+  return {
+    listCampaigns: vi.fn().mockResolvedValue([]),
+    createCampaign: vi.fn().mockResolvedValue({ id: "camp_new_001", name: "Business - 2026-06", status: "active" }),
+    addLeadToCampaign: vi.fn().mockResolvedValue({ upload_id: "upload_001", leads_uploaded: 1, leads_skipped: 0 }),
+    listEmails: vi.fn().mockResolvedValue({ items: [], nextStartingAfter: null }),
+  };
+}
+
+function makeMockAlerter(): Alerter {
+  return { send: vi.fn().mockResolvedValue(undefined) };
+}
+
+// ---------------------------------------------------------------------------
+// normalizeEmail
+// ---------------------------------------------------------------------------
 
 describe("normalizeEmail", () => {
   it("marks mail FROM a lead as inbound", () => {
@@ -61,6 +109,10 @@ describe("normalizeEmail", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// classifyEmail
+// ---------------------------------------------------------------------------
+
 describe("classifyEmail", () => {
   const base = { leadEmail: "mike@acme.ca", subject: "Re: hi", snippet: "interested" };
 
@@ -75,5 +127,169 @@ describe("classifyEmail", () => {
   });
   it("outbound -> ignore", () => {
     expect(classifyEmail({ ...base, direction: "outbound", isAutoReply: false, isBounce: false }).kind).toBe("ignore");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runReplyPoll — Phase A
+// ---------------------------------------------------------------------------
+
+describe("runReplyPoll — Phase A", () => {
+  it("flags a genuine reply: Responded + assign + last-reply date + comment", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({
+        id: "lead_1",
+        email: "mike@acme.ca",
+        contactEmailFieldId: config.fields.contactEmail,
+        outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+      }),
+    ]);
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{ from_address_email: "mike@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Re: hi", body: { text: "Yes, send pricing" } }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
+    expect(upd.status).toBe("Responded - Owner Follow-up");
+    expect(upd.assignees).toEqual({ add: [config.ownerUserId] });
+    expect(upd.custom_fields.find((f: { id: string }) => f.id === config.outreachFields.lastReplyDate)).toBeDefined();
+    expect(clickup.addComment).toHaveBeenCalledWith("lead_1", expect.stringContaining("Yes, send pricing"));
+    expect(result.repliesFlagged).toBe(1);
+  });
+
+  it("is idempotent: a reply on an already-Responded lead does nothing", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({
+        id: "lead_1",
+        email: "mike@acme.ca",
+        status: "Responded - Owner Follow-up",
+        contactEmailFieldId: config.fields.contactEmail,
+      }),
+    ]);
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "c", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{ from_address_email: "mike@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Re", body: { text: "again" } }],
+      nextStartingAfter: null,
+    });
+
+    await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+  });
+
+  it("auto-reply only tags and comments, no status change", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
+    ]);
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{
+        from_address_email: "mike@acme.ca",
+        to_address_email_list: "ellie@shopjaydees.ca",
+        subject: "Out of office",
+        body: { text: "I am out of office until Monday" },
+      }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+
+    expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "auto-reply");
+    expect(clickup.addComment).toHaveBeenCalledWith("lead_1", expect.stringContaining("I am out of office until Monday"));
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(result.autoRepliesTagged).toBe(1);
+    expect(result.repliesFlagged).toBe(0);
+  });
+
+  it("bounce moves to Bounced + tag when not closed", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
+    ]);
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{
+        from_address_email: "MAILER-DAEMON@googlemail.com",
+        to_address_email_list: "ellie@shopjaydees.ca",
+        subject: "Delivery Status Notification (Failure)",
+        body: { text: "Your message to mike@acme.ca could not be delivered." },
+      }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
+    expect(upd.status).toBe("Bounced");
+    expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "bounced");
+    expect(result.bounced).toBe(1);
+  });
+
+  it("no matching task -> counted in noMatch, no writes", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    (clickup.getTasks as Mock).mockResolvedValue([]); // no task found for this email
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{ from_address_email: "unknown@nowhere.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Re: hey", body: { text: "Hi there" } }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+
+    expect(result.noMatch).toBe(1);
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+    expect(clickup.addTag).not.toHaveBeenCalled();
+  });
+
+  it("dry run performs no writes", async () => {
+    const config = { ...makeSendConfig(), dryRun: true };
+    const clickup = makeMockClickUp();
+    (clickup.getTasks as Mock).mockResolvedValue([
+      makeOutreachActiveLeadTask({ id: "lead_1", email: "mike@acme.ca", contactEmailFieldId: config.fields.contactEmail }),
+    ]);
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{ from_address_email: "mike@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Re: hi", body: { text: "I am interested in your products" } }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+    expect(clickup.addTag).not.toHaveBeenCalled();
+    expect(result.repliesFlagged).toBe(1); // counter still increments in dry-run
+  });
+
+  it("Instantly failure alerts and surfaces an error", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const alerter = makeMockAlerter();
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
+    (instantly.listEmails as Mock).mockRejectedValue(new Error("Instantly API 503 Service Unavailable"));
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+
+    expect(alerter.send).toHaveBeenCalled();
+    expect(result.errors).toBeGreaterThanOrEqual(1);
   });
 });

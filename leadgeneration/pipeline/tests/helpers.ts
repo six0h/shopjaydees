@@ -401,6 +401,25 @@ export function makeDormantLeadTask(opts: {
   });
 }
 
+export function makeOutreachActiveLeadTask(opts: {
+  id?: string;
+  email?: string;
+  status?: string;
+  startedDaysAgo?: number;
+  contactEmailFieldId?: string;
+  outreachStartedFieldId?: string;
+}): ClickUpTask {
+  const started = Date.now() - (opts.startedDaysAgo ?? 0) * 24 * 60 * 60 * 1000;
+  return makeClickUpTask({
+    id: opts.id ?? "lead_1",
+    status: { status: opts.status ?? "Outreach Active" } as ClickUpTask["status"],
+    custom_fields: [
+      { id: opts.contactEmailFieldId ?? "field-contact-email", name: "Contact Email", value: opts.email ?? "mike@acme.ca", type: "email" },
+      { id: opts.outreachStartedFieldId ?? "field-outreach-started-date", name: "Outreach Started Date", value: started, type: "date" },
+    ] as ClickUpTask["custom_fields"],
+  });
+}
+
 export function makeSendConfig(): Config {
   return {
     clickupApiToken: "pk_test",
