@@ -260,6 +260,7 @@ These fields track the actual sending and engagement. Populated by the send agen
 | **Instantly Campaign ID** | Short Text | — | No | Send agent | The Instantly campaign this lead was added to. Needed for Zapier lookups and debugging. |
 | **Instantly Lead ID** | Short Text | — | No | Send agent | The lead ID within Instantly. Used by Zapier to match engagement events back to the ClickUp task. |
 | **Sending Domain** | Dropdown | `shopjaydees.ca`, `shopjaydees.net` | No | Send agent | Which sending domain was used. For tracking deliverability per domain. |
+| **Outreach Started Date** | Date | epoch ms | No | Send agent | When the lead was activated into Instantly (status → Outreach Active). The reply-poll agent's Phase B sweep reads this to decide a sequence is complete (older than `SEQUENCE_COMPLETE_AFTER_DAYS`, default 14) and moves the lead to Dormant. Added 2026-06-29. |
 | **Sequence Status** | Dropdown | `Not Started`, `Touch 1 Sent`, `Touch 2 Sent`, `Touch 3 Sent`, `Sequence Complete`, `Paused`, `Cancelled` | No | Send agent / Zapier | Tracks where in the 3-touch sequence this lead is. Updated by Zapier as Instantly sends each touch. |
 | **Touch 1 Sent Date** | Date | YYYY-MM-DD | No | Zapier | When Touch 1 was actually sent. |
 | **Touch 2 Sent Date** | Date | YYYY-MM-DD | No | Zapier | When Touch 2 was sent. |
@@ -267,7 +268,7 @@ These fields track the actual sending and engagement. Populated by the send agen
 | **Opens** | Number | Whole number | No | Zapier | Total email opens across all touches. |
 | **Replies** | Number | Whole number | No | Zapier | Total replies received. |
 | **Last Open Date** | Date | YYYY-MM-DD | No | Zapier | Most recent email open. |
-| **Last Reply Date** | Date | YYYY-MM-DD | No | Zapier | Most recent reply. |
+| **Last Reply Date** | Date | epoch ms | No | Reply-poll agent | Most recent reply. Set by the reply-poll agent (was Zapier; superseded 2026-06-29). |
 | **Bounced** | Checkbox | — | No | Zapier | Checked if any email in the sequence bounced. |
 | **Unsubscribed** | Checkbox | — | No | Zapier | Checked if the prospect clicked an unsubscribe link. |
 | **Dormant Date** | Date | YYYY-MM-DD | No | Automation / agent | Date the lead entered Dormant status. Used to calculate the 90-day cool-off. |
@@ -622,6 +623,21 @@ When a Dormant lead's 90-day cool-off expires, it should not be re-imported as a
 ---
 
 ## 8. Zapier Integration Points
+
+> **SUPERSEDED 2026-06-29 — Zapier retired.** All six zaps below and the engagement-sync
+> automations are replaced by the **reply-poll agent** (`runReplyPoll`, `ff.http("replyPoll")`),
+> a scheduled Cloud Function that polls the Instantly `GET /emails` API. This change was forced
+> by Jenn's Instantly **Growth** plan: webhooks (which the native Zapier "instant" triggers rely
+> on) require Hypergrowth. See `2026-06-29-instantly-reply-poll-agent-design.md`. Scope changes
+> from the original Zapier design:
+> - **Replies** (Zap 3): now set by the reply-poll agent → status **Responded - Owner Follow-up**, assign Jenn, set Last Reply Date, comment with snippet.
+> - **Auto-replies**: tagged `auto-reply`, no status change (new — distinguishes out-of-office from genuine replies).
+> - **Sequence complete → Dormant** (Zap 6): now the agent's time-based Phase B sweep (reads Outreach Started Date), not an Instantly event.
+> - **Bounces** (Zap 4): detection logic exists but is **not yet functional** — pending live-payload validation (see the design doc's Go-live section).
+> - **Unsubscribes** (Zap 5): **out of scope** — Instantly handles suppression itself; not reflected in ClickUp.
+> - **Opens / clicks / per-touch sent dates** (Zaps 1, 2): **dropped** — engagement counters are available in Instantly's own analytics; the agent tracks only status-changing signals.
+>
+> The detail below is retained for provenance.
 
 Zapier provides bidirectional sync between Instantly and ClickUp. All zaps use the Instantly and ClickUp native Zapier integrations.
 
