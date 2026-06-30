@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "dist/index.js",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
     "build": "tsc",
+    "gcp-build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "npx functions-framework --target=discover --source=dist/index.js",
