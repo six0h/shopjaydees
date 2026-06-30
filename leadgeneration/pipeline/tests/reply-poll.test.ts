@@ -4,7 +4,7 @@ import type { ClickUpClient } from "../src/clients/clickup.js";
 import type { InstantlyClient } from "../src/clients/instantly.js";
 import type { Alerter } from "../src/alerting.js";
 import { createLogger } from "../src/logger.js";
-import { normalizeEmail, classifyEmail, runReplyPoll } from "../src/reply-poll.js";
+import { normalizeEmail, classifyEmail, runReplyPoll, isSequenceComplete } from "../src/reply-poll.js";
 import { makeOutreachActiveLeadTask, makeSendConfig } from "./helpers.js";
 
 const DOMAINS = ["shopjaydees.ca", "shopjaydees.net"];
@@ -127,6 +127,57 @@ describe("classifyEmail", () => {
   });
   it("outbound -> ignore", () => {
     expect(classifyEmail({ ...base, direction: "outbound", isAutoReply: false, isBounce: false }).kind).toBe("ignore");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isSequenceComplete
+// ---------------------------------------------------------------------------
+
+describe("isSequenceComplete", () => {
+  const config = makeSendConfig();
+  const now = new Date();
+
+  it("returns false when status is NOT 'Outreach Active' (even with old start date)", () => {
+    const task = makeOutreachActiveLeadTask({
+      status: "Responded - Owner Follow-up",
+      startedDaysAgo: 20,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+    expect(isSequenceComplete(task, config, now)).toBe(false);
+  });
+
+  it("returns false when 'Outreach Active' but outreachStartedDate field is absent", () => {
+    // Pass a wrong field id so the field on the task doesn't match config.outreachFields.outreachStartedDate
+    const task = makeOutreachActiveLeadTask({ outreachStartedFieldId: "wrong-field-id", startedDaysAgo: 20 });
+    expect(isSequenceComplete(task, config, now)).toBe(false);
+  });
+
+  it("returns false when outreachStartedDate value is non-numeric", () => {
+    const base = makeOutreachActiveLeadTask({ outreachStartedFieldId: config.outreachFields.outreachStartedDate });
+    const task = {
+      ...base,
+      custom_fields: base.custom_fields.map((f) =>
+        f.id === config.outreachFields.outreachStartedDate ? { ...f, value: "not-a-date" } : f
+      ),
+    };
+    expect(isSequenceComplete(task, config, now)).toBe(false);
+  });
+
+  it("returns false when start date is within the threshold (3 days ago)", () => {
+    const task = makeOutreachActiveLeadTask({
+      startedDaysAgo: 3,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+    expect(isSequenceComplete(task, config, now)).toBe(false);
+  });
+
+  it("returns true when start date is past the threshold (20 days ago)", () => {
+    const task = makeOutreachActiveLeadTask({
+      startedDaysAgo: 20,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+    expect(isSequenceComplete(task, config, now)).toBe(true);
   });
 });
 
@@ -341,10 +392,10 @@ describe("runReplyPoll — Phase B sweep", () => {
     const clickup = makeMockClickUp();
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([]); // skip Phase A
-    // Phase B query for Outreach Active:
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({ id: "old_1", startedDaysAgo: 20, outreachStartedFieldId: config.outreachFields.outreachStartedDate }),
-    ]);
+    const staleLead = makeOutreachActiveLeadTask({ id: "old_1", startedDaysAgo: 20, outreachStartedFieldId: config.outreachFields.outreachStartedDate });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.statuses?.includes("Outreach Active") ? Promise.resolve([staleLead]) : Promise.resolve([])
+    );
     const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
     const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "old_1")![1];
     expect(upd.status).toBe("Dormant");
@@ -359,11 +410,26 @@ describe("runReplyPoll — Phase B sweep", () => {
     const clickup = makeMockClickUp();
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockResolvedValue([]);
-    (clickup.getTasks as Mock).mockResolvedValue([
-      makeOutreachActiveLeadTask({ id: "fresh_1", startedDaysAgo: 3, outreachStartedFieldId: config.outreachFields.outreachStartedDate }),
-    ]);
+    const freshLead = makeOutreachActiveLeadTask({ id: "fresh_1", startedDaysAgo: 3, outreachStartedFieldId: config.outreachFields.outreachStartedDate });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.statuses?.includes("Outreach Active") ? Promise.resolve([freshLead]) : Promise.resolve([])
+    );
     const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(result.dormant).toBe(0);
+  });
+
+  it("dry run: dormant counter increments but updateTask is NOT called", async () => {
+    const config = { ...makeSendConfig(), dryRun: true };
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([]); // skip Phase A
+    const staleLead = makeOutreachActiveLeadTask({ startedDaysAgo: 20, outreachStartedFieldId: config.outreachFields.outreachStartedDate });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.statuses?.includes("Outreach Active") ? Promise.resolve([staleLead]) : Promise.resolve([])
+    );
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(result.dormant).toBe(1);
   });
 });
