@@ -34,4 +34,10 @@ gcloud projects add-iam-policy-binding "${PROJECT}" \
 gcloud projects add-iam-policy-binding "${PROJECT}" \
   --member="serviceAccount:${SCHEDULER_SA}" --role="roles/run.invoker" --condition=None
 
+echo "==> Granting Cloud Build permissions to the default compute SA (Gen2 build identity)"
+PROJECT_NUMBER="$(gcloud projects describe "${PROJECT}" --format='value(projectNumber)')"
+COMPUTE_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+gcloud projects add-iam-policy-binding "${PROJECT}" \
+  --member="serviceAccount:${COMPUTE_SA}" --role="roles/cloudbuild.builds.builder" --condition=None
+
 echo "==> Bootstrap complete. Next: ./setup-secrets.sh"

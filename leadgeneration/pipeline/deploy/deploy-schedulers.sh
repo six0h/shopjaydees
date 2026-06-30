@@ -11,7 +11,7 @@ for row in "${FUNCTIONS[@]}"; do
 
   echo "==> Resolving URL for ${target}"
   url="$(gcloud functions describe "${target}" --gen2 --region="${REGION}" \
-        --project="${PROJECT}" --format='value(serviceConfig.uri)')"
+        --project="${PROJECT}" --format='value(serviceConfig.uri)' || true)"
   if [[ -z "${url}" ]]; then
     echo "ERROR: could not resolve URL for ${target}; deploy the function first." >&2
     exit 1

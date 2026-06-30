@@ -38,3 +38,6 @@ Redeploy a single function: `./deploy-functions.sh send`.
   the next scheduled run handles any remainder.
 - Schedules (America/Vancouver): discover `0 4 * * 1-5`, personalize `0 5 * * 1-5`,
   send `0 9 * * 1-5`, dormancyCheck `0 6 * * 0`, replyPoll `*/20 7-21 * * *` (daily).
+- On a brand-new project, the first `deploy-functions.sh` run builds via Cloud Build using the default compute service account. `bootstrap.sh` grants it `roles/cloudbuild.builds.builder`; if a first deploy still fails with a build/permission error, re-run `bootstrap.sh` and retry.
+- IAM grants are eventually consistent: `setup-secrets.sh` grants `runtime-sa` secret access seconds before functions deploy, so a function's first cold start can occasionally fail to mount a secret and will succeed on the next scheduled run. No action needed unless it persists.
+- Non-secret config lives in BOTH `../.env` (local dev/tests) and `env.yaml` (deploy via `--env-vars-file`). When you change a ClickUp field UUID or other non-secret value, update both files or they will silently drift.
