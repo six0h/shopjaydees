@@ -5,7 +5,7 @@ category: index
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-06-29
 tags: [wiki, index]
 ---
 
@@ -30,8 +30,10 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 
 ## Decisions
 
-- [Separate cold outreach domains](decisions/separate-cold-outreach-domains.md): cold email runs from dedicated domains to protect the primary domain's deliverability; qualified 2026-06-17 by the alias implementation below.
-- [Outreach aliases via IMAP/SMTP](decisions/outreach-aliases-via-imap-smtp.md): ellie@shopjaydees.ca/.net are aliases of hello@shopjaydees.com, connected to Instantly over IMAP/SMTP; shared-mailbox trade-off accepted.
+- [Separate cold outreach domains](decisions/separate-cold-outreach-domains.md): cold email runs from dedicated domains to protect the primary domain's deliverability; full domain + mailbox isolation restored 2026-06-22 via standalone mailboxes.
+- [Standalone outreach mailboxes](decisions/standalone-outreach-mailboxes.md): ellie@shopjaydees.ca/.net rebuilt as real mailboxes in a separate Google Workspace tenant; ClickUp-only reply handoff; supersedes the alias setup (2026-06-22).
+- [Reply detection via API polling](decisions/reply-detection-via-api-polling.md): the reply → ClickUp loop is a scheduled polling agent, not a webhook — Growth plan has no webhooks/Unibox; retires Zapier (2026-06-29).
+- [Outreach aliases via IMAP/SMTP](decisions/outreach-aliases-via-imap-smtp.md): SUPERSEDED 2026-06-22 — ellie@ addresses were aliases of hello@ over IMAP/SMTP; shared-mailbox trade-off reversed for full isolation.
 - [Start small then scale](decisions/start-small-then-scale.md): outreach ramps from a five-to-ten-send test batch to full volume after joint review.
 - [ClickUp single source of truth](decisions/clickup-single-source-of-truth.md): every lead's status, score, and history lives in ClickUp; no separate databases.
 - [Hunter.io for discovery and enrichment](decisions/hunter-io-for-discovery-and-enrichment.md): one tool for finding companies and verified contacts, per the design spec; conflicts with other documents flagged.
