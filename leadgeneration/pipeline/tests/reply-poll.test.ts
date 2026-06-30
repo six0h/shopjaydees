@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { Mock } from "vitest";
 import type { ClickUpClient } from "../src/clients/clickup.js";
 import type { InstantlyClient } from "../src/clients/instantly.js";
+import { InstantlyApiError } from "../src/clients/instantly.js";
 import type { Alerter } from "../src/alerting.js";
 import { createLogger } from "../src/logger.js";
 import { normalizeEmail, classifyEmail, runReplyPoll, isSequenceComplete } from "../src/reply-poll.js";
@@ -367,18 +368,113 @@ describe("runReplyPoll — Phase A", () => {
     expect(result.repliesFlagged).toBe(1); // counter still increments in dry-run
   });
 
-  it("Instantly failure alerts and surfaces an error", async () => {
+  // UPDATED (was: "Instantly failure alerts and surfaces an error")
+  // With per-campaign isolation, listEmails failures do NOT alert — only listCampaigns failure does.
+  it("listCampaigns failure alerts and surfaces an error", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
     const alerter = makeMockAlerter();
     const instantly = makeMockInstantly();
-    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Business - 2026-06", status: "active" }]);
-    (instantly.listEmails as Mock).mockRejectedValue(new Error("Instantly API 503 Service Unavailable"));
+    (instantly.listCampaigns as Mock).mockRejectedValue(new Error("Instantly API 503 Service Unavailable"));
 
     const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
 
     expect(alerter.send).toHaveBeenCalled();
     expect(result.errors).toBeGreaterThanOrEqual(1);
+  });
+
+  // ADDED: per-campaign isolation — first campaign fails, second still processes its reply
+  it("per-campaign isolation: first campaign error does not abort second campaign", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const alerter = makeMockAlerter();
+    const theLead = makeOutreachActiveLeadTask({
+      id: "lead_2",
+      email: "jane@corp.ca",
+      contactEmailFieldId: config.fields.contactEmail,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+    // Phase A email lookups find the lead; Phase B sweep finds nothing.
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+    );
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([
+      { id: "camp_1", name: "Camp 1", status: "active" },
+      { id: "camp_2", name: "Camp 2", status: "active" },
+    ]);
+    // First campaign's listEmails throws a non-429 error; second returns a reply.
+    (instantly.listEmails as Mock)
+      .mockRejectedValueOnce(new Error("Network error for camp_1"))
+      .mockResolvedValueOnce({
+        items: [{ from_address_email: "jane@corp.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Re: your email", body: { text: "Sounds great" } }],
+        nextStartingAfter: null,
+      });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+
+    // Second campaign's reply was still processed.
+    expect(result.repliesFlagged).toBeGreaterThanOrEqual(1);
+    // First campaign's error was counted.
+    expect(result.errors).toBeGreaterThanOrEqual(1);
+    // Non-429 campaign errors do NOT alert.
+    expect(alerter.send).not.toHaveBeenCalled();
+  });
+
+  // ADDED: 429 rate-limit handling — stops campaigns, warns, does NOT alert
+  it("429 from listEmails: stops campaigns, warns, does NOT alert", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const alerter = makeMockAlerter();
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Camp 1", status: "active" }]);
+    (instantly.listEmails as Mock).mockRejectedValue(new InstantlyApiError("rate limit", 429));
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+
+    expect(alerter.send).not.toHaveBeenCalled();
+    expect(result.errors).toBeGreaterThanOrEqual(1);
+  });
+
+  // ADDED: Phase A/B race guard — a lead replied in Phase A must NOT be swept to Dormant in Phase B
+  it("reply-wins race: lead replied in Phase A is skipped by Phase B dormant sweep", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const alerter = makeMockAlerter();
+
+    // The lead is Outreach Active and stale (20 days) — Phase B would normally sweep it to Dormant.
+    // But Phase A will process a reply from it first, adding it to touchedInPhaseA.
+    const staleLead = makeOutreachActiveLeadTask({
+      id: "lead_race",
+      email: "race@acme.ca",
+      startedDaysAgo: 20,
+      contactEmailFieldId: config.fields.contactEmail,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+
+    // Both Phase A's email-lookup (customFields) and Phase B's sweep query (statuses) return the
+    // same stale lead — simulating ClickUp read-after-write staleness where Phase B's getTasks
+    // query returns the pre-update "Outreach Active" status even after Phase A already replied.
+    (clickup.getTasks as Mock).mockImplementation(() => Promise.resolve([staleLead]));
+
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Camp 1", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{ from_address_email: "race@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "I'm interested", body: { text: "Let's talk" } }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+
+    // Phase A should have flagged the reply.
+    expect(result.repliesFlagged).toBe(1);
+
+    // Phase B must NOT have swept this lead to Dormant.
+    const dormantCalls = (clickup.updateTask as Mock).mock.calls.filter(
+      (c) => c[0] === "lead_race" && c[1]?.status === "Dormant"
+    );
+    expect(dormantCalls).toHaveLength(0);
+    expect(result.dormant).toBe(0);
   });
 });
 

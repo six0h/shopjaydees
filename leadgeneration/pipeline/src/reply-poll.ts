@@ -1,4 +1,5 @@
 import type { InstantlyRawEmail } from "./clients/instantly.js";
+import { InstantlyApiError } from "./clients/instantly.js";
 import type { Config } from "./config.js";
 import type { ClickUpClient } from "./clients/clickup.js";
 import type { InstantlyClient } from "./clients/instantly.js";
@@ -147,20 +148,44 @@ export async function runReplyPoll(deps: ReplyPollDeps): Promise<ReplyPollRunRes
     errors: 0,
   };
 
+  // Fix 3: track leads touched in Phase A to prevent Phase B from clobbering them.
+  const touchedInPhaseA = new Set<string>();
+
   // ---- Phase A: email events ----
+
+  // Fix 1: listCampaigns in its own try/catch — a failure here alerts and skips Phase A's loop.
+  let campaigns: Awaited<ReturnType<typeof instantly.listCampaigns>> = [];
   try {
-    const campaigns = await instantly.listCampaigns();
-    for (const campaign of campaigns) {
-      result.campaignsPolled += 1;
+    campaigns = await instantly.listCampaigns();
+  } catch (err) {
+    result.errors += 1;
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.critical("Reply-poll Phase A: listCampaigns failed", { error: msg });
+    await alerter.send("Reply-poll agent error (Instantly polling)", msg);
+    // campaigns stays [] — skip the campaign loop below; Phase B still runs.
+  }
+
+  // Fix 1: per-campaign try/catch so one campaign's failure does not abort the others.
+  for (const campaign of campaigns) {
+    result.campaignsPolled += 1;
+    try {
+      // Fix 2: pagination page cap to prevent infinite loop on non-advancing cursor.
+      const MAX_PAGES = 50;
+      let pageCount = 0;
       let cursor: string | undefined;
       do {
+        pageCount += 1;
+        if (pageCount > MAX_PAGES) {
+          logger.warn("Pagination cap reached — stopping poll for this campaign", { campaign, MAX_PAGES });
+          break;
+        }
         const page = await instantly.listEmails(campaign.id, { startingAfter: cursor, limit: 100 });
         for (const raw of page.items) {
           result.emailsScanned += 1;
           try {
             const signal = classifyEmail(normalizeEmail(raw, config.instantlySendingDomains));
             if (signal.kind === "ignore") continue;
-            await applySignal(deps, signal, result);
+            await applySignal(deps, signal, result, touchedInPhaseA);
           } catch (itemErr) {
             result.errors += 1;
             logger.warn("Reply-poll item failed", {
@@ -170,23 +195,35 @@ export async function runReplyPoll(deps: ReplyPollDeps): Promise<ReplyPollRunRes
         }
         cursor = page.nextStartingAfter ?? undefined;
       } while (cursor);
+    } catch (err) {
+      result.errors += 1;
+      if (err instanceof InstantlyApiError && err.code === 429) {
+        // 429 is expected/transient — warn and stop polling campaigns this run; do NOT alert.
+        logger.warn("Instantly rate limited — will retry next run", { campaign });
+        break; // stop all remaining campaigns this run
+      } else {
+        logger.error("Campaign poll failed", {
+          campaign,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        // continue to next campaign
+      }
     }
-  } catch (err) {
-    result.errors += 1;
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.critical("Reply-poll Phase A failed", { error: msg });
-    await alerter.send("Reply-poll agent error (Instantly polling)", msg);
   }
 
   // ---- Phase B: time-based completion sweep ----
   try {
-    const active = await deps.clickup.getTasks(config.clickupListId, { statuses: ["Outreach Active"] });
+    // Fix 4: destructure clickup from deps.
+    const { clickup } = deps;
+    const active = await clickup.getTasks(config.clickupListId, { statuses: ["Outreach Active"] });
     for (const task of active) {
+      // Fix 3: skip leads already touched in Phase A ("reply wins" race guard).
+      if (touchedInPhaseA.has(task.id)) continue;
       if (!isSequenceComplete(task, config, now)) continue;
       try {
         if (!config.dryRun) {
           const reactivation = now.getTime() + 90 * 24 * 60 * 60 * 1000;
-          await deps.clickup.updateTask(task.id, {
+          await clickup.updateTask(task.id, {
             status: "Dormant",
             custom_fields: [
               { id: config.outreachFields.dormantDate, value: now.getTime() },
@@ -214,7 +251,8 @@ export async function runReplyPoll(deps: ReplyPollDeps): Promise<ReplyPollRunRes
 async function applySignal(
   deps: ReplyPollDeps,
   signal: Exclude<EmailSignal, { kind: "ignore" }>,
-  result: ReplyPollRunResult
+  result: ReplyPollRunResult,
+  touchedInPhaseA: Set<string>
 ): Promise<void> {
   const { config, clickup, logger } = deps;
   const task = await findTaskByEmail(deps, signal.leadEmail);
@@ -227,6 +265,8 @@ async function applySignal(
 
   if (signal.kind === "reply") {
     if (TERMINAL_FOR_REPLY.has(status)) return;
+    // Fix 3: mark as touched before any write so Phase B skips this lead even on dry-run.
+    touchedInPhaseA.add(task.id);
     if (!config.dryRun) {
       await clickup.updateTask(task.id, {
         status: "Responded - Owner Follow-up",
@@ -245,6 +285,8 @@ async function applySignal(
     result.autoRepliesTagged += 1;
   } else if (signal.kind === "bounce") {
     if (CLOSED_STATUSES.has(status)) return;
+    // Fix 3: mark as touched so Phase B skips this lead.
+    touchedInPhaseA.add(task.id);
     if (!config.dryRun) {
       // NOTE: bounce reconciliation depends on the bounced lead's address being recoverable from
       // the /emails payload. For mail-daemon bounces, `leadEmail` is the daemon address, so
