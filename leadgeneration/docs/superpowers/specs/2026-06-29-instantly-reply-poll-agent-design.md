@@ -306,3 +306,20 @@ implementation plan's first task is a live-API spike to capture real fixtures an
 **only** `normalizeEmail` against them; `classifyEmail`, the Phase B sweep, and everything
 else are mechanical and testable independent of the live API. (Sequence completion no
 longer depends on the API — Phase B is time-based — so that uncertainty is removed.)
+
+## Go-live validation
+
+Once a campaign has real inbound traffic:
+
+1. Run `scripts/spike-emails.ts` against the live Instantly API to capture a real page of
+   `/emails` JSON.
+2. Confirm the exact field names used by `normalizeEmail`: specifically `from_address_email`,
+   `to_address_email_list`, `subject`, and `body.text`. If the live payload uses different
+   names, adjust `normalizeEmail` and its test fixtures to match, then re-run
+   `npx vitest run` to confirm all tests stay green.
+3. **BOUNCE reconciliation is not yet functional.** Mail-daemon bounce messages currently
+   resolve `leadEmail` to the daemon address (e.g. `mailer-daemon@...`) and land in
+   `noMatch` — safe, no wrong ClickUp writes. During live validation, inspect how the
+   Instantly `/emails` endpoint represents a bounce (the `from_address_email` field on a
+   bounce record), and map the bounced lead's real email address before relying on the
+   Bounced status transition.
