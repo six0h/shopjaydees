@@ -242,6 +242,9 @@ export function makePersonalizationConfig(): Config {
     alertWebhookUrl: "",
     hunterDefaultHeadcount: ["1-10", "11-50", "51-200"],
     hunterDefaultSeniority: ["executive", "senior"],
+    ownerUserId: 42,
+    replyPollLookbackMinutes: 90,
+    sequenceCompleteAfterDays: 14,
     fields: {
       companyName: "f-company-name",
       companyDomain: "f-company-domain",
@@ -292,6 +295,8 @@ export function makePersonalizationConfig(): Config {
       sequenceStatus: "f-seq-status",
       dormantDate: "f-dormant-date",
       dormantReactivationDate: "f-dormant-react-date",
+      lastReplyDate: "field-last-reply-date",
+      outreachStartedDate: "field-outreach-started-date",
     },
   };
 }
@@ -396,6 +401,25 @@ export function makeDormantLeadTask(opts: {
   });
 }
 
+export function makeOutreachActiveLeadTask(opts: {
+  id?: string;
+  email?: string;
+  status?: string;
+  startedDaysAgo?: number;
+  contactEmailFieldId?: string;
+  outreachStartedFieldId?: string;
+}): ClickUpTask {
+  const started = Date.now() - (opts.startedDaysAgo ?? 0) * 24 * 60 * 60 * 1000;
+  return makeClickUpTask({
+    id: opts.id ?? "lead_1",
+    status: { status: opts.status ?? "Outreach Active" } as ClickUpTask["status"],
+    custom_fields: [
+      { id: opts.contactEmailFieldId ?? "field-contact-email", name: "Contact Email", value: opts.email ?? "mike@acme.ca", type: "email" },
+      { id: opts.outreachStartedFieldId ?? "field-outreach-started-date", name: "Outreach Started Date", value: started, type: "date" },
+    ] as ClickUpTask["custom_fields"],
+  });
+}
+
 export function makeSendConfig(): Config {
   return {
     clickupApiToken: "pk_test",
@@ -413,6 +437,9 @@ export function makeSendConfig(): Config {
     alertWebhookUrl: "",
     hunterDefaultHeadcount: ["1-10", "11-50", "51-200"],
     hunterDefaultSeniority: ["executive", "senior"],
+    ownerUserId: 42,
+    replyPollLookbackMinutes: 90,
+    sequenceCompleteAfterDays: 14,
     fields: {
       companyName: "field-company-name",
       companyDomain: "field-company-domain",
@@ -463,6 +490,8 @@ export function makeSendConfig(): Config {
       sequenceStatus: "field-seq-status",
       dormantDate: "field-dormant-date",
       dormantReactivationDate: "field-dormant-react-date",
+      lastReplyDate: "field-last-reply-date",
+      outreachStartedDate: "field-outreach-started-date",
     },
   };
 }

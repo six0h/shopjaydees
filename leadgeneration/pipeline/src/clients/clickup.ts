@@ -28,6 +28,7 @@ export interface ClickUpClient {
     update: {
       status?: string;
       custom_fields?: Array<{ id: string; value: unknown }>;
+      assignees?: { add?: number[]; rem?: number[] };
     }
   ): Promise<ClickUpTask>;
 

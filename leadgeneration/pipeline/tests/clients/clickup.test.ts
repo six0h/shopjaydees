@@ -132,6 +132,18 @@ describe("ClickUpClient", () => {
       expect(url).toContain("task/t1");
       expect(opts.method).toBe("PUT");
     });
+
+    it("forwards assignees in the updateTask PUT body", async () => {
+      const mockFetch = mockFetchResponses({ status: 200, body: { id: "t1" } });
+      const client = createClickUpClient({ token: "tok", rateLimit: 90, fetchFn: mockFetch, logger });
+
+      await client.updateTask("t1", { status: "Responded - Owner Follow-up", assignees: { add: [42] } });
+
+      const [, options] = mockFetch.mock.calls[0];
+      const body = JSON.parse(options.body);
+      expect(body.assignees).toEqual({ add: [42] });
+      expect(body.status).toBe("Responded - Owner Follow-up");
+    });
   });
 
   describe("addComment", () => {

@@ -35,6 +35,7 @@ import { createLogger } from "./logger.js";
 import { createAlerter } from "./alerting.js";
 import { createClickUpClient } from "./clients/clickup.js";
 import { createHunterClient, HunterRateLimitError } from "./clients/hunter.js";
+import { runReplyPoll } from "./reply-poll.js";
 
 // --- Domain Normalization ---
 
@@ -1335,6 +1336,7 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
               { id: config.outreachFields.instantlyLeadId, value: instantlyResponse.upload_id },
               { id: config.outreachFields.sendingDomain, value: sendingDomainIndex },
               { id: config.outreachFields.sequenceStatus, value: notStartedIndex },
+              { id: config.outreachFields.outreachStartedDate, value: Date.now() },
             ],
           });
           clickupSuccess = true;
@@ -1707,6 +1709,42 @@ ff.http("dormancyCheck", async (req: Request, res: Response) => {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.critical("Unhandled error in Dormancy Check", { error: errorMsg });
     await alerter.send("Unhandled error in dormancy-check", errorMsg);
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+ff.http("replyPoll", async (req: Request, res: Response) => {
+  const config = loadConfig();
+  const logger = createLogger("reply-poll");
+  const alerter = createAlerter({
+    alertEmail: config.alertEmail,
+    alertWebhookUrl: config.alertWebhookUrl,
+  });
+  const clickup = createClickUpClient({
+    token: config.clickupApiToken,
+    rateLimit: config.clickupRateLimit,
+    logger,
+  });
+  const instantly = createInstantlyClient({ apiKey: config.instantlyApiKey, logger });
+
+  try {
+    const dryRunOverride =
+      req.body && typeof req.body === "object" && "dry_run" in req.body
+        ? req.body.dry_run === true
+        : undefined;
+
+    const effectiveConfig =
+      dryRunOverride !== undefined
+        ? { ...config, dryRun: dryRunOverride }
+        : config;
+
+    const result = await runReplyPoll({ config: effectiveConfig, clickup, instantly, alerter, logger });
+
+    res.status(200).json(result);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.critical("Unhandled error in Reply Poll", { error: errorMsg });
+    await alerter.send("Unhandled error in reply-poll", errorMsg);
     res.status(500).json({ error: errorMsg });
   }
 });

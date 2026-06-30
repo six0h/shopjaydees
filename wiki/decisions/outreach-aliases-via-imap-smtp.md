@@ -2,10 +2,10 @@
 title: Outreach Aliases via IMAP/SMTP
 type: wiki-page
 category: decision
-status: active
+status: superseded
 owner: cody
 created: 2026-06-17
-updated: 2026-06-17
+updated: 2026-06-22
 tags: [deliverability, email, instantly, imap, aliases]
 sources:
   - file: leadgeneration/presentations/instantly-imap-connection-guide.md
@@ -14,7 +14,9 @@ sources:
 
 # Decision: Outreach Aliases via IMAP/SMTP
 
-The two cold outreach addresses, **ellie@shopjaydees.ca** and **ellie@shopjaydees.net**, are implemented as **aliases of the primary Google Workspace mailbox hello@shopjaydees.com**, and connected to Instantly over **IMAP/SMTP** rather than OAuth. Confirmed by Cody on 2026-06-17; proceeding with this setup.
+> **Superseded 2026-06-22** by [Standalone outreach mailboxes](standalone-outreach-mailboxes.md). The alias-over-IMAP approach isolated the `.com` From-domain reputation but left cold sending authenticating as `hello@` — exposing the primary mailbox and tenant to suspension risk, breaking independent warmup, and routing cold replies and bounces into the business inbox. The addresses are being rebuilt as real standalone mailboxes in a separate Google Workspace tenant, and the IMAP connection guide is retired. This page is retained for provenance; the detail below describes the now-replaced setup.
+
+The two cold outreach addresses, **ellie@shopjaydees.ca** and **ellie@shopjaydees.net**, were implemented as **aliases of the primary Google Workspace mailbox hello@shopjaydees.com**, and connected to Instantly over **IMAP/SMTP** rather than OAuth. Confirmed by Cody on 2026-06-17; superseded 2026-06-22.
 
 ## How it works
 
