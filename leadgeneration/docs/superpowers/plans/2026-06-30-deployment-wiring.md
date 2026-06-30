@@ -242,7 +242,7 @@ ALERT_WEBHOOK_URL: ""
 - [ ] **Step 4: Verify env.yaml is ignored and example is valid YAML**
 
 Run: `cd pipeline && cp env.yaml.example env.yaml && git check-ignore env.yaml && node -e "const fs=require('fs');const t=fs.readFileSync('env.yaml.example','utf8');let n=0;for(const l of t.split('\n')){const s=l.trim();if(!s||s.startsWith('#'))continue;if(!/^[A-Z0-9_]+: \".*\"$/.test(s))throw new Error('bad line: '+l);n++}console.log('ok',n,'vars')" && rm env.yaml`
-Expected: `git check-ignore` prints `env.yaml` (ignored); validation prints `ok 61 vars` (every non-comment line is `KEY: "value"`); temp file removed.
+Expected: `git check-ignore` prints `env.yaml` (ignored); validation prints `ok 56 vars` (every non-comment line is `KEY: "value"` — 56 non-secret vars; the 5 API keys are deliberately excluded); temp file removed.
 
 - [ ] **Step 5: Commit**
 
