@@ -38,8 +38,8 @@ tracked. This also retires the Zapier dependency entirely.
 
 ## Goals
 
-- Detect replies, bounces, unsubscribes, and sequence-completions for leads in active
-  outreach, and reflect each in ClickUp.
+- Detect replies (and auto-replies), bounces, and sequence-completions for leads in active
+  outreach, and reflect each in ClickUp. (Unsubscribes are out of scope — see the mapping note.)
 - Flag warm leads to Jenn fast enough to matter (within one poll interval).
 - Move sequence-completed leads into **Dormant** so the existing dormancy/reactivation
   agent can pick them up.
@@ -80,14 +80,14 @@ ff.http("replyPoll")  ──►  runReplyPoll(deps)
         ├─ Phase A — email events (Instantly API):
         │     ├─ instantly.listCampaigns()
         │     ├─ for each campaign: instantly.listEmails(campaignId, { since: lookback })  (paginated)
-        │     ├─ normalizeEmail(raw) → classifyEmail(n) → reply | auto-reply | bounce | unsubscribe | ignore
+        │     ├─ normalizeEmail(raw) → classifyEmail(n) → reply | auto-reply | bounce | ignore
         │     ├─ match to ClickUp task by Contact Email
         │     └─ apply mapping idempotently (updateTask / addComment / addTag / assign)
         │
         └─ Phase B — completion sweep (ClickUp only, no Instantly call):
               ├─ clickup.getTasks(list, { statuses: ["Outreach Active"] })
               ├─ for each: outreachStartedDate older than SEQUENCE_COMPLETE_AFTER_DAYS?
-              └─ if so → Dormant + dormantDate + dormantReactivationDate(+90d) + Sequence Status=Completed
+              └─ if so → Dormant + dormantDate + dormantReactivationDate(+90d)
 ```
 
 Phase B is deliberately **not** driven by the Instantly API: per-lead "sequence finished"
@@ -123,15 +123,16 @@ in the next look-back window is a no-op.
 |---|---|---|
 | **Genuine reply** | current status ∉ {Responded - Owner Follow-up, Won, Lost, Unsubscribed, Bounced} | status → **Responded - Owner Follow-up**; assign Jenn (`ownerUserId`); set **Last Reply Date** = today; add comment with reply subject + snippet. If already Responded: skip (no duplicate comment/flag). |
 | **Auto-reply** | always | add tag `auto-reply`; add comment with snippet (once — guard on existing tag). **No status change.** |
-| **Bounce** | not already in a closed status | status → **Bounced**; tag `bounced`. |
-| **Unsubscribe** | not already in a closed status | status → **Unsubscribed**; tag `unsubscribed`. |
-| Anything else (sent, open, click, manual labels, meetings) | — | ignore (log at debug). |
+| **Bounce** | not already in a closed status | status → **Bounced**; tag `bounced`. *(Detection is implemented but currently lands in `noMatch` for mail-daemon bounces — lead identity unresolved until live-payload validation; see Go-live.)* |
+| Anything else (sent, open, click, **unsubscribe**, manual labels, meetings) | — | ignore (log at debug). |
+
+> **Unsubscribe is out of scope** for this agent: Instantly handles suppression itself, and unsubscribe surfaces as a lead-status change rather than an email in `/emails`, so it is not detected here.
 
 Sequence completion is handled by the **Phase B time-based sweep**, not the email classifier:
 
 | Sweep condition | Action |
 |---|---|
-| status = **Outreach Active** AND `outreachStartedDate` older than `SEQUENCE_COMPLETE_AFTER_DAYS` (default 14) | status → **Dormant**; set `dormantDate` = today; set `dormantReactivationDate` = today + 90 days; set Sequence Status → `Completed`. |
+| status = **Outreach Active** AND `outreachStartedDate` older than `SEQUENCE_COMPLETE_AFTER_DAYS` (default 14) | status → **Dormant**; set `dormantDate` = today; set `dormantReactivationDate` = today + 90 days. (The **Dormant** status itself conveys completion; no separate Sequence Status write — that would be redundant.) |
 
 Notes:
 
@@ -240,7 +241,6 @@ sweep reads to decide "sequence done." No other send-agent behavior changes.
 
 - New custom field on the Prospects list: **Last Reply Date** (Date).
 - New custom field on the Prospects list: **Outreach Started Date** (Date).
-- **Sequence Status** dropdown gains a `Completed` option (it already has `Not Started`).
 
 ### `.env.example`
 
@@ -285,12 +285,11 @@ clickup/instantly/alerter, `createLogger("test")`):
 - Reply → Responded + assign + Last Reply Date + comment.
 - Reply when already Responded → no-op (idempotency: no duplicate comment, no re-assign).
 - Auto-reply → tag only, no status change; second pass adds nothing.
-- Bounce → Bounced + tag; already-closed → no-op.
-- Unsubscribe → Unsubscribed + tag.
+- Bounce → classified, but for mail-daemon bounces the lead is unresolved → `noMatch` (documented limitation; see Go-live validation).
 - **Phase B sweep:** Outreach Active + `outreachStartedDate` older than threshold → Dormant
-  with dormantDate + dormantReactivationDate(+90d) + Sequence Status Completed; Outreach
-  Active but within threshold → untouched; a lead flagged Responded in Phase A is never
-  swept (Phase A precedes Phase B).
+  with dormantDate + dormantReactivationDate(+90d); Outreach Active but within threshold →
+  untouched; a lead flagged Responded in Phase A is never swept (Phase A precedes Phase B,
+  and Phase B skips tasks Phase A already transitioned).
 - No matching ClickUp task → skipped, counted in `noMatch`.
 - Look-back re-run over the same window → zero net changes.
 - Dry run → no write calls.
