@@ -5,7 +5,7 @@ category: decision
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-03
 tags: [hunter-io, discovery, enrichment, design-decision]
 sources:
   - file: ingested/documents/2026-05-20-lead-generation-system-design.md
@@ -20,14 +20,14 @@ Per the 2026-05-20 design spec, Hunter.io's Discover API handles both prospect f
 
 Combining discovery and enrichment in one tool eliminates the need for separate discovery and enrichment services. Estimated at $34 per month on the Starter plan, which fits the under-$100-per-month pipeline budget.
 
-## Conflict with other documents
+## Conflict with other documents (resolved 2026-06-11)
 
-This decision is contradicted in both directions by other engagement documents:
+At ingest this decision was contradicted in both directions by other engagement documents:
 
 - The service agreement, pitch, and implementation roadmap describe discovery as Google Maps scraping via Firecrawl, with Hunter.io only doing email discovery.
 - The account setup guide replaces Hunter.io entirely with client-driven LinkedIn Sales Navigator searches enriched through cleanlists.ai.
 
-Three discovery approaches exist across the documents and none of the sources are reliably ordered. Confirm the current approach with Cody. See [Third-party stack](../topics/third-party-stack.md).
+Three discovery approaches existed across the documents. Cody resolved this on 2026-06-11: **this design-spec version is current — Hunter.io Discover API only** (no Firecrawl, no Sales Navigator, no cleanlists.ai); the other two are superseded. See [Third-party stack](../topics/third-party-stack.md).
 
 ## Related pages
 

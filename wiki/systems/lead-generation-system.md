@@ -5,7 +5,7 @@ category: system
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-03
 tags: [lead-generation, automation, engagement-scope]
 sources:
   - file: ingested/documents/service-agreement.html
@@ -30,7 +30,7 @@ The System SixOhQuad is contracted to design, build, deploy, and manage for Jayd
 2. **Lead enrichment.** Website scraping, decision-maker identification, email discovery, and lead quality scoring.
 3. **Personalized outreach.** AI-generated multi-touch email sequences and LinkedIn connection request copy, using segment-specific templates.
 4. **Delivery and tracking.** Sending approved emails through a cold email platform, tracking opens, replies, and engagement, and flagging warm leads.
-5. **Warm lead reply handling.** Replies land in the cold email platform's unified inbox (Unibox). On reply detection the System updates the lead's status in ClickUp to flag it for follow-up. The client responds through the unified inbox and moves established conversations to the primary business email.
+5. **Warm lead reply handling.** A scheduled polling agent checks the Instantly API for replies — the client's Instantly Growth plan has no webhooks and no unified inbox (Unibox), both Hypergrowth-only. On reply detection the System sets the lead's ClickUp status to Responded - Owner Follow-up, assigns it to Jenn, and comments. The client reads and replies directly from the standalone ellie@ Gmail inbox (`.ca`/`.net`) and moves established conversations to the primary business email. See [Reply detection via API polling](../decisions/reply-detection-via-api-polling.md).
 
 ## Expected volumes and cadence (per the pitch)
 
@@ -58,15 +58,15 @@ Agents run serverless on Google Cloud Functions, triggered by Google Cloud Sched
 - Owner bandwidth is capped at roughly fifteen to twenty minutes per day.
 - Email is the primary automated channel; LinkedIn is secondary and manual.
 
-## Discovery approach conflict
+## Discovery approach (resolved 2026-06-11)
 
-The documents describe three different discovery approaches:
+The source documents described three different discovery approaches:
 
 1. Agreement, pitch, and roadmap: automated Google Maps scraping (Firecrawl), with Hunter.io for email discovery.
 2. Design spec (2026-05-20): Hunter.io's Discover API does both discovery and enrichment, driven by Prospecting Requests in ClickUp; no Firecrawl in the stack.
 3. Account setup guide: the client searches LinkedIn Sales Navigator with Cody-provided filter templates, exports company lists, and enriches them through cleanlists.ai; no Hunter.io.
 
-Which approach is current is unconfirmed; see [Third-party stack](../topics/third-party-stack.md) and [Hunter.io for discovery and enrichment](../decisions/hunter-io-for-discovery-and-enrichment.md).
+Cody resolved this on 2026-06-11: the design spec's version is current — **Hunter.io Discover API only, no Firecrawl, no Sales Navigator, no cleanlists.ai**. The other two versions are superseded. See [Third-party stack](../topics/third-party-stack.md) and [Hunter.io for discovery and enrichment](../decisions/hunter-io-for-discovery-and-enrichment.md).
 
 ## Why it exists
 

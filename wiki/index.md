@@ -5,7 +5,7 @@ category: index
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-29
+updated: 2026-07-03
 tags: [wiki, index]
 ---
 
@@ -36,7 +36,7 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 - [Outreach aliases via IMAP/SMTP](decisions/outreach-aliases-via-imap-smtp.md): SUPERSEDED 2026-06-22 — ellie@ addresses were aliases of hello@ over IMAP/SMTP; shared-mailbox trade-off reversed for full isolation.
 - [Start small then scale](decisions/start-small-then-scale.md): outreach ramps from a five-to-ten-send test batch to full volume after joint review.
 - [ClickUp single source of truth](decisions/clickup-single-source-of-truth.md): every lead's status, score, and history lives in ClickUp; no separate databases.
-- [Hunter.io for discovery and enrichment](decisions/hunter-io-for-discovery-and-enrichment.md): one tool for finding companies and verified contacts, per the design spec; conflicts with other documents flagged.
+- [Hunter.io for discovery and enrichment](decisions/hunter-io-for-discovery-and-enrichment.md): one tool for finding companies and verified contacts, per the design spec; confirmed the current discovery stack (Cody, 2026-06-11).
 - [LinkedIn stays manual](decisions/linkedin-stays-manual.md): the agent writes LinkedIn copy, the owner sends it, keeping the account safe.
 - [Dedicated cold email tool](decisions/dedicated-cold-email-tool.md): Instantly or Smartlead handles sending, warmup, and deliverability instead of ClickUp.
 - [Async approval queue](decisions/async-approval-queue.md): one daily batch review of ten to twenty drafts instead of real-time approvals.
@@ -45,7 +45,7 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 ## Topics
 
 - [Service agreement terms](topics/service-agreement-terms.md): fees, term, IP, liability, and compliance terms; signed and complete 2026-05-28 via Google eSignature.
-- [Third-party stack](topics/third-party-stack.md): client-paid tools, with two conflicting versions: agreement and pitch (Hunter.io, Firecrawl) versus the setup guide (Sales Navigator, cleanlists.ai).
+- [Third-party stack](topics/third-party-stack.md): client-paid tools; discovery stack resolved to Hunter.io Discover API only (the Firecrawl and Sales Navigator/cleanlists.ai versions are superseded).
 - [Target market](topics/target-market.md): segment categories with discovery filters and company sizes, plus the four-phase geographic expansion plan.
 - [Seasonal playbook](topics/seasonal-playbook.md): which segments to target with which theme in each part of the year.
 - [Engagement goals](topics/engagement-goals.md): ninety-day targets, six-month outlook, pipeline metrics, health signals, monthly review agenda, and the responsibility split.

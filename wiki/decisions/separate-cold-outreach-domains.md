@@ -5,7 +5,7 @@ category: decision
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-22
+updated: 2026-07-03
 tags: [deliverability, domains, email]
 sources:
   - file: ingested/documents/service-agreement.html
@@ -26,7 +26,7 @@ Protect the reputation and deliverability of Jaydees Apparel's main domain. Cold
 
 - The client registers and maintains the outreach domain(s) and gives SixOhQuad access to the associated email accounts for platform configuration.
 - The cold email platform handles warmup of these domains before campaigns run.
-- Established warm conversations transition from the unified inbox to the client's primary business email.
+- Established warm conversations transition from the outreach mailbox to the client's primary business email.
 
 ## Resolution
 

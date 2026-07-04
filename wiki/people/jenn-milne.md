@@ -5,7 +5,7 @@ category: person
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-22
+updated: 2026-07-03
 tags: [client-contact, jaydees-apparel]
 sources:
   - file: ingested/documents/service-agreement.html
@@ -35,7 +35,7 @@ Relationship context, confirmed by Cody on 2026-06-11: she is a fellow BNI membe
 - Responsible for creating and paying for the third-party tool accounts (see [Third-party stack](../topics/third-party-stack.md)) and for registering separate cold outreach domains.
 - As **admin of the shopjaydees domains and their DNS**, she owns the 2026-06-22 outreach-mailbox migration: freeing `.ca`/`.net` from the primary Workspace, creating the **separate Google Workspace tenant**, creating the two real `ellie@` mailboxes, and setting **SPF, DKIM, and DMARC** in DNS. Cody handles the Instantly reconnect and warmup. See [Standalone outreach mailboxes](../decisions/standalone-outreach-mailboxes.md). She accepted the ~$17 CAD/month cost (offset by a $150 final-invoice credit) on 2026-06-22.
 - Pre-build to-do per the implementation roadmap: set up ClickUp, Instantly, Hunter.io, Firecrawl, and Google Cloud accounts, invite cody@sixohquad.com (share the Firecrawl API key), and create a dedicated cold outreach email address. The build clock starts when these are done. See [Implementation roadmap](../topics/implementation-roadmap.md).
-- The later account setup guide revises that list: ClickUp (invite Cody as Admin), LinkedIn Sales Navigator Core, cleanlists.ai, Instantly (invite Cody), Google Cloud (accept Cody's invite and add billing), plus the dedicated outreach address. The guide also gives the client an active pipeline role: running Sales Navigator searches and exporting company lists. See [Third-party stack](../topics/third-party-stack.md) for the conflict between the two lists.
+- The later account setup guide revises that list: ClickUp (invite Cody as Admin), LinkedIn Sales Navigator Core, cleanlists.ai, Instantly (invite Cody), Google Cloud (accept Cody's invite and add billing), plus the dedicated outreach address. The guide also gives the client an active pipeline role: running Sales Navigator searches and exporting company lists. Cody resolved the stack on 2026-06-11 to Hunter.io Discover API only, so the Firecrawl, Sales Navigator, and cleanlists.ai items in both lists above are superseded. See [Third-party stack](../topics/third-party-stack.md).
 
 ## Related pages
 

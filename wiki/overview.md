@@ -5,7 +5,7 @@ category: overview
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-03
 tags: [wiki, overview]
 sources:
   - file: ingested/documents/service-agreement.html
@@ -36,7 +36,7 @@ Before this engagement all new business came from referrals. No outbound motion 
 
 SixOhQuad is designing, building, and managing an automated [lead generation system](systems/lead-generation-system.md) for the client: prospect discovery, enrichment, AI-personalized cold email and LinkedIn outreach, and warm lead handoff, all integrated with ClickUp and deployed on Google Cloud. The client targets businesses, schools, and sports teams across six Fraser Valley and Lower Mainland municipalities ([target market](topics/target-market.md)).
 
-Commercials: $3,000 CAD setup fee (split half on signing, half on delivery) plus $300 CAD per month management with a six-month minimum, both plus GST. The client pays for the third-party tool subscriptions ([third-party stack](topics/third-party-stack.md): ClickUp, Instantly, Hunter.io, Firecrawl, Google Cloud with the Gemini API). Full terms: [service agreement terms](topics/service-agreement-terms.md).
+Commercials: $3,000 CAD setup fee (split half on signing, half on delivery) plus $300 CAD per month management with a six-month minimum, both plus GST. The client pays for the third-party tool subscriptions ([third-party stack](topics/third-party-stack.md): ClickUp, Instantly, Hunter.io, Google Cloud with the Gemini API; no Firecrawl per the resolved discovery stack). Full terms: [service agreement terms](topics/service-agreement-terms.md).
 
 ## How it runs
 

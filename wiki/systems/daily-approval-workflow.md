@@ -5,7 +5,7 @@ category: system
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-03
 tags: [clickup, approval, client-operations]
 sources:
   - file: ingested/documents/service-agreement.html
@@ -24,7 +24,7 @@ The human-in-the-loop step in the [lead generation system](lead-generation-syste
 
 - The System writes outreach drafts into ClickUp.
 - The client reviews and approves or edits drafts daily, approximately fifteen to twenty minutes per day. This is a contractual client responsibility.
-- When a prospect replies, the System flags the lead in ClickUp. The client reviews flagged warm leads during the same daily review, responds through the cold email platform's unified inbox, and transitions established conversations to the primary business email.
+- When a prospect replies, the [reply-poll agent](lead-generation-system.md) flags the lead in ClickUp (Responded - Owner Follow-up, assigned to Jenn). The client reviews flagged warm leads during the same daily review, responds from the standalone ellie@ Gmail inbox (the Instantly Growth plan has no unified inbox), and transitions established conversations to the primary business email.
 - The client personally handles warm lead conversations and LinkedIn outreach, using AI-drafted copy.
 
 ## The daily routine (per the pitch)
