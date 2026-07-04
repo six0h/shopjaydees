@@ -3,7 +3,7 @@
 # Sourced by bootstrap.sh, setup-secrets.sh, deploy-functions.sh, deploy-schedulers.sh.
 set -euo pipefail
 
-PROJECT="shopjaydees-leadgen"
+PROJECT="shop-jaydees-lead-gen"
 REGION="us-west1"
 RUNTIME="nodejs20"
 TIMEZONE="America/Vancouver"

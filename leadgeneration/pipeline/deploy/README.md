@@ -2,14 +2,14 @@
 
 Deploys five Gen2 Cloud Functions (`discover`, `personalize`, `send`,
 `dormancyCheck`, `replyPoll`) and their Cloud Scheduler triggers into the
-`shopjaydees-leadgen` GCP project (`us-west1`, Node 20).
+`shop-jaydees-lead-gen` GCP project (`us-west1`, Node 20).
 
 Design: `../../docs/superpowers/specs/2026-06-30-deployment-design.md`.
 
 ## Prerequisites
 
-1. `gcloud auth login` and access to the `shopjaydees-leadgen` project (create it
-   and link billing if it does not exist).
+1. `gcloud auth login` and access to the `shop-jaydees-lead-gen` project
+   (already exists, project # 511192368881, billing enabled).
 2. `pipeline/.env` populated with the 5 API keys **and** all ClickUp field UUIDs
    (`loadConfig()` throws on any missing required var).
 3. `pipeline/env.yaml` created from `env.yaml.example` with real (non-secret)
