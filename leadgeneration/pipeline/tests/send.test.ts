@@ -154,7 +154,9 @@ describe("runSend", () => {
     expect(result.results.sent).toBe(1);
 
     expect(instantly.listCampaigns).toHaveBeenCalledOnce();
-    expect(instantly.createCampaign).toHaveBeenCalledWith("Business - 2026-06");
+    expect(instantly.createCampaign).toHaveBeenCalledWith(
+      `Business - ${new Date().toISOString().slice(0, 7)}`
+    );
 
     expect(instantly.addLeadToCampaign).toHaveBeenCalledOnce();
     const addLeadCall = (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -189,7 +191,11 @@ describe("runSend", () => {
     const logger = createLogger("test");
 
     (instantly.listCampaigns as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
-      { id: "camp_existing", name: "Business - 2026-06", status: "active" },
+      {
+        id: "camp_existing",
+        name: `Business - ${new Date().toISOString().slice(0, 7)}`,
+        status: "active",
+      },
     ]);
 
     (clickup.getTasks as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
