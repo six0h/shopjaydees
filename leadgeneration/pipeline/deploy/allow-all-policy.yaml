@@ -1,0 +1,16 @@
+# Project-scoped exception to the org's Domain Restricted Sharing constraint
+# (iam.allowedPolicyMemberDomains) for shop-jaydees-lead-gen ONLY.
+#
+# Why: the project lives under org 247493366000, which restricts IAM members to a
+# permitted customer. Enabling Cloud Functions/Run/Build/Scheduler auto-creates
+# Google-managed service agents that the org policy rejects, so `bootstrap.sh`
+# fails at "Enabling APIs" with FAILED_PRECONDITION. This override allows all
+# principals for THIS project, leaving the org-wide default intact.
+#
+# Apply (requires roles/orgpolicy.policyAdmin on the org):
+#   gcloud services enable orgpolicy.googleapis.com --project=shop-jaydees-lead-gen
+#   gcloud org-policies set-policy deploy/allow-all-policy.yaml
+name: projects/shop-jaydees-lead-gen/policies/iam.allowedPolicyMemberDomains
+spec:
+  rules:
+    - allowAll: true

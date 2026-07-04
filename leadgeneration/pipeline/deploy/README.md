@@ -8,6 +8,16 @@ Design: `../../docs/superpowers/specs/2026-06-30-deployment-design.md`.
 
 ## Prerequisites
 
+0. **Org-policy exception (one-time, blocks everything below).** The project is
+   under org `247493366000`, which enforces Domain Restricted Sharing
+   (`iam.allowedPolicyMemberDomains`). Without an exception, `bootstrap.sh` fails
+   at "Enabling APIs" (`FAILED_PRECONDITION: ...do not belong to a permitted
+   customer`) because Google-managed service agents get rejected. Fix (requires
+   `roles/orgpolicy.policyAdmin` on the org):
+   ```
+   gcloud services enable orgpolicy.googleapis.com --project=shop-jaydees-lead-gen
+   gcloud org-policies set-policy allow-all-policy.yaml   # project-scoped Allow-All
+   ```
 1. `gcloud auth login` and access to the `shop-jaydees-lead-gen` project
    (already exists, project # 511192368881, billing enabled).
 2. `pipeline/.env` populated with the 5 API keys **and** all ClickUp field UUIDs

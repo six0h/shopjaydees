@@ -9,18 +9,84 @@ deployment wiring `docs/superpowers/{specs/2026-06-30-deployment-design.md,plans
 
 ---
 
-## ▶ RESUME HERE (next session)
+## ▶ RESUME HERE (updated 2026-07-04 session)
 
-**Two things are owed by Cody before deploy can start:**
-1. `FIRECRAWL_API_KEY` — real value from the Firecrawl dashboard → into `pipeline/.env` (last placeholder secret).
-2. Top up **Gemini billing** in AI Studio (https://ai.studio/projects → `shop-jaydees-lead-gen`) — the key works but the paid tier's prepayment credits are depleted, so Gemini calls currently 429.
+**HARD BLOCKER discovered — Phase 1 deploy cannot proceed until resolved:**
+- **Org policy: Domain Restricted Sharing.** The project `shop-jaydees-lead-gen`
+  lives under **org `247493366000`**, which enforces
+  `iam.allowedPolicyMemberDomains`. Enabling the Cloud
+  Functions/Run/Build/Scheduler APIs requires GCP to auto-create Google-managed
+  *service agents*; the org policy rejects those Google-owned identities →
+  `bootstrap.sh` fails at "Enabling APIs" with
+  `FAILED_PRECONDITION: ...do not belong to a permitted customer`.
+- **Cody is NOT an admin of org `247493366000`** — `cody@sixohquad.com` can't even
+  `describe` it, and has no direct project role binding (access is inherited/group).
+- **Chosen fix path (2026-07-04): Cody obtains `roles/orgpolicy.policyAdmin`** on
+  the org (an org Super/Org Admin grants it:
+  `gcloud organizations add-iam-policy-binding 247493366000 --member="user:cody@sixohquad.com" --role="roles/orgpolicy.policyAdmin"`).
+  Then apply a **project-scoped Allow-All exception** to
+  `iam.allowedPolicyMemberDomains` (leaves org default intact):
+  ```
+  gcloud services enable orgpolicy.googleapis.com --project=shop-jaydees-lead-gen
+  # policy file: name: projects/shop-jaydees-lead-gen/policies/iam.allowedPolicyMemberDomains
+  #              spec.rules: [{allowAll: true}]
+  gcloud org-policies set-policy <file>
+  ```
+  Then re-run `bootstrap.sh` → `setup-secrets.sh` → `deploy-functions.sh`.
 
-**Then the immediate next step is a decision, not code:** Cody gives the explicit
-go-ahead on the **safe-deploy design** (§4 below). On approval:
-- Write the design up as `docs/superpowers/specs/2026-07-03-safe-deployment-design.md` and commit (this was in progress — brainstorming reached "present design", not yet written/approved).
-- Then run **Phase 1** (bootstrap → secrets → deploy 5 functions, private, **no schedulers**).
+**Still owed by Cody (do NOT block deploy or the dormancy/reply-poll/discover
+dry-runs — only gate personalize + discover-scrape):**
+1. `FIRECRAWL_API_KEY` — real value → `pipeline/.env` (last placeholder secret; only affects `discover` scrape, which degrades gracefully to Hunter-only).
+2. Top up **Gemini billing** in AI Studio (https://ai.studio/projects → `shop-jaydees-lead-gen`) — key works but prepayment credits depleted → `personalize` 429s.
 
-Nothing touches GCP until the design is approved.
+**Done in the 2026-07-04 session:** safe-deploy design written & committed
+(`docs/superpowers/specs/2026-07-03-safe-deployment-design.md`); the 4 clean
+working-tree fixes committed to `main` (test date-coupling, config.sh project-ID,
+deploy README, wiki lint); 217 tests green; Phase 1 attempted → hit the org-policy
+blocker above.
+
+Nothing has touched live GCP yet (bootstrap aborted before any resource created).
+
+### Exact resume runbook (run in order once unblocked)
+
+**Precondition:** Cody holds `roles/orgpolicy.policyAdmin` on org `247493366000`.
+An org Super/Org Admin grants it:
+```
+gcloud organizations add-iam-policy-binding 247493366000 \
+  --member="user:cody@sixohquad.com" --role="roles/orgpolicy.policyAdmin"
+```
+
+Then, from `pipeline/`:
+```
+# 0. Clear the org-policy blocker (project-scoped Allow-All exception)
+gcloud services enable orgpolicy.googleapis.com --project=shop-jaydees-lead-gen
+gcloud org-policies set-policy deploy/allow-all-policy.yaml
+
+# 1. Phase 1 — deploy 5 functions (private, no schedulers)
+cd deploy
+./bootstrap.sh          # APIs, service accounts, invoker/build roles
+./setup-secrets.sh      # 5 API-key secrets from ../.env (Firecrawl placeholder rides along)
+./deploy-functions.sh   # deploy/redeploy all 5 (Gen2, --no-allow-unauthenticated)
+
+# 2. Phase 2 — dry-run validation (zero external writes). Each function is private,
+#    so call with an identity token. Get each URL from:
+#    gcloud functions describe <target> --gen2 --region=us-west1 --format='value(url)'
+TOKEN=$(gcloud auth print-identity-token)
+curl -s -X POST -H "Authorization: bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"dry_run": true}' <dormancyCheck-url>
+#   repeat for replyPoll (validates the 2 open go-live flags for free) and discover
+#   (Hunter path works; scrape hits the graceful-fallback branch until Firecrawl key).
+#   DEFER personalize dry-run until Gemini billing is topped up (it 429s otherwise).
+```
+
+**Do NOT run `deploy-schedulers.sh` yet** — that's Phase 4 (crons), and send must
+stay hard-gated on mailbox warmup (Phase 5). See the safe-deploy spec for phase gates.
+
+### Drop-in for live testing (after deploy + when keys land)
+- Firecrawl: put the real key in `pipeline/.env` → `cd deploy && ./setup-secrets.sh`
+  → `./deploy-functions.sh discover` (redeploy just that one). Live discovery scrape
+  now active.
+- Gemini: top up AI Studio billing (no code/redeploy needed) → `personalize` stops 429ing.
 
 ---
 
