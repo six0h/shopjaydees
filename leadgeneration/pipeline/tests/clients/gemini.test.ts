@@ -87,7 +87,7 @@ describe("GeminiClient", () => {
       expect(result.error).toBeUndefined();
 
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toContain("generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent");
+      expect(url).toContain("generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent");
       expect(url).toContain("key=test_gemini_key");
       expect(opts.method).toBe("POST");
       const body = JSON.parse(opts.body);

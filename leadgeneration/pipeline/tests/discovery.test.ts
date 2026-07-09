@@ -487,3 +487,33 @@ describe("runDiscovery", () => {
     expect(result.requests[1].companiesSearched).toBe(0);
   });
 });
+
+describe("Max Results (target volume) handling", () => {
+  it("caps companies searched at the request's Max Results value", async () => {
+    const config = makeConfig();
+    const clickup = makeMockClickUp();
+    const hunter = makeMockHunter();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    (hunter.discover as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeDiscoverResponse([
+        makeDiscoverCompany({ domain: "a.ca", organization: "A" }),
+        makeDiscoverCompany({ domain: "b.ca", organization: "B" }),
+        makeDiscoverCompany({ domain: "c.ca", organization: "C" }),
+      ])
+    );
+
+    const getTasksMock = clickup.getTasks as ReturnType<typeof vi.fn>;
+    getTasksMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeProspectingRequestTask({ targetVolume: 2 })])
+      .mockResolvedValueOnce([]);
+
+    const result = await runDiscovery({ config, clickup, hunter, alerter, logger });
+
+    expect(result.requests[0].companiesDiscovered).toBe(3);
+    expect(hunter.searchDomain).toHaveBeenCalledTimes(2);
+    expect(result.requests[0].companiesSearched).toBe(2);
+  });
+});

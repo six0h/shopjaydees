@@ -1,8 +1,10 @@
 import type { Logger } from "../logger.js";
 import type { GeminiDraftOutput } from "../types.js";
 
+// Pinned deliberately: an alias like gemini-flash-latest would silently change
+// the model behind client outreach copy. Retirement surfaces as a 404 instead.
 const BASE_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
 
 export interface GeminiGenerateResult {
   drafts?: GeminiDraftOutput;

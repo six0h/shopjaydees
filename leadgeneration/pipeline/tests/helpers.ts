@@ -78,9 +78,11 @@ export function makeProspectingRequestTask(opts: {
         },
       },
       {
-        id: "field-target-volume",
-        name: "Target Volume",
-        value: opts.targetVolume ?? 25,
+        // Mirrors the live Prospecting list: the field is named "Max Results",
+        // and ClickUp returns number-field values as strings.
+        id: "field-max-results",
+        name: "Max Results",
+        value: String(opts.targetVolume ?? 25),
         type: "number",
       },
     ],

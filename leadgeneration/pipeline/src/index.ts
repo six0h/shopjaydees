@@ -115,8 +115,13 @@ function extractRequestFields(task: ClickUpTask): {
       );
       if (opt) targetCity = opt.name as City;
     }
-    if (field.name === "Target Volume" && typeof field.value === "number") {
-      targetVolume = field.value;
+    // The live list names this "Max Results"; "Target Volume" is the legacy
+    // name. ClickUp returns number-field values as strings, so coerce.
+    if (field.name === "Max Results" || field.name === "Target Volume") {
+      const parsed = Number(field.value);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        targetVolume = parsed;
+      }
     }
   }
 
