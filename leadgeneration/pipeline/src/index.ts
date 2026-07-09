@@ -85,6 +85,16 @@ function resolveDropdownValue(
 
 // --- Request Field Extraction ---
 
+/**
+ * ClickUp returns number-typed custom fields as strings ("5", not 5). Reading
+ * them with a `typeof === "number"` check silently yields 0, which is how every
+ * lead once scored 0 and fell out of the personalize eligibility filter.
+ */
+function numericFieldValue(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function extractRequestFields(task: ClickUpTask): {
   segment: Segment;
   category: Category;
@@ -514,7 +524,7 @@ export function extractLeadData(task: ClickUpTask, config: Config): LeadData {
         }
         break;
       case config.fields.leadScore:
-        leadScore = typeof field.value === "number" ? field.value : 0;
+        leadScore = numericFieldValue(field.value);
         break;
       case config.fields.companyIndustry:
         companyIndustry = String(field.value ?? "");
@@ -742,16 +752,16 @@ export async function runPersonalization(
     const scoreField = task.custom_fields.find(
       (f) => f.id === config.fields.leadScore
     );
-    const score = typeof scoreField?.value === "number" ? scoreField.value : 0;
+    const score = numericFieldValue(scoreField?.value);
     return score >= 3;
   });
 
   // Client-side sorting: score DESC, date_created ASC
   eligible.sort((a, b) => {
     const valA = a.custom_fields.find((f) => f.id === config.fields.leadScore)?.value;
-    const scoreA = typeof valA === "number" ? valA : 0;
+    const scoreA = numericFieldValue(valA);
     const valB = b.custom_fields.find((f) => f.id === config.fields.leadScore)?.value;
-    const scoreB = typeof valB === "number" ? valB : 0;
+    const scoreB = numericFieldValue(valB);
     if (scoreB !== scoreA) return scoreB - scoreA;
     return parseInt(a.date_created, 10) - parseInt(b.date_created, 10);
   });
@@ -1166,7 +1176,7 @@ export function extractSendData(
 
 function getSendLeadScore(task: ClickUpTask, leadScoreFieldId: string): number {
   const field = task.custom_fields.find((f) => f.id === leadScoreFieldId);
-  return typeof field?.value === "number" ? field.value : 0;
+  return numericFieldValue(field?.value);
 }
 
 // --- Send Agent Core ---

@@ -183,7 +183,7 @@ export function makeEnrichedClickUpTask(opts: {
           options: [{ id: "c0", name: opts.category ?? "Trades & Contractors", orderindex: 0 }],
         },
       },
-      { id: "f-lead-score", name: "Lead Score", value: opts.leadScore ?? 4, type: "number" },
+      { id: "f-lead-score", name: "Lead Score", value: String(opts.leadScore ?? 4), type: "number" },
       { id: "f-company-industry", name: "Company Industry", value: opts.companyIndustry ?? "Construction", type: "text" },
       { id: "f-company-headcount", name: "Company Headcount", value: opts.companyHeadcount ?? "11-50", type: "text" },
       {
@@ -339,7 +339,7 @@ export function makeApprovedLeadTask(opts: {
           ],
         },
       },
-      { id: "field-lead-score", name: "Lead Score", value: opts.leadScore ?? 4, type: "number" },
+      { id: "field-lead-score", name: "Lead Score", value: String(opts.leadScore ?? 4), type: "number" },
       { id: "field-touch-1", name: "Email Touch 1", value: opts.touch1Body ?? "Hi Mike,\n\nI came across ABC Plumbing and loved your community work...", type: "text" },
       { id: "field-touch-1-subj", name: "Email Touch 1 Subject", value: opts.touch1Subject ?? "Quick question about your crew's gear", type: "text" },
       { id: "field-touch-2", name: "Email Touch 2", value: opts.touch2Body ?? "Hi Mike,\n\nOne thing we hear from trades companies...", type: "text" },
@@ -367,7 +367,7 @@ export function makeDormantLeadTask(opts: {
     status: { status: "Dormant" },
     tags: (opts.tags ?? []).map((t) => ({ name: t })),
     custom_fields: [
-      { id: "field-lead-score", name: "Lead Score", value: opts.leadScore ?? 4, type: "number" },
+      { id: "field-lead-score", name: "Lead Score", value: String(opts.leadScore ?? 4), type: "number" },
       { id: "field-dormant-date", name: "Dormant Date", value: opts.dormantDate ?? String(ninetyOneDaysAgo), type: "date" },
       { id: "field-dormant-react-date", name: "Dormant Reactivation Date", value: opts.reactivationDate ?? String(yesterday), type: "date" },
       { id: "field-company-name", name: "Company Name", value: opts.companyName ?? "Old Lead Corp", type: "text" },
