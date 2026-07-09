@@ -1,7 +1,7 @@
 # Go-Live Status & Session Handoff — 2026-07-03
 
 Living handoff for the ShopJayDees lead-gen deployment. Updated through the
-2026-07-03 session (dry run → `.env`/ClickUp/GCP prep → safe-deploy design).
+2026-07-09 session (Phases 1–3 complete).
 
 Related: deploy runbook `pipeline/deploy/README.md`; reply-poll design/plan
 `docs/superpowers/{specs,plans}/2026-06-29-instantly-reply-poll-agent*`;
@@ -9,7 +9,73 @@ deployment wiring `docs/superpowers/{specs/2026-06-30-deployment-design.md,plans
 
 ---
 
-## ▶ RESUME HERE (updated 2026-07-04 session)
+## ▶ RESUME HERE (updated 2026-07-09 session)
+
+**Phases 1, 2 and 3 are DONE.** Five real leads sit in the ClickUp Leads list at
+`Ready for Review` with complete 3-touch drafts, waiting on Jenn's approval.
+`send` has never been invoked. No schedulers exist.
+
+### Current live state
+
+- Org-policy exception applied (project-scoped `allowAll` on
+  `iam.allowedPolicyMemberDomains`); org default untouched.
+- All 5 Gen2 functions ACTIVE in `shop-jaydees-lead-gen` / `us-west1`, private
+  (`--no-allow-unauthenticated`), running as `runtime-sa`. 5 secrets loaded.
+- **0 Cloud Scheduler jobs.** Nothing runs unless invoked by hand.
+- Prospecting Request `86bav9gtg` (Business / Trades & Contractors / Surrey /
+  Max Results 5) is `complete`.
+- Gemini billing is topped up and working. Firecrawl key is real and live.
+
+### What still gates go-live
+
+1. **Mailbox warmup** — `send` stays hard-gated (Phase 5). Unchanged.
+2. **Phase 4 schedulers** not deployed. Deliberate.
+3. **The two go-live validation flags remain OPEN** (see §5). The earlier claim
+   that a `replyPoll` dry-run would clear them "for free" was **wrong**: Instantly
+   has 0 campaigns pre-launch, so the dry-run scans 0 emails and validates
+   nothing. They need real send traffic and will be addressed at Phase 5.
+4. Nothing is pushed to `origin` — 6 commits sit on local `main`.
+
+### Six silent bugs found by the live prime (all fixed, 234 tests green)
+
+Every one returned HTTP 200 while doing the wrong thing, and the test suite was
+green throughout, because the fixtures encoded payload shapes ClickUp and Google
+never actually send. Two of them (4 and 5) were independently fatal — the
+pipeline could not have produced a single approvable draft.
+
+1. `gemini-2.5-flash` is **retired** → 404, not the 429 this doc previously
+   blamed on billing. Pinned to `gemini-3.5-flash`. Retired models still appear
+   in ListModels, so listing ≠ callable.
+2. `extractRequestFields` read a `Target Volume` field that does not exist; the
+   live list calls it `Max Results`. Volume silently defaulted to 25.
+3. **`dry_run` did not suppress 4 ClickUp writes in `discover`** (stale reset,
+   `Running`, `Failed`, error comment). The "zero external writes" guarantee this
+   whole rollout rests on was false.
+4. ClickUp v2 **silently ignores `custom_fields` on `PUT /task/:id`** (200 OK,
+   dropped). Every custom-field write in all four agents was a no-op. Fields must
+   be set via `POST /task/:id/field/:field_id`.
+5. ClickUp returns **number fields as strings** (`"5"`). Reads guarded on
+   `typeof === "number"` yielded 0, so every lead scored 0 and `personalize`
+   filtered them all out.
+6. Draft validation demanded the **verbatim legal company name**, rejecting ~80%
+   of good copy nondeterministically ("Blue Pine" vs "Blue Pine Enterprises").
+7. `reply-poll` wrote status `Responded - Owner Follow-up`, which exists on
+   neither the list nor the `ProspectStatus` union — the write was dropped *and*
+   the idempotency guard never matched, so every 20-min poll would have re-flagged
+   the same lead. Now pinned to `ProspectStatus` so a bad status is a compile error.
+
+Also: the Prospecting list had ClickUp's default statuses (`new`) rather than the
+spec'd `Requested`; Cody renamed it in the UI (the v2 API cannot).
+
+### Next steps
+
+- Jenn reviews the 5 drafts and approves.
+- Push the 6 commits.
+- Phase 4 (schedulers, `send` paused) and Phase 5 (gated send) unchanged below.
+
+---
+
+## Historical: the org-policy blocker (RESOLVED 2026-07-07)
 
 **HARD BLOCKER discovered — Phase 1 deploy cannot proceed until resolved:**
 - **Org policy: Domain Restricted Sharing.** The project `shop-jaydees-lead-gen`
@@ -116,11 +182,11 @@ stay hard-gated on mailbox warmup (Phase 5). See the safe-deploy spec for phase 
 | --- | --- |
 | `CLICKUP_API_TOKEN` | ✅ rotated to valid token this session (old one was revoked) |
 | `HUNTER_API_KEY` | ✅ real |
-| `GEMINI_API_KEY` | ✅ real (⚠️ needs AI Studio billing top-up to actually call) |
+| `GEMINI_API_KEY` | ✅ real, billing topped up, live generation confirmed 2026-07-09 |
 | `INSTANTLY_API_KEY` | ✅ real & validated |
 | `CLICKUP_OWNER_USER_ID` | ✅ `204037863` |
 | all ClickUp list/field IDs | ✅ complete (incl. the 2 new date fields) |
-| `FIRECRAWL_API_KEY` | ❌ still `fc-xxx…` placeholder — **Cody to supply** |
+| `FIRECRAWL_API_KEY` | ✅ real (landed 2026-07-07; live scrape confirmed working 07-09) |
 
 `loadConfig()` passes on all **required** vars. `env.yaml` (56 non-secret vars) is
 generated and clean. `.env` and `env.yaml` are gitignored.
@@ -140,15 +206,17 @@ generated and clean. `.env` and `env.yaml` are gitignored.
 **Phases:**
 - **Phase 0 — Prereqs (Cody):** GCP project+billing ✅ · owner id/Gemini/Instantly keys ✅ · `config.sh`/`env.yaml` ✅ · **Firecrawl key ⬜ · Gemini billing top-up ⬜**.
 - **Phase 1 — Deploy, no schedulers (Claude runs, Cody approves start):** `bootstrap.sh` → `setup-secrets.sh` → `deploy-functions.sh` (all 5, private). Gate: all deploy, URLs resolve, nothing triggers.
-- **Phase 2 — Dry-run validation (`{"dry_run": true}` per agent; Cody reviews logs):** verify each agent's behavior with zero writes. Bonus: reply-poll dry-run against real Instantly data validates the 2 open go-live flags (raw `/emails` field names + bounce reconciliation) for free.
+- **Phase 2 — Dry-run validation (`{"dry_run": true}` per agent; Cody reviews logs):** verify each agent's behavior with zero writes. ~~Bonus: reply-poll dry-run against real Instantly data validates the 2 open go-live flags (raw `/emails` field names + bounce reconciliation) for free.~~ **This did not hold** (2026-07-09): Instantly has 0 campaigns pre-launch, so the dry-run scans 0 emails and validates neither flag. They need real send traffic — deferred to Phase 5.
 - **Phase 3 — Controlled live prime:** one live Prospecting Request through discovery → personalize; enable reply-poll (read/flag only). Gate: ClickUp looks right; Jenn starts daily approvals. **`send` not invoked live.**
 - **Phase 4 — Schedulers minus send:** `deploy-schedulers.sh`, then immediately `gcloud scheduler jobs pause send-job`. discover/personalize/dormancy/replyPoll now on cron; send scheduler exists but paused.
 - **Phase 5 — Gated send (after warmup, Cody gates hard):** confirm warmup done → start-small 5–10 lead live send batch (per `start-small-then-scale` decision) → watch deliverability + reply flow → `resume send-job` → full volume.
 
 ## 5. Still-open go-live validation (from earlier, needs live traffic)
 
-- Confirm raw `/emails` field names in `normalizeEmail` (reply-poll) — validated for free in Phase 2.
-- **Bounce reconciliation not yet functional** (daemon bounces resolve to daemon address → land in `noMatch` safely) — needs a real bounce payload.
+- Confirm raw `/emails` field names in `normalizeEmail` (reply-poll) — **still open.**
+  Phase 2 could not validate this: 0 Instantly campaigns → 0 emails scanned.
+  Needs real send traffic (Phase 5).
+- **Bounce reconciliation not yet functional** (daemon bounces resolve to daemon address → land in `noMatch` safely) — needs a real bounce payload. **Still open**, same reason.
 - Unsubscribes intentionally out of scope.
 
 ## 6. Uncommitted working-tree changes (branch `main`)
