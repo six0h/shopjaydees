@@ -27,7 +27,7 @@ describe("InstantlyClient", () => {
         { id: "camp_001", name: "Business - 2026-06", status: "active" },
         { id: "camp_002", name: "School - 2026-06", status: "active" },
       ];
-      const mockFetch = mockFetchResponse(200, campaigns);
+      const mockFetch = mockFetchResponse(200, { items: campaigns });
       const client = createInstantlyClient({
         apiKey: "test_key",
         fetchFn: mockFetch,
@@ -41,7 +41,7 @@ describe("InstantlyClient", () => {
       const [url, opts] = mockFetch.mock.calls[0];
       expect(url).toContain("api.instantly.ai/api/v2/campaigns");
       expect(url).toContain("limit=100");
-      expect(url).toContain("status=active");
+      expect(url).toContain("status=1");
       expect(opts.headers["Authorization"]).toBe("Bearer test_key");
     });
   });

@@ -94,14 +94,17 @@ export function createInstantlyClient(
 
   return {
     async listCampaigns(): Promise<InstantlyCampaign[]> {
+      // Instantly v2 requires `status` as a numeric enum (1 = active), not the
+      // string "active", and returns a paginated `{ items: [...] }` envelope.
       const params = new URLSearchParams({
         limit: "100",
-        status: "active",
+        status: "1",
       });
-      return (await request(
+      const page = (await request(
         "GET",
         `/campaigns?${params.toString()}`
-      )) as InstantlyCampaign[];
+      )) as { items?: InstantlyCampaign[] };
+      return page.items ?? [];
     },
 
     async createCampaign(name: string): Promise<InstantlyCampaign> {
