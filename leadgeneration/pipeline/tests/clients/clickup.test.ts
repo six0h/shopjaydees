@@ -112,10 +112,10 @@ describe("ClickUpClient", () => {
 
   describe("updateTask", () => {
     it("updates task status and custom fields", async () => {
-      const mockFetch = mockFetchResponses({
-        status: 200,
-        body: { id: "t1", status: { status: "Complete" } },
-      });
+      const mockFetch = mockFetchResponses(
+        { status: 200, body: { id: "t1", status: { status: "Complete" } } },
+        { status: 200, body: {} }
+      );
       const client = createClickUpClient({
         token: "pk_test",
         rateLimit: 90,
@@ -131,6 +131,12 @@ describe("ClickUpClient", () => {
       const [url, opts] = mockFetch.mock.calls[0];
       expect(url).toContain("task/t1");
       expect(opts.method).toBe("PUT");
+
+      // The custom field lands via its own POST, not the PUT body.
+      const [fieldUrl, fieldOpts] = mockFetch.mock.calls[1];
+      expect(fieldUrl).toContain("/task/t1/field/f1");
+      expect(fieldOpts.method).toBe("POST");
+      expect(JSON.parse(fieldOpts.body)).toEqual({ value: 25 });
     });
 
     it("forwards assignees in the updateTask PUT body", async () => {
@@ -222,5 +228,69 @@ describe("ClickUpClient", () => {
       expect(fields).toHaveLength(1);
       expect(fields[0].name).toBe("Segment");
     });
+  });
+});
+
+describe("updateTask custom_fields", () => {
+  const logger = createLogger("test");
+
+  it("sets each custom field via POST /task/:id/field/:fieldId, not PUT /task/:id", async () => {
+    // ClickUp v2 silently ignores custom_fields on PUT /task/:id.
+    const mockFetch = mockFetchResponses(
+      { status: 200, body: { id: "t1", custom_fields: [] } }, // PUT
+      { status: 200, body: {} }, // POST field f1
+      { status: 200, body: {} } // POST field f2
+    );
+    const client = createClickUpClient({
+      token: "pk_test",
+      rateLimit: 90,
+      fetchFn: mockFetch,
+      logger,
+    });
+
+    await client.updateTask("t1", {
+      status: "Ready for Review",
+      custom_fields: [
+        { id: "f1", value: "draft body" },
+        { id: "f2", value: 7 },
+      ],
+    });
+
+    const calls = mockFetch.mock.calls;
+    expect(calls).toHaveLength(3);
+
+    // 1. PUT carries the status but NOT custom_fields
+    const [putUrl, putOpts] = calls[0];
+    expect(putUrl).toContain("/task/t1");
+    expect(putOpts.method).toBe("PUT");
+    const putBody = JSON.parse(putOpts.body);
+    expect(putBody.status).toBe("Ready for Review");
+    expect(putBody.custom_fields).toBeUndefined();
+
+    // 2+3. One POST per field, value wrapped in { value }
+    const [f1Url, f1Opts] = calls[1];
+    expect(f1Url).toContain("/task/t1/field/f1");
+    expect(f1Opts.method).toBe("POST");
+    expect(JSON.parse(f1Opts.body)).toEqual({ value: "draft body" });
+
+    const [f2Url, f2Opts] = calls[2];
+    expect(f2Url).toContain("/task/t1/field/f2");
+    expect(JSON.parse(f2Opts.body)).toEqual({ value: 7 });
+  });
+
+  it("skips the PUT entirely when only custom_fields are supplied", async () => {
+    const mockFetch = mockFetchResponses({ status: 200, body: {} });
+    const client = createClickUpClient({
+      token: "pk_test",
+      rateLimit: 90,
+      fetchFn: mockFetch,
+      logger,
+    });
+
+    await client.updateTask("t1", { custom_fields: [{ id: "f1", value: "x" }] });
+
+    expect(mockFetch.mock.calls).toHaveLength(1);
+    expect(mockFetch.mock.calls[0][0]).toContain("/task/t1/field/f1");
+    expect(mockFetch.mock.calls[0][1].method).toBe("POST");
   });
 });

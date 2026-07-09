@@ -30,7 +30,7 @@ export interface ClickUpClient {
       custom_fields?: Array<{ id: string; value: unknown }>;
       assignees?: { add?: number[]; rem?: number[] };
     }
-  ): Promise<ClickUpTask>;
+  ): Promise<void>;
 
   addComment(taskId: string, text: string): Promise<void>;
 
@@ -156,7 +156,20 @@ export function createClickUpClient(options: ClickUpClientOptions): ClickUpClien
     },
 
     async updateTask(taskId, update) {
-      return (await request("PUT", `/task/${taskId}`, update)) as ClickUpTask;
+      // ClickUp v2 ignores custom_fields on PUT /task/:id — each field must be
+      // set via its own POST /task/:id/field/:fieldId. Silently dropping them
+      // here is how draft copy and run counters went missing.
+      const { custom_fields: customFields, ...taskUpdate } = update;
+
+      if (Object.keys(taskUpdate).length > 0) {
+        await request("PUT", `/task/${taskId}`, taskUpdate);
+      }
+
+      for (const field of customFields ?? []) {
+        await request("POST", `/task/${taskId}/field/${field.id}`, {
+          value: field.value,
+        });
+      }
     },
 
     async addComment(taskId, text) {
