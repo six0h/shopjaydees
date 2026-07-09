@@ -36,6 +36,8 @@ export interface ClickUpClient {
 
   addTag(taskId: string, tag: string): Promise<void>;
 
+  removeTag(taskId: string, tag: string): Promise<void>;
+
   getFields(
     listId: string
   ): Promise<
@@ -180,6 +182,10 @@ export function createClickUpClient(options: ClickUpClientOptions): ClickUpClien
 
     async addTag(taskId, tag) {
       await request("POST", `/task/${taskId}/tag/${encodeURIComponent(tag)}`);
+    },
+
+    async removeTag(taskId, tag) {
+      await request("DELETE", `/task/${taskId}/tag/${encodeURIComponent(tag)}`);
     },
 
     async getFields(listId) {

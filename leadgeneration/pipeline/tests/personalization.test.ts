@@ -28,6 +28,7 @@ function makeMockClickUp(): ClickUpClient {
     updateTask: vi.fn().mockResolvedValue({ id: "t1", status: { status: "Personalizing" } }),
     addComment: vi.fn().mockResolvedValue(undefined),
     addTag: vi.fn().mockResolvedValue(undefined),
+    removeTag: vi.fn().mockResolvedValue(undefined),
     getFields: vi.fn().mockResolvedValue([]),
   };
 }
@@ -750,5 +751,44 @@ describe("validateDrafts — natural company-name mentions", () => {
     const lead = makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
     const body = `Hello PARDEEP, Monark caught my eye this week. ${"x".repeat(100)}`;
     expect(validateDrafts(draftsMentioning(body), lead)).toEqual([]);
+  });
+});
+
+describe("stale generation-failed tag", () => {
+  it("clears the tag when a previously-failed lead personalizes successfully", async () => {
+    const config = makePersonalizationConfig();
+    const clickup = makeMockClickUp();
+    const firecrawl = makeMockFirecrawl();
+    const gemini = makeMockGemini();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    const task = makeEnrichedClickUpTask({ tags: ["generation-failed"] });
+    (clickup.getTasks as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([]) // stuck Personalizing reset
+      .mockResolvedValueOnce([task]); // eligible Enriched leads
+
+    const result = await runPersonalization({ config, clickup, firecrawl, gemini, alerter, logger });
+
+    expect(result.results.success).toBe(1);
+    expect(clickup.removeTag).toHaveBeenCalledWith(task.id, "generation-failed");
+  });
+
+  it("does not remove the tag in dry-run mode", async () => {
+    const config = { ...makePersonalizationConfig(), dryRun: true };
+    const clickup = makeMockClickUp();
+    const firecrawl = makeMockFirecrawl();
+    const gemini = makeMockGemini();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    const task = makeEnrichedClickUpTask({ tags: ["generation-failed"] });
+    (clickup.getTasks as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([task]);
+
+    await runPersonalization({ config, clickup, firecrawl, gemini, alerter, logger });
+
+    expect(clickup.removeTag).not.toHaveBeenCalled();
   });
 });

@@ -31,6 +31,7 @@ function makeMockClickUp(): ClickUpClient {
     updateTask: vi.fn().mockResolvedValue({}),
     addComment: vi.fn().mockResolvedValue(undefined),
     addTag: vi.fn().mockResolvedValue(undefined),
+    removeTag: vi.fn().mockResolvedValue(undefined),
     getFields: vi.fn().mockResolvedValue([]),
   };
 }
@@ -141,7 +142,7 @@ describe("isSequenceComplete", () => {
 
   it("returns false when status is NOT 'Outreach Active' (even with old start date)", () => {
     const task = makeOutreachActiveLeadTask({
-      status: "Responded - Owner Follow-up",
+      status: "Responded - Follow-up",
       startedDaysAgo: 20,
       outreachStartedFieldId: config.outreachFields.outreachStartedDate,
     });
@@ -209,7 +210,7 @@ describe("runReplyPoll — Phase A", () => {
     const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
 
     const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
-    expect(upd.status).toBe("Responded - Owner Follow-up");
+    expect(upd.status).toBe("Responded - Follow-up");
     expect(upd.assignees).toEqual({ add: [config.ownerUserId] });
     expect(upd.custom_fields.find((f: { id: string }) => f.id === config.outreachFields.lastReplyDate)).toBeDefined();
     expect(clickup.addComment).toHaveBeenCalledWith("lead_1", expect.stringContaining("Yes, send pricing"));
@@ -222,7 +223,7 @@ describe("runReplyPoll — Phase A", () => {
     const theLead = makeOutreachActiveLeadTask({
       id: "lead_1",
       email: "mike@acme.ca",
-      status: "Responded - Owner Follow-up",
+      status: "Responded - Follow-up",
       contactEmailFieldId: config.fields.contactEmail,
     });
     (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>

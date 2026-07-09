@@ -1056,6 +1056,12 @@ export async function runPersonalization(
             },
           ],
         });
+
+        // A retry that succeeds must clear the tag from the earlier failure,
+        // or the lead reaches Jenn's queue looking broken.
+        if (task.tags.some((t) => t.name === "generation-failed")) {
+          await clickup.removeTag(lead.taskId, "generation-failed");
+        }
       }
 
       result.results.success += 1;

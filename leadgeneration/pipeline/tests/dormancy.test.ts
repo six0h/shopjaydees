@@ -14,6 +14,7 @@ function makeMockClickUp(): ClickUpClient {
     updateTask: vi.fn().mockResolvedValue({}),
     addComment: vi.fn().mockResolvedValue(undefined),
     addTag: vi.fn().mockResolvedValue(undefined),
+    removeTag: vi.fn().mockResolvedValue(undefined),
     getFields: vi.fn().mockResolvedValue([]),
   };
 }

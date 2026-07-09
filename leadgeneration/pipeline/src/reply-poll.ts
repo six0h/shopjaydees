@@ -3,7 +3,7 @@ import { InstantlyApiError } from "./clients/instantly.js";
 import type { Config } from "./config.js";
 import type { ClickUpClient } from "./clients/clickup.js";
 import type { InstantlyClient } from "./clients/instantly.js";
-import type { ClickUpTask } from "./types.js";
+import type { ClickUpTask, ProspectStatus } from "./types.js";
 import type { Alerter } from "./alerting.js";
 import type { Logger } from "./logger.js";
 
@@ -106,9 +106,15 @@ export function isSequenceComplete(task: ClickUpTask, config: Config, now: Date)
   return ageMs >= config.sequenceCompleteAfterDays * 24 * 60 * 60 * 1000;
 }
 
+// Typed against ProspectStatus so a status that does not exist on the ClickUp
+// Leads list is a compile error, not a silent no-op. "Responded - Owner
+// Follow-up" was neither a real status nor a real union member: the write was
+// dropped and this set never matched, so every poll re-flagged the same lead.
+const RESPONDED_STATUS: ProspectStatus = "Responded - Follow-up";
+
 const CLOSED_STATUSES = new Set(["Won", "Lost", "Unsubscribed", "Bounced"]);
-const TERMINAL_FOR_REPLY = new Set([
-  "Responded - Owner Follow-up",
+const TERMINAL_FOR_REPLY: ReadonlySet<string> = new Set<ProspectStatus>([
+  RESPONDED_STATUS,
   "Won",
   "Lost",
   "Unsubscribed",
@@ -269,7 +275,7 @@ async function applySignal(
     touchedInPhaseA.add(task.id);
     if (!config.dryRun) {
       await clickup.updateTask(task.id, {
-        status: "Responded - Owner Follow-up",
+        status: RESPONDED_STATUS,
         assignees: { add: [config.ownerUserId] },
         custom_fields: [{ id: config.outreachFields.lastReplyDate, value: Date.now() }],
       });

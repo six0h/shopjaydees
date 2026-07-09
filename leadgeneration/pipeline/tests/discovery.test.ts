@@ -28,6 +28,7 @@ function makeMockClickUp(): ClickUpClient {
     updateTask: vi.fn().mockResolvedValue({}),
     addComment: vi.fn().mockResolvedValue(undefined),
     addTag: vi.fn().mockResolvedValue(undefined),
+    removeTag: vi.fn().mockResolvedValue(undefined),
     getFields: vi.fn().mockResolvedValue([
       { id: "f-segment", name: "Segment", type: "drop_down", type_config: { options: [{ name: "Business", orderindex: 0 }, { name: "School", orderindex: 1 }, { name: "Team", orderindex: 2 }] } },
       { id: "f-category", name: "Category", type: "drop_down", type_config: { options: [{ name: "Trades & Contractors", orderindex: 0 }] } },

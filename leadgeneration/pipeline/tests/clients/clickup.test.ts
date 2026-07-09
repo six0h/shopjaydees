@@ -143,12 +143,12 @@ describe("ClickUpClient", () => {
       const mockFetch = mockFetchResponses({ status: 200, body: { id: "t1" } });
       const client = createClickUpClient({ token: "tok", rateLimit: 90, fetchFn: mockFetch, logger });
 
-      await client.updateTask("t1", { status: "Responded - Owner Follow-up", assignees: { add: [42] } });
+      await client.updateTask("t1", { status: "Responded - Follow-up", assignees: { add: [42] } });
 
       const [, options] = mockFetch.mock.calls[0];
       const body = JSON.parse(options.body);
       expect(body.assignees).toEqual({ add: [42] });
-      expect(body.status).toBe("Responded - Owner Follow-up");
+      expect(body.status).toBe("Responded - Follow-up");
     });
   });
 
@@ -292,5 +292,34 @@ describe("updateTask custom_fields", () => {
     expect(mockFetch.mock.calls).toHaveLength(1);
     expect(mockFetch.mock.calls[0][0]).toContain("/task/t1/field/f1");
     expect(mockFetch.mock.calls[0][1].method).toBe("POST");
+  });
+});
+
+describe("removeTag", () => {
+  const logger = createLogger("test");
+
+  it("deletes a tag from a task", async () => {
+    const mockFetch = mockFetchResponses({ status: 200, body: {} });
+    const client = createClickUpClient({
+      token: "pk_test",
+      rateLimit: 90,
+      fetchFn: mockFetch,
+      logger,
+    });
+
+    await client.removeTag("t1", "generation-failed");
+
+    const [url, opts] = mockFetch.mock.calls[0];
+    expect(url).toContain("/task/t1/tag/generation-failed");
+    expect(opts.method).toBe("DELETE");
+  });
+
+  it("url-encodes the tag name", async () => {
+    const mockFetch = mockFetchResponses({ status: 200, body: {} });
+    const client = createClickUpClient({ token: "t", rateLimit: 90, fetchFn: mockFetch, logger });
+
+    await client.removeTag("t1", "needs review");
+
+    expect(mockFetch.mock.calls[0][0]).toContain("/task/t1/tag/needs%20review");
   });
 });
