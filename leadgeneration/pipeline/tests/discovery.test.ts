@@ -517,3 +517,31 @@ describe("Max Results (target volume) handling", () => {
     expect(result.requests[0].companiesSearched).toBe(2);
   });
 });
+
+describe("dry-run performs zero external writes", () => {
+  it("never mutates the Prospecting Request or creates leads when dryRun is true", async () => {
+    const config = { ...makeConfig(), dryRun: true };
+    const clickup = makeMockClickUp();
+    const hunter = makeMockHunter();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    const staleTask = makeProspectingRequestTask({
+      id: "stale_req",
+      status: "Running",
+      dateUpdated: String(Date.now() - 60 * 60_000), // 60 min stale
+    });
+
+    const getTasksMock = clickup.getTasks as ReturnType<typeof vi.fn>;
+    getTasksMock
+      .mockResolvedValueOnce([staleTask])
+      .mockResolvedValueOnce([makeProspectingRequestTask({ targetVolume: 2 })])
+      .mockResolvedValueOnce([]);
+
+    await runDiscovery({ config, clickup, hunter, alerter, logger });
+
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(clickup.createTask).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+  });
+});

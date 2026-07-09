@@ -164,7 +164,9 @@ export async function runDiscovery(
     const updatedAt = parseInt(task.date_updated, 10);
     const minutesStale = (Date.now() - updatedAt) / 60_000;
     if (minutesStale > 30) {
-      await clickup.updateTask(task.id, { status: "Requested" });
+      if (!config.dryRun) {
+        await clickup.updateTask(task.id, { status: "Requested" });
+      }
       logger.warn("RESET: stale Running request", {
         taskId: task.id,
         minutesStale: Math.round(minutesStale),
@@ -226,7 +228,9 @@ export async function runDiscovery(
     };
 
     try {
-      await clickup.updateTask(requestTask.id, { status: "Running" });
+      if (!config.dryRun) {
+        await clickup.updateTask(requestTask.id, { status: "Running" });
+      }
 
       // Step 1: Discover companies (free)
       const filters = categoryToDiscoverFilters(category, targetCity);
@@ -390,8 +394,10 @@ export async function runDiscovery(
       result.results.failed += 1;
 
       try {
-        await clickup.updateTask(requestTask.id, { status: "Failed" });
-        await clickup.addComment(requestTask.id, `Error: ${errorMsg}`);
+        if (!config.dryRun) {
+          await clickup.updateTask(requestTask.id, { status: "Failed" });
+          await clickup.addComment(requestTask.id, `Error: ${errorMsg}`);
+        }
       } catch {
         // Best effort
       }
