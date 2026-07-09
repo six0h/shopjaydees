@@ -12,6 +12,7 @@ import {
 } from "../src/index.js";
 import {
   makeEnrichedClickUpTask,
+  makeLeadData,
   makeMockDraftOutput,
   makePersonalizationConfig,
 } from "./helpers.js";
@@ -703,5 +704,51 @@ describe("runPersonalization", () => {
     expect(clickup.updateTask).not.toHaveBeenCalledWith("lead_bad", {
       status: "Personalizing",
     });
+  });
+});
+
+describe("validateDrafts — natural company-name mentions", () => {
+  function draftsMentioning(body: string) {
+    return makeMockDraftOutput({
+      email_touch_1_body: body,
+      email_touch_2_body: "B".repeat(90),
+      email_touch_3_body: "C".repeat(70),
+    });
+  }
+
+  const cases: Array<[string, string, string]> = [
+    ["Blue Pine Enterprises", "Blue Pine", "distinctive two-token prefix"],
+    ["LineStar Utility Supply", "LineStar", "distinctive single token"],
+    ["Northcoast Lumber", "Northcoast", "single distinctive token"],
+    ["A1 Doors & Mouldings", "A1 Doors", "short first token needs the second"],
+    ["Monark", "Monark", "single-word name"],
+    ["ABC Plumbing Ltd.", "ABC Plumbing", "legal suffix dropped"],
+  ];
+
+  for (const [companyName, mention, why] of cases) {
+    it(`accepts "${mention}" for "${companyName}" (${why})`, () => {
+      const lead = makeLeadData({ companyName, contactName: "Mike Thompson" });
+      const body = `Hi Mike, I noticed ${mention} has been busy this spring. ${"x".repeat(100)}`;
+      expect(validateDrafts(draftsMentioning(body), lead)).toEqual([]);
+    });
+  }
+
+  it("still rejects a body that never names the company", () => {
+    const lead = makeLeadData({ companyName: "Blue Pine Enterprises", contactName: "Mike Thompson" });
+    const body = `Hi Mike, I noticed your company has been busy this spring. ${"x".repeat(100)}`;
+    const errors = validateDrafts(draftsMentioning(body), lead);
+    expect(errors.some((e) => e.includes("missing company name"))).toBe(true);
+  });
+
+  it("matches the company name case-insensitively", () => {
+    const lead = makeLeadData({ companyName: "Northcoast Lumber", contactName: "Ron Sargeant" });
+    const body = `Hi Ron, folks at NORTHCOAST have a great reputation. ${"x".repeat(100)}`;
+    expect(validateDrafts(draftsMentioning(body), lead)).toEqual([]);
+  });
+
+  it("matches the contact first name case-insensitively", () => {
+    const lead = makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
+    const body = `Hello PARDEEP, Monark caught my eye this week. ${"x".repeat(100)}`;
+    expect(validateDrafts(draftsMentioning(body), lead)).toEqual([]);
   });
 });

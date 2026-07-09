@@ -611,13 +611,16 @@ INSTRUCTIONS:
 1. Write 3 email touches following the sequence structure (Touch 1: intro + value,
    Touch 2: value-add follow-up, Touch 3: friendly check-in).
 2. Reference something specific from their website or business. Do not be generic.
-3. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
-4. Sign all emails as "Ellie" (the ShopJaydees outreach persona — not the owner's name).
-5. Write a LinkedIn connection request note (under 300 chars, no pitch).
-6. Check the website content for any "do not contact" or "do not solicit" statements.
-7. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
+3. Name the company in the Touch 1 body, and address ${(lead.contactName ?? "").split(" ")[0]}
+   by first name. Writing "${lead.companyName}" how a person would say it out loud
+   is fine — you need not reproduce the full legal name.
+4. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
+5. Sign all emails as "Ellie" (the ShopJaydees outreach persona — not the owner's name).
+6. Write a LinkedIn connection request note (under 300 chars, no pitch).
+7. Check the website content for any "do not contact" or "do not solicit" statements.
+8. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
    role at ${lead.companyName}.
-8. If no website content was available, still write the emails using the company data,
+9. If no website content was available, still write the emails using the company data,
    but note that in the website_scrape_summary field.
 
 Return your response as structured JSON matching the schema provided.`;
@@ -637,6 +640,52 @@ Their 90-day cool-off period has passed. You MUST:
 }
 
 // --- Draft Validation ---
+
+const LEGAL_SUFFIXES = new Set([
+  "ltd",
+  "ltd.",
+  "limited",
+  "inc",
+  "inc.",
+  "incorporated",
+  "llc",
+  "corp",
+  "corp.",
+  "co",
+  "co.",
+  "ulc",
+]);
+
+/** Lowercase, strip punctuation that writers drop naturally ("&", ".", ","). */
+function normalizeForMatch(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[.,&']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * A writer referring to "Blue Pine Enterprises" naturally writes "Blue Pine";
+ * "A1 Doors & Mouldings" becomes "A1 Doors". Requiring the full legal name
+ * verbatim rejected ~80% of otherwise-good drafts, so accept the full name or a
+ * distinctive leading fragment of it. A body that never names the company at
+ * all still fails.
+ */
+export function companyNameMentioned(body: string, companyName: string): boolean {
+  const haystack = normalizeForMatch(body);
+  const tokens = normalizeForMatch(companyName)
+    .split(" ")
+    .filter((t) => t && !LEGAL_SUFFIXES.has(t));
+  if (tokens.length === 0) return false;
+
+  const candidates = [tokens.join(" ")];
+  if (tokens.length >= 2) candidates.push(`${tokens[0]} ${tokens[1]}`);
+  // A short leading token ("A1") isn't distinctive enough on its own.
+  if (tokens[0].length >= 4) candidates.push(tokens[0]);
+
+  return candidates.some((c) => haystack.includes(c));
+}
 
 export function validateDrafts(
   drafts: GeminiDraftOutput,
@@ -660,14 +709,19 @@ export function validateDrafts(
     );
   }
 
-  if (!drafts.email_touch_1_body.includes(lead.companyName)) {
+  if (!companyNameMentioned(drafts.email_touch_1_body, lead.companyName)) {
     errors.push(
       `email_touch_1_body missing company name "${lead.companyName}"`
     );
   }
 
   const firstName = lead.contactName.split(" ")[0];
-  if (firstName && !drafts.email_touch_1_body.includes(firstName)) {
+  if (
+    firstName &&
+    !normalizeForMatch(drafts.email_touch_1_body).includes(
+      normalizeForMatch(firstName)
+    )
+  ) {
     errors.push(
       `email_touch_1_body missing contact first name "${firstName}"`
     );
