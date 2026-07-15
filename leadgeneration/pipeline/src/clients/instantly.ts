@@ -8,10 +8,24 @@ export interface InstantlyCampaign {
   status: string;
 }
 
+/** Normalized result of a bulk /leads/add call. */
 export interface InstantlyAddLeadsResponse {
-  upload_id: string;
-  leads_uploaded: number;
-  leads_skipped: number;
+  /** Instantly lead id of the first created lead, or null if none created. */
+  leadId: string | null;
+  uploaded: number;
+  /** Skipped as already-in-workspace/campaign/list (skip_if_* flags). */
+  skipped: number;
+  /** Rejected as invalid or incomplete email. */
+  invalid: number;
+}
+
+/** Raw shape returned by POST /api/v2/leads/add (verified live). */
+interface InstantlyAddLeadsRaw {
+  leads_uploaded?: number;
+  skipped_count?: number;
+  invalid_email_count?: number;
+  incomplete_count?: number;
+  created_leads?: Array<{ id?: string }>;
 }
 
 export interface InstantlyLeadInput {
@@ -20,6 +34,22 @@ export interface InstantlyLeadInput {
   lastName: string;
   companyName: string;
   customVariables: Record<string, string>;
+}
+
+export interface InstantlyEmailVariant {
+  subject: string;
+  body: string;
+}
+
+export interface InstantlySequenceStep {
+  type: "email";
+  /** Days to wait before the NEXT step. 0 on the final step. */
+  delay: number;
+  variants: InstantlyEmailVariant[];
+}
+
+export interface InstantlySequence {
+  steps: InstantlySequenceStep[];
 }
 
 export type InstantlyRawEmail = Record<string, unknown>;
@@ -40,7 +70,12 @@ export class InstantlyApiError extends Error {
 
 export interface InstantlyClient {
   listCampaigns(): Promise<InstantlyCampaign[]>;
-  createCampaign(name: string): Promise<InstantlyCampaign>;
+  createCampaign(
+    name: string,
+    sequences: InstantlySequence[],
+    emailList: string[]
+  ): Promise<InstantlyCampaign>;
+  activateCampaign(campaignId: string): Promise<InstantlyCampaign>;
   addLeadToCampaign(
     campaignId: string,
     lead: InstantlyLeadInput
@@ -107,9 +142,15 @@ export function createInstantlyClient(
       return page.items ?? [];
     },
 
-    async createCampaign(name: string): Promise<InstantlyCampaign> {
+    async createCampaign(
+      name: string,
+      sequences: InstantlySequence[],
+      emailList: string[]
+    ): Promise<InstantlyCampaign> {
       return (await request("POST", "/campaigns", {
         name,
+        sequences,
+        email_list: emailList,
         campaign_schedule: {
           schedules: [
             {
@@ -123,7 +164,11 @@ export function createInstantlyClient(
                 "5": true,
                 "6": false,
               },
-              timezone: "America/Vancouver",
+              // Instantly's schedule timezone is a fixed enum with no
+              // America/Vancouver; America/Dawson is its only Pacific-offset
+              // value (identical to Vancouver during PDT). Any other string
+              // 400s the entire create-campaign call.
+              timezone: "America/Dawson",
               timing: {
                 from: "08:00",
                 to: "17:00",
@@ -134,11 +179,23 @@ export function createInstantlyClient(
       })) as InstantlyCampaign;
     },
 
+    async activateCampaign(campaignId: string): Promise<InstantlyCampaign> {
+      // Empty object, not undefined: Instantly 400s an empty body when the
+      // Content-Type is application/json (which `request` always sets).
+      return (await request(
+        "POST",
+        `/campaigns/${campaignId}/activate`,
+        {}
+      )) as InstantlyCampaign;
+    },
+
     async addLeadToCampaign(
       campaignId: string,
       lead: InstantlyLeadInput
     ): Promise<InstantlyAddLeadsResponse> {
-      return (await request("POST", "/leads", {
+      // Bulk add endpoint: POST /leads/add (NOT /leads, which is single-lead
+      // create with a different, top-level schema and no upload counts).
+      const raw = (await request("POST", "/leads/add", {
         campaign_id: campaignId,
         skip_if_in_workspace: true,
         leads: [
@@ -150,7 +207,14 @@ export function createInstantlyClient(
             custom_variables: lead.customVariables,
           },
         ],
-      })) as InstantlyAddLeadsResponse;
+      })) as InstantlyAddLeadsRaw;
+
+      return {
+        leadId: raw.created_leads?.[0]?.id ?? null,
+        uploaded: raw.leads_uploaded ?? 0,
+        skipped: raw.skipped_count ?? 0,
+        invalid: (raw.invalid_email_count ?? 0) + (raw.incomplete_count ?? 0),
+      };
     },
 
     async listEmails(campaignId, opts = {}): Promise<InstantlyEmailPage> {

@@ -2,7 +2,7 @@ import * as ff from "@google-cloud/functions-framework";
 import type { Request, Response } from "@google-cloud/functions-framework";
 import type { ClickUpClient } from "./clients/clickup.js";
 import type { HunterClient } from "./clients/hunter.js";
-import type { InstantlyClient } from "./clients/instantly.js";
+import type { InstantlyClient, InstantlySequence } from "./clients/instantly.js";
 import type { Alerter } from "./alerting.js";
 import type { Logger } from "./logger.js";
 import type { Config } from "./config.js";
@@ -1187,9 +1187,45 @@ export function getSegmentLabel(task: ClickUpTask, segmentFieldId: string): stri
   return "Business";
 }
 
-export function buildCampaignName(segment: string, now: Date): string {
+export function buildCampaignName(
+  segment: string,
+  now: Date,
+  businessName: string
+): string {
   const month = now.toISOString().slice(0, 7);
-  return `${segment} - ${month}`;
+  // Prefix the client business name so a human triaging in Instantly (which may
+  // hold many clients' campaigns) can tell whose campaign this is.
+  return `${businessName} - ${segment} - ${month}`;
+}
+
+/**
+ * The 3-touch sequence configured at the campaign level. The steps reference
+ * per-lead custom variables ({{touch_N_subject}}/{{touch_N_body}}) that
+ * `addLeadToCampaign` supplies; the campaign itself carries no literal copy.
+ * `delay` is days-until-next-step, giving Day 0 / Day 4 / Day 9 touches.
+ */
+export function buildOutreachSequences(): InstantlySequence[] {
+  return [
+    {
+      steps: [
+        {
+          type: "email",
+          delay: 4,
+          variants: [{ subject: "{{touch_1_subject}}", body: "{{touch_1_body}}" }],
+        },
+        {
+          type: "email",
+          delay: 5,
+          variants: [{ subject: "{{touch_2_subject}}", body: "{{touch_2_body}}" }],
+        },
+        {
+          type: "email",
+          delay: 0,
+          variants: [{ subject: "{{touch_3_subject}}", body: "{{touch_3_body}}" }],
+        },
+      ],
+    },
+  ];
 }
 
 function getSendFieldValue(task: ClickUpTask, fieldId: string): unknown {
@@ -1285,8 +1321,17 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
       getSendLeadScore(a, config.fields.leadScore)
   );
 
-  result.leadsQueued = approvedTasks.length;
-  logger.info("Approved leads found", { count: approvedTasks.length });
+  // Start-small batching: cap the run to the top-scored sendBatchSize leads.
+  const batch =
+    config.sendBatchSize && config.sendBatchSize > 0
+      ? approvedTasks.slice(0, config.sendBatchSize)
+      : approvedTasks;
+
+  result.leadsQueued = batch.length;
+  logger.info("Approved leads found", {
+    count: approvedTasks.length,
+    sending: batch.length,
+  });
 
   const prospectFields = await clickup.getFields(config.clickupListId);
   const dropdownOptions: Record<string, Array<{ name: string; orderindex: number }>> = {};
@@ -1304,8 +1349,8 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
 
   let rateLimited = false;
 
-  for (let i = 0; i < approvedTasks.length; i++) {
-    const task = approvedTasks[i];
+  for (let i = 0; i < batch.length; i++) {
+    const task = batch[i];
     const leadResult: SendLeadResult = {
       taskId: task.id,
       company: "",
@@ -1342,11 +1387,17 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
         continue;
       }
 
-      const sendingDomain = config.instantlySendingDomains[i % config.instantlySendingDomains.length];
+      // Instantly rotates actual sends across all assigned mailboxes. For
+      // ClickUp tracking we record an index-based rotation over the active
+      // accounts' domains.
+      const activeAccount =
+        config.instantlySendingAccounts[i % config.instantlySendingAccounts.length];
+      const sendingDomain =
+        activeAccount?.split("@")[1] ?? config.instantlySendingDomains[0];
       leadResult.sendingDomain = sendingDomain;
 
       const segment = getSegmentLabel(task, config.fields.segment);
-      const campaignName = buildCampaignName(segment, now);
+      const campaignName = buildCampaignName(segment, now, config.businessName);
 
       if (config.dryRun) {
         logger.info("DRY_RUN: would send lead", {
@@ -1363,8 +1414,16 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
       let campaignId = campaignCache.get(campaignName);
       if (!campaignId) {
         logger.info("Creating new campaign", { name: campaignName });
-        const newCampaign = await instantly.createCampaign(campaignName);
+        const newCampaign = await instantly.createCampaign(
+          campaignName,
+          buildOutreachSequences(),
+          config.instantlySendingAccounts
+        );
         campaignId = newCampaign.id;
+        // A freshly created campaign is a draft — activate it or the sequence
+        // never sends and leads pile up in a dormant campaign.
+        logger.info("Activating campaign", { name: campaignName, campaignId });
+        await instantly.activateCampaign(campaignId);
         campaignCache.set(campaignName, campaignId);
       }
       leadResult.campaignId = campaignId;
@@ -1385,7 +1444,34 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
         },
       });
 
-      const isSkipped = instantlyResponse.leads_skipped > 0;
+      // Instantly returns 200 with per-lead counts. An invalid/incomplete
+      // email is reported here, not as a 400.
+      if (instantlyResponse.invalid > 0) {
+        logger.warn("Instantly rejected lead email as invalid/incomplete", {
+          taskId: task.id,
+          email: leadData.contactEmail,
+        });
+        await clickup.addTag(task.id, "invalid-email");
+        await clickup.updateTask(task.id, { status: "Bounced" });
+        leadResult.status = "invalid_email";
+        result.results.invalidEmail += 1;
+        result.leads.push(leadResult);
+        continue;
+      }
+
+      if (instantlyResponse.uploaded === 0 && instantlyResponse.skipped === 0) {
+        logger.error("Instantly accepted 0 leads with no skip/invalid reason", {
+          taskId: task.id,
+          email: leadData.contactEmail,
+        });
+        leadResult.status = "error";
+        leadResult.error = "Instantly accepted 0 leads (none uploaded, skipped, or invalid)";
+        result.results.errors += 1;
+        result.leads.push(leadResult);
+        continue;
+      }
+
+      const isSkipped = instantlyResponse.skipped > 0;
       if (isSkipped) {
         logger.warn("Lead skipped by Instantly (already in workspace)", {
           taskId: task.id,
@@ -1414,7 +1500,7 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
             status: "Outreach Active",
             custom_fields: [
               { id: config.outreachFields.instantlyCampaignId, value: campaignId },
-              { id: config.outreachFields.instantlyLeadId, value: instantlyResponse.upload_id },
+              { id: config.outreachFields.instantlyLeadId, value: instantlyResponse.leadId ?? "" },
               { id: config.outreachFields.sendingDomain, value: sendingDomainIndex },
               { id: config.outreachFields.sequenceStatus, value: notStartedIndex },
               { id: config.outreachFields.outreachStartedDate, value: Date.now() },
@@ -1453,7 +1539,7 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
         if (err.code === 429) {
           logger.warn("Instantly 429 — stopping batch", {
             taskId: task.id,
-            remainingLeads: approvedTasks.length - i,
+            remainingLeads: batch.length - i,
           });
           rateLimited = true;
           leadResult.status = "deferred_rate_limit";
@@ -1462,15 +1548,10 @@ export async function runSend(deps: SendDeps): Promise<SendRunResult> {
           continue;
         }
 
-        if (err.code === 400) {
-          logger.warn("Instantly 400 — invalid email", { taskId: task.id });
-          await clickup.addTag(task.id, "invalid-email");
-          await clickup.updateTask(task.id, { status: "Bounced" });
-          leadResult.status = "invalid_email";
-          result.results.invalidEmail += 1;
-          result.leads.push(leadResult);
-          continue;
-        }
+        // A 400 from /leads/add is a genuine bad request (payload/API
+        // problem), NOT an invalid email — invalid emails come back 200 with
+        // invalid_email_count. Leave the lead Approved and surface the error
+        // rather than falsely marking it Bounced.
       }
 
       const errorMsg = err instanceof Error ? err.message : String(err);
@@ -1519,10 +1600,18 @@ ff.http("send", async (req: Request, res: Response) => {
         ? req.body.dry_run === true
         : undefined;
 
-    const effectiveConfig =
-      dryRunOverride !== undefined
-        ? { ...config, dryRun: dryRunOverride }
-        : config;
+    const batchSizeOverride =
+      req.body && typeof req.body === "object" && "batch_size" in req.body
+        ? parseInt(String(req.body.batch_size), 10)
+        : undefined;
+
+    const effectiveConfig = {
+      ...config,
+      ...(dryRunOverride !== undefined ? { dryRun: dryRunOverride } : {}),
+      ...(batchSizeOverride !== undefined && !isNaN(batchSizeOverride)
+        ? { sendBatchSize: batchSizeOverride }
+        : {}),
+    };
 
     const result = await runSend({
       config: effectiveConfig,

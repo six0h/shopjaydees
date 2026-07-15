@@ -60,7 +60,18 @@ describe("InstantlyClient", () => {
         logger,
       });
 
-      const result = await client.createCampaign("Team - 2026-06");
+      const sequences = [
+        {
+          steps: [
+            { type: "email" as const, delay: 4, variants: [{ subject: "{{touch_1_subject}}", body: "{{touch_1_body}}" }] },
+            { type: "email" as const, delay: 5, variants: [{ subject: "{{touch_2_subject}}", body: "{{touch_2_body}}" }] },
+            { type: "email" as const, delay: 0, variants: [{ subject: "{{touch_3_subject}}", body: "{{touch_3_body}}" }] },
+          ],
+        },
+      ];
+
+      const emailList = ["ellie@shopjaydees.ca", "ellie@shopjaydees.net"];
+      const result = await client.createCampaign("Team - 2026-06", sequences, emailList);
 
       expect(result.id).toBe("camp_new");
       expect(result.name).toBe("Team - 2026-06");
@@ -69,50 +80,89 @@ describe("InstantlyClient", () => {
       expect(opts.method).toBe("POST");
       const body = JSON.parse(opts.body);
       expect(body.name).toBe("Team - 2026-06");
-      expect(body.campaign_schedule.schedules[0].timezone).toBe("America/Vancouver");
+      // Instantly's timezone enum has no America/Vancouver; America/Dawson is
+      // the only Pacific-offset value it accepts (== Vancouver during PDT).
+      // A non-enum value 400s the whole create call.
+      expect(body.campaign_schedule.schedules[0].timezone).toBe("America/Dawson");
       expect(body.campaign_schedule.schedules[0].timing.from).toBe("08:00");
       expect(body.campaign_schedule.schedules[0].timing.to).toBe("17:00");
       expect(body.campaign_schedule.schedules[0].days["1"]).toBe(true);
       expect(body.campaign_schedule.schedules[0].days["5"]).toBe(true);
       expect(body.campaign_schedule.schedules[0].days["0"]).toBe(false);
       expect(body.campaign_schedule.schedules[0].days["6"]).toBe(false);
+      // The 3-touch sequence must ship in the create body, or the campaign has
+      // nothing to send and adding leads produces zero emails.
+      expect(body.sequences).toEqual(sequences);
+      // Without email_list the campaign has no sending mailboxes and sends
+      // nothing even when active with leads.
+      expect(body.email_list).toEqual(emailList);
     });
   });
 
-  describe("addLeadToCampaign", () => {
-    it("adds a lead with custom variables for all 3 touches", async () => {
-      const response: InstantlyAddLeadsResponse = {
-        upload_id: "upload_xyz",
-        leads_uploaded: 1,
-        leads_skipped: 0,
+  describe("activateCampaign", () => {
+    it("POSTs to /campaigns/:id/activate with Bearer auth", async () => {
+      const activated: InstantlyCampaign = {
+        id: "camp_new",
+        name: "Team - 2026-06",
+        status: "active",
       };
-      const mockFetch = mockFetchResponse(200, response);
+      const mockFetch = mockFetchResponse(200, activated);
       const client = createInstantlyClient({
         apiKey: "test_key",
         fetchFn: mockFetch,
         logger,
       });
 
-      const result = await client.addLeadToCampaign("camp_001", {
-        email: "mike@abcplumbing.ca",
-        firstName: "Mike",
-        lastName: "Thompson",
-        companyName: "ABC Plumbing Ltd.",
-        customVariables: {
-          touch_1_subject: "Quick question about your crew's gear",
-          touch_1_body: "Hi Mike,\n\nI came across ABC Plumbing...",
-          touch_2_subject: "An idea for your team",
-          touch_2_body: "Hi Mike,\n\nOne thing we hear...",
-          touch_3_subject: "Checking in",
-          touch_3_body: "Hi Mike,\n\nJust a quick follow-up...",
-          sending_domain: "shopjaydees.ca",
-        },
-      });
+      const result = await client.activateCampaign("camp_new");
 
-      expect(result.leads_uploaded).toBe(1);
-      expect(result.leads_skipped).toBe(0);
+      expect(result.id).toBe("camp_new");
       const [url, opts] = mockFetch.mock.calls[0];
-      expect(url).toContain("api.instantly.ai/api/v2/leads");
+      expect(url).toBe("https://api.instantly.ai/api/v2/campaigns/camp_new/activate");
+      expect(opts.method).toBe("POST");
+      expect(opts.headers["Authorization"]).toBe("Bearer test_key");
+      // Instantly rejects an empty body when Content-Type is application/json,
+      // so activate must send a (non-empty) JSON object.
+      expect(opts.body).toBe("{}");
+    });
+  });
+
+  describe("addLeadToCampaign", () => {
+    const lead = {
+      email: "mike@abcplumbing.ca",
+      firstName: "Mike",
+      lastName: "Thompson",
+      companyName: "ABC Plumbing Ltd.",
+      customVariables: {
+        touch_1_subject: "Quick question about your crew's gear",
+        touch_1_body: "Hi Mike,\n\nI came across ABC Plumbing...",
+        touch_2_subject: "An idea for your team",
+        touch_2_body: "Hi Mike,\n\nOne thing we hear...",
+        touch_3_subject: "Checking in",
+        touch_3_body: "Hi Mike,\n\nJust a quick follow-up...",
+        sending_domain: "shopjaydees.ca",
+      },
+    };
+
+    it("POSTs to /leads/add and normalizes the bulk response", async () => {
+      // Real /leads/add success payload shape (verified live).
+      const mockFetch = mockFetchResponse(200, {
+        status: "success",
+        leads_uploaded: 1,
+        skipped_count: 0,
+        invalid_email_count: 0,
+        incomplete_count: 0,
+        created_leads: [{ index: 0, id: "lead_abc", email: "mike@abcplumbing.ca" }],
+      });
+      const client = createInstantlyClient({ apiKey: "test_key", fetchFn: mockFetch, logger });
+
+      const result: InstantlyAddLeadsResponse = await client.addLeadToCampaign("camp_001", lead);
+
+      expect(result.uploaded).toBe(1);
+      expect(result.skipped).toBe(0);
+      expect(result.invalid).toBe(0);
+      expect(result.leadId).toBe("lead_abc");
+      const [url, opts] = mockFetch.mock.calls[0];
+      expect(url).toContain("api.instantly.ai/api/v2/leads/add");
       expect(opts.method).toBe("POST");
       const body = JSON.parse(opts.body);
       expect(body.campaign_id).toBe("camp_001");
@@ -127,37 +177,39 @@ describe("InstantlyClient", () => {
       );
     });
 
-    it("returns leads_skipped: 1 when lead already in workspace", async () => {
-      const response: InstantlyAddLeadsResponse = {
-        upload_id: "upload_dup",
+    it("maps skipped_count to skipped when the lead is already in the workspace", async () => {
+      const mockFetch = mockFetchResponse(200, {
+        status: "success",
         leads_uploaded: 0,
-        leads_skipped: 1,
-      };
-      const mockFetch = mockFetchResponse(200, response);
-      const client = createInstantlyClient({
-        apiKey: "test_key",
-        fetchFn: mockFetch,
-        logger,
+        skipped_count: 1,
+        invalid_email_count: 0,
+        incomplete_count: 0,
+        created_leads: [],
       });
+      const client = createInstantlyClient({ apiKey: "test_key", fetchFn: mockFetch, logger });
 
-      const result = await client.addLeadToCampaign("camp_001", {
-        email: "duplicate@test.com",
-        firstName: "Dup",
-        lastName: "User",
-        companyName: "Dup Corp",
-        customVariables: {
-          touch_1_subject: "s1",
-          touch_1_body: "b1",
-          touch_2_subject: "s2",
-          touch_2_body: "b2",
-          touch_3_subject: "s3",
-          touch_3_body: "b3",
-          sending_domain: "shopjaydees.ca",
-        },
+      const result = await client.addLeadToCampaign("camp_001", lead);
+
+      expect(result.skipped).toBe(1);
+      expect(result.uploaded).toBe(0);
+      expect(result.leadId).toBeNull();
+    });
+
+    it("sums invalid_email_count and incomplete_count into invalid", async () => {
+      const mockFetch = mockFetchResponse(200, {
+        status: "success",
+        leads_uploaded: 0,
+        skipped_count: 0,
+        invalid_email_count: 1,
+        incomplete_count: 0,
+        created_leads: [],
       });
+      const client = createInstantlyClient({ apiKey: "test_key", fetchFn: mockFetch, logger });
 
-      expect(result.leads_skipped).toBe(1);
-      expect(result.leads_uploaded).toBe(0);
+      const result = await client.addLeadToCampaign("camp_001", lead);
+
+      expect(result.invalid).toBe(1);
+      expect(result.uploaded).toBe(0);
     });
   });
 

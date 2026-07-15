@@ -40,7 +40,7 @@ function makeMockInstantly(): InstantlyClient {
   return {
     listCampaigns: vi.fn().mockResolvedValue([]),
     createCampaign: vi.fn().mockResolvedValue({ id: "camp_new_001", name: "Business - 2026-06", status: "active" }),
-    addLeadToCampaign: vi.fn().mockResolvedValue({ upload_id: "upload_001", leads_uploaded: 1, leads_skipped: 0 }),
+    addLeadToCampaign: vi.fn().mockResolvedValue({ leadId: "lead_001", uploaded: 1, skipped: 0, invalid: 0 }),
     listEmails: vi.fn().mockResolvedValue({ items: [], nextStartingAfter: null }),
   };
 }

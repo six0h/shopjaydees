@@ -61,6 +61,7 @@ describe("loadConfig", () => {
     // Instantly API
     process.env.INSTANTLY_API_KEY = "instantly_test_key";
     process.env.INSTANTLY_SENDING_DOMAINS = "shopjaydees.ca,shopjaydees.net";
+    process.env.INSTANTLY_SENDING_ACCOUNTS = "ellie@shopjaydees.ca,ellie@shopjaydees.net";
     // Outreach Tracking Fields
     process.env.CLICKUP_FIELD_INSTANTLY_CAMPAIGN_ID = "field-campaign-id";
     process.env.CLICKUP_FIELD_INSTANTLY_LEAD_ID = "field-lead-id";
@@ -184,6 +185,15 @@ describe("loadConfig", () => {
     setRequiredEnv();
     const config = loadConfig();
     expect(config.instantlySendingDomains).toEqual(["shopjaydees.ca", "shopjaydees.net"]);
+    // Active sending mailboxes assigned to the campaign; Instantly rotates
+    // sends across them. Narrow this list (e.g. to just .net) via config if a
+    // domain's health drops — no code change.
+    expect(config.instantlySendingAccounts).toEqual([
+      "ellie@shopjaydees.ca",
+      "ellie@shopjaydees.net",
+    ]);
+    // Defaults when CAMPAIGN_BUSINESS_NAME is unset.
+    expect(config.businessName).toBe("ShopJaydees");
   });
 
   it("loads Hunter ICP defaults from env", () => {

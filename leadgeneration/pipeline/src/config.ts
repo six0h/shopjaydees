@@ -5,6 +5,12 @@ export interface Config {
   geminiApiKey: string;
   instantlyApiKey: string;
   instantlySendingDomains: string[];
+  /** Active sending mailboxes assigned to the campaign; Instantly rotates sends across them. Narrow via config (e.g. drop .ca if its health drops). */
+  instantlySendingAccounts: string[];
+  /** Optional cap on approved leads sent per run (start-small batching). Unset = all approved. */
+  sendBatchSize?: number;
+  /** Client business name, prefixed to Instantly campaign names for human troubleshooting. */
+  businessName: string;
   clickupListId: string;
   clickupProspectingListId: string;
   clickupRateLimit: number;
@@ -98,6 +104,13 @@ export function loadConfig(): Config {
     instantlySendingDomains: required("INSTANTLY_SENDING_DOMAINS")
       .split(",")
       .map((d) => d.trim()),
+    instantlySendingAccounts: required("INSTANTLY_SENDING_ACCOUNTS")
+      .split(",")
+      .map((a) => a.trim()),
+    sendBatchSize: process.env.SEND_BATCH_SIZE
+      ? parseInt(process.env.SEND_BATCH_SIZE, 10)
+      : undefined,
+    businessName: process.env.CAMPAIGN_BUSINESS_NAME?.trim() || "ShopJaydees",
     clickupListId: required("CLICKUP_LIST_ID"),
     clickupProspectingListId: required("CLICKUP_PROSPECTING_LIST_ID"),
     clickupRateLimit: parseInt(process.env.CLICKUP_RATE_LIMIT ?? "90", 10),

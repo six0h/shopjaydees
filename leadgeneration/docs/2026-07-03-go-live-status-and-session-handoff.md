@@ -1,11 +1,68 @@
 # Go-Live Status & Session Handoff — 2026-07-03
 
 Living handoff for the ShopJayDees lead-gen deployment. Updated through the
-2026-07-09 session (Phases 1–3 complete).
+2026-07-15 session (Phase 5 first live send complete).
 
 Related: deploy runbook `pipeline/deploy/README.md`; reply-poll design/plan
 `docs/superpowers/{specs,plans}/2026-06-29-instantly-reply-poll-agent*`;
 deployment wiring `docs/superpowers/{specs/2026-06-30-deployment-design.md,plans/2026-06-30-deployment-wiring.md}`.
+
+---
+
+## ▶ RESUME HERE (updated 2026-07-15 session — PHASE 5 STARTED)
+
+**First real cold emails have been sent.** Mailbox warmup hit 100 (both
+`ellie@shopjaydees.ca` and `ellie@shopjaydees.net`, `warmup_score=100`). Jenn
+approved 2 leads; both were sent live this session via the local `send` handler
+(the plan's "Claude runs the steps"), one at a time with Cody gating each:
+
+- **Monark** (`pardeepd@monark.com`) and **Blue Pine** (`mike@bluepineenterprises.com`)
+  are both in Instantly campaign **`ShopJaydees - Business - 2026-07`**
+  (id `59af434d-2651-48cf-9761-5603cb62fb2b`, active, both mailboxes assigned).
+  Monark's touch-1 sent at 16:23:31Z; Blue Pine queued behind Instantly's
+  per-account sending gap. Both ClickUp tasks → `Outreach Active` with tracking
+  fields written. This is the real send traffic the two §5 go-live flags needed.
+
+**`send` had never actually worked — five latent bugs, all found live this
+session** (the green suite never caught them: fixtures encoded payload shapes the
+live ClickUp/Instantly APIs never send). All fixed TDD, **241 tests green**,
+typecheck + build clean:
+
+1. `createCampaign` set only a schedule — **no 3-touch sequence**. Added
+   `buildOutreachSequences()` (steps reference `{{touch_N_*}}` custom vars, Day
+   0/4/9 via per-step `delay` 4/5/0).
+2. New Instantly campaigns are **drafts** — added `activateCampaign`
+   (`POST /campaigns/{id}/activate`, must send `{}` body or it 400s).
+3. `createCampaign` never set **`email_list`** → campaign had **zero sending
+   mailboxes**. Now config-driven (`INSTANTLY_SENDING_ACCOUNTS`, both mailboxes;
+   narrow the list to fail over to one domain if the other's health drops).
+4. `addLeadToCampaign` posted to **`/leads`** (single-lead create, top-level
+   schema) instead of bulk **`/leads/add`** → `400 "Email is required"`. Fixed
+   path + normalized the real response (`leads_uploaded`→`uploaded`,
+   `skipped_count`→`skipped`, `invalid_email_count`+`incomplete_count`→`invalid`,
+   lead id from `created_leads[0].id`).
+5. Old code assumed **Instantly 400 = invalid email** and marked the lead
+   `Bounced`. Invalid emails actually return **200 with a count**; a 400 is a real
+   error. Rewired: invalid detected from the 200 response; a 400 now leaves the
+   lead `Approved`. (Reconciled Monark's wrongly-set `Bounced` state during the run.)
+
+Also fixed: schedule timezone `America/Vancouver` → **`America/Dawson`** (only
+Pacific-offset value in Instantly's enum; = Vancouver during PDT). Added optional
+**`sendBatchSize`** (`SEND_BATCH_SIZE` / `batch_size` body override) for
+start-small batches, and **`CAMPAIGN_BUSINESS_NAME`** so campaign names carry the
+client name (`ShopJaydees - <segment> - <month>`) for human triage in Instantly.
+
+**New env vars (in `.env`/`env.yaml`, must ship on redeploy):**
+`INSTANTLY_SENDING_ACCOUNTS`, `CAMPAIGN_BUSINESS_NAME` (and optional
+`SEND_BATCH_SIZE`).
+
+### Still open after this session
+- **Deployed Cloud Functions still run the OLD (broken) `send` code.** This
+  session ran `send` locally. Redeploy `send` (with the new env vars) before any
+  Phase 4 scheduler touches it.
+- Phase 4 schedulers still not deployed; `send` still not on cron.
+- §5 flags (reply-poll `/emails` field names, bounce reconciliation) now have real
+  traffic to validate against — verify on the next reply-poll run.
 
 ---
 

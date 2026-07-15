@@ -4,7 +4,7 @@ import type { InstantlyClient } from "../src/clients/instantly.js";
 import { InstantlyApiError } from "../src/clients/instantly.js";
 import type { Alerter } from "../src/alerting.js";
 import { createLogger } from "../src/logger.js";
-import { runSend, extractSendData, getSegmentLabel, buildCampaignName } from "../src/index.js";
+import { runSend, extractSendData, getSegmentLabel, buildCampaignName, buildOutreachSequences } from "../src/index.js";
 import { makeApprovedLeadTask, makeSendConfig } from "./helpers.js";
 import type { Config } from "../src/config.js";
 
@@ -51,12 +51,18 @@ function makeMockInstantly(): InstantlyClient {
     createCampaign: vi.fn().mockResolvedValue({
       id: "camp_new_001",
       name: "Business - 2026-06",
+      status: "draft",
+    }),
+    activateCampaign: vi.fn().mockResolvedValue({
+      id: "camp_new_001",
+      name: "Business - 2026-06",
       status: "active",
     }),
     addLeadToCampaign: vi.fn().mockResolvedValue({
-      upload_id: "upload_001",
-      leads_uploaded: 1,
-      leads_skipped: 0,
+      leadId: "lead_001",
+      uploaded: 1,
+      skipped: 0,
+      invalid: 0,
     }),
   };
 }
@@ -81,14 +87,14 @@ describe("getSegmentLabel", () => {
 });
 
 describe("buildCampaignName", () => {
-  it("creates segment-month format", () => {
-    const name = buildCampaignName("Business", new Date("2026-06-08"));
-    expect(name).toBe("Business - 2026-06");
+  it("prefixes the business name so campaigns are identifiable in Instantly", () => {
+    const name = buildCampaignName("Business", new Date("2026-06-08"), "ShopJaydees");
+    expect(name).toBe("ShopJaydees - Business - 2026-06");
   });
 
   it("creates School campaign name", () => {
-    const name = buildCampaignName("School", new Date("2026-12-15"));
-    expect(name).toBe("School - 2026-12");
+    const name = buildCampaignName("School", new Date("2026-12-15"), "ShopJaydees");
+    expect(name).toBe("ShopJaydees - School - 2026-12");
   });
 });
 
@@ -137,6 +143,36 @@ describe("extractSendData", () => {
   });
 });
 
+describe("buildOutreachSequences", () => {
+  it("builds one sequence of three email steps with Day 0/4/9 delays", () => {
+    const sequences = buildOutreachSequences();
+
+    expect(sequences).toHaveLength(1);
+    const steps = sequences[0].steps;
+    expect(steps).toHaveLength(3);
+
+    // Every step is an email step.
+    expect(steps.every((s) => s.type === "email")).toBe(true);
+
+    // Delay is days-until-next-step: touch1 +4 → Day 4, touch2 +5 → Day 9,
+    // touch3 is terminal (0).
+    expect(steps[0].delay).toBe(4);
+    expect(steps[1].delay).toBe(5);
+    expect(steps[2].delay).toBe(0);
+  });
+
+  it("references the per-lead touch custom variables, not literal copy", () => {
+    const steps = buildOutreachSequences()[0].steps;
+
+    expect(steps[0].variants[0].subject).toBe("{{touch_1_subject}}");
+    expect(steps[0].variants[0].body).toBe("{{touch_1_body}}");
+    expect(steps[1].variants[0].subject).toBe("{{touch_2_subject}}");
+    expect(steps[1].variants[0].body).toBe("{{touch_2_body}}");
+    expect(steps[2].variants[0].subject).toBe("{{touch_3_subject}}");
+    expect(steps[2].variants[0].body).toBe("{{touch_3_body}}");
+  });
+});
+
 describe("runSend", () => {
   it("processes an approved lead end-to-end", async () => {
     const config = makeSendConfig();
@@ -156,8 +192,13 @@ describe("runSend", () => {
 
     expect(instantly.listCampaigns).toHaveBeenCalledOnce();
     expect(instantly.createCampaign).toHaveBeenCalledWith(
-      `Business - ${new Date().toISOString().slice(0, 7)}`
+      `ShopJaydees - Business - ${new Date().toISOString().slice(0, 7)}`,
+      buildOutreachSequences(),
+      config.instantlySendingAccounts
     );
+    // A freshly created campaign is a draft; it must be activated or the
+    // sequence never sends.
+    expect(instantly.activateCampaign).toHaveBeenCalledWith("camp_new_001");
 
     expect(instantly.addLeadToCampaign).toHaveBeenCalledOnce();
     const addLeadCall = (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -194,7 +235,7 @@ describe("runSend", () => {
     (instantly.listCampaigns as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
       {
         id: "camp_existing",
-        name: `Business - ${new Date().toISOString().slice(0, 7)}`,
+        name: `ShopJaydees - Business - ${new Date().toISOString().slice(0, 7)}`,
         status: "active",
       },
     ]);
@@ -206,6 +247,8 @@ describe("runSend", () => {
     await runSend({ config, clickup, instantly, alerter, logger });
 
     expect(instantly.createCampaign).not.toHaveBeenCalled();
+    // A reused campaign is already active; do not re-activate it.
+    expect(instantly.activateCampaign).not.toHaveBeenCalled();
     const addLeadCall = (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(addLeadCall[0]).toBe("camp_existing");
   });
@@ -226,7 +269,7 @@ describe("runSend", () => {
     (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mockImplementation(
       async (_campaignId: string, lead: { companyName: string }) => {
         callOrder.push(lead.companyName);
-        return { upload_id: "u", leads_uploaded: 1, leads_skipped: 0 };
+        return { leadId: "u", uploaded: 1, skipped: 0, invalid: 0 };
       }
     );
 
@@ -236,7 +279,48 @@ describe("runSend", () => {
     expect(callOrder[1]).toBe("Low Score");
   });
 
-  it("round-robins sending domains based on lead index", async () => {
+  it("limits the run to sendBatchSize approved leads, highest score first", async () => {
+    const config = { ...makeSendConfig(), sendBatchSize: 1 };
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    (clickup.getTasks as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      makeApprovedLeadTask({ id: "low", leadScore: 3, companyName: "Low", contactEmail: "low@test.com" }),
+      makeApprovedLeadTask({ id: "high", leadScore: 5, companyName: "High", contactEmail: "high@test.com" }),
+    ]);
+
+    const result = await runSend({ config, clickup, instantly, alerter, logger });
+
+    // Only the single highest-scored lead is sent this run.
+    expect(result.leadsQueued).toBe(1);
+    expect(instantly.addLeadToCampaign).toHaveBeenCalledOnce();
+    expect((instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mock.calls[0][1].companyName).toBe("High");
+  });
+
+  it("sends all approved leads when sendBatchSize is unset", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    (clickup.getTasks as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      makeApprovedLeadTask({ id: "a", contactEmail: "a@test.com" }),
+      makeApprovedLeadTask({ id: "b", contactEmail: "b@test.com" }),
+    ]);
+
+    const result = await runSend({ config, clickup, instantly, alerter, logger });
+
+    expect(result.leadsQueued).toBe(2);
+    expect(instantly.addLeadToCampaign).toHaveBeenCalledTimes(2);
+  });
+
+  it("round-robins the tracked sending domain across active accounts by lead index", async () => {
+    // Instantly distributes actual sends across all email_list mailboxes; the
+    // per-lead sending_domain custom variable records an index-based rotation
+    // over the active accounts' domains for ClickUp tracking.
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
     const instantly = makeMockInstantly();
@@ -269,9 +353,10 @@ describe("runSend", () => {
     ]);
 
     (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      upload_id: "u",
-      leads_uploaded: 0,
-      leads_skipped: 1,
+      leadId: null,
+      uploaded: 0,
+      skipped: 1,
+      invalid: 0,
     });
 
     const result = await runSend({ config, clickup, instantly, alerter, logger });
@@ -284,7 +369,37 @@ describe("runSend", () => {
     );
   });
 
-  it("handles invalid email: tags task and sets Bounced", async () => {
+  it("handles invalid email (200 with invalid_email_count): tags task and sets Bounced", async () => {
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const instantly = makeMockInstantly();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    (clickup.getTasks as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      makeApprovedLeadTask({}),
+    ]);
+
+    // /leads/add returns 200 and reports the invalid email in the counts — it
+    // is NOT a thrown 400.
+    (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      leadId: null,
+      uploaded: 0,
+      skipped: 0,
+      invalid: 1,
+    });
+
+    const result = await runSend({ config, clickup, instantly, alerter, logger });
+
+    expect(result.results.invalidEmail).toBe(1);
+    expect(clickup.addTag).toHaveBeenCalledWith("task_approved_001", "invalid-email");
+    expect(clickup.updateTask).toHaveBeenCalledWith(
+      "task_approved_001",
+      expect.objectContaining({ status: "Bounced" })
+    );
+  });
+
+  it("leaves a lead Approved (error, not Bounced) when /leads/add throws a 400", async () => {
     const config = makeSendConfig();
     const clickup = makeMockClickUp();
     const instantly = makeMockInstantly();
@@ -296,14 +411,16 @@ describe("runSend", () => {
     ]);
 
     (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new InstantlyApiError("Invalid email format", 400)
+      new InstantlyApiError("Bad Request", 400)
     );
 
     const result = await runSend({ config, clickup, instantly, alerter, logger });
 
-    expect(result.results.invalidEmail).toBe(1);
-    expect(clickup.addTag).toHaveBeenCalledWith("task_approved_001", "invalid-email");
-    expect(clickup.updateTask).toHaveBeenCalledWith(
+    // A genuine 400 is an error, not an invalid-email — do not mark Bounced.
+    expect(result.results.errors).toBe(1);
+    expect(result.results.invalidEmail).toBe(0);
+    expect(clickup.addTag).not.toHaveBeenCalledWith("task_approved_001", "invalid-email");
+    expect(clickup.updateTask).not.toHaveBeenCalledWith(
       "task_approved_001",
       expect.objectContaining({ status: "Bounced" })
     );
@@ -323,7 +440,7 @@ describe("runSend", () => {
     ]);
 
     (instantly.addLeadToCampaign as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ upload_id: "u1", leads_uploaded: 1, leads_skipped: 0 })
+      .mockResolvedValueOnce({ leadId: "u1", uploaded: 1, skipped: 0, invalid: 0 })
       .mockRejectedValueOnce(new InstantlyApiError("Rate limited", 429));
 
     const result = await runSend({ config, clickup, instantly, alerter, logger });
