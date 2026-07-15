@@ -565,6 +565,37 @@ export function extractLeadData(task: ClickUpTask, config: Config): LeadData {
 
 // --- Prompt Builder ---
 
+/**
+ * Deterministic guard against the AI-writing tells the prompt asks the model to
+ * avoid but that it still slips in — chiefly em/en dashes and typographic
+ * quotes. Applied to prospect-facing copy before validation and writeback so a
+ * clean draft is guaranteed regardless of model compliance.
+ */
+export function sanitizeDraftText(s: string): string {
+  return s
+    .replace(/(\d)\s*[—–]\s*(\d)/g, "$1-$2") // numeric ranges -> hyphen
+    .replace(/\s*[—–]\s*/g, ", ") // em/en dash as clause separator -> comma
+    .replace(/[“”]/g, '"') // curly double quotes -> straight
+    .replace(/[‘’]/g, "'") // curly single quotes/apostrophes -> straight
+    .replace(/…/g, "...") // ellipsis char -> three dots
+    .replace(/ {2,}/g, " ") // collapse doubled spaces
+    .replace(/ +([,.])/g, "$1"); // drop space before , or .
+}
+
+/** Sanitize every prospect-facing draft field (subjects, bodies, LinkedIn note). */
+export function sanitizeDrafts(drafts: GeminiDraftOutput): GeminiDraftOutput {
+  return {
+    ...drafts,
+    email_touch_1_subject: sanitizeDraftText(drafts.email_touch_1_subject),
+    email_touch_1_body: sanitizeDraftText(drafts.email_touch_1_body),
+    email_touch_2_subject: sanitizeDraftText(drafts.email_touch_2_subject),
+    email_touch_2_body: sanitizeDraftText(drafts.email_touch_2_body),
+    email_touch_3_subject: sanitizeDraftText(drafts.email_touch_3_subject),
+    email_touch_3_body: sanitizeDraftText(drafts.email_touch_3_body),
+    linkedin_message: sanitizeDraftText(drafts.linkedin_message),
+  };
+}
+
 export function buildPrompt(lead: LeadData, scrapedContent: string): string {
   const websiteSection =
     scrapedContent.trim().length > 0
@@ -590,6 +621,29 @@ once in Touch 1, but don't lead with it.
 
 TONE: Friendly > Professional > Casual. Like a local business owner reaching out
 to another. First-name basis. No corporate jargon, no buzzwords, no pressure.
+
+WRITE LIKE A HUMAN — AVOID AI TELLS. These patterns scream "written by AI" and
+kill replies. Follow normal human grammar and punctuation:
+- NO em dashes or en dashes ("—", "–"). A real person emailing uses commas,
+  periods, or parentheses. Never join clauses with a dash.
+- Use contractions (you're, we've, don't, it's). Write how people actually talk.
+- Vary sentence length. Mix a short, blunt sentence in with longer ones. Do not
+  make every sentence the same measured, balanced length.
+- No "rule of three" triplets or parallel lists for rhythm (e.g. "durable,
+  professional, and reliable"). Pick one or two concrete things instead.
+- No antithesis templates: "It's not just X, it's Y", "not only... but also".
+- Ban these AI-giveaway words/phrases entirely: elevate, unlock, leverage,
+  streamline, seamless, robust, empower, foster, navigate, boasts, testament,
+  tapestry, realm, landscape, game-changer, cutting-edge, dive in, delve,
+  "in today's fast-paced world", "when it comes to", "I hope this email finds
+  you well", "I hope you're doing well".
+- No formulaic transitions: Moreover, Furthermore, Additionally, In conclusion,
+  Ultimately, That said. Use plain and/but/so.
+- No puffery about their company: nestled, vibrant, bustling, rich history,
+  renowned, "stands as", "proud to". Just state the specific fact plainly.
+- No semicolons and no bullet points in the email bodies.
+- Use straight quotes and apostrophes, never curly/typographic ones.
+- Don't restate or over-explain. Cut throat-clearing and filler. Say it once.
 
 PROSPECT DATA:
 - Company: ${lead.companyName}
@@ -941,7 +995,9 @@ export async function runPersonalization(
         continue;
       }
 
-      const drafts = geminiResult.drafts;
+      // Strip AI-writing tells (em dashes, curly quotes) before validation and
+      // writeback, so the reviewer and the prospect only ever see clean copy.
+      const drafts = sanitizeDrafts(geminiResult.drafts);
 
       // Step 6: Validate — CASL opt-out check first
       if (!drafts.casl_opt_out_check) {

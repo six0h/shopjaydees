@@ -9,6 +9,8 @@ import {
   extractLeadData,
   validateDrafts,
   buildPrompt,
+  sanitizeDraftText,
+  sanitizeDrafts,
 } from "../src/index.js";
 import {
   makeEnrichedClickUpTask,
@@ -189,6 +191,71 @@ describe("validateDrafts", () => {
   });
 });
 
+describe("sanitizeDraftText", () => {
+  it("replaces a spaced em dash used as a clause separator with a comma", () => {
+    expect(sanitizeDraftText("Our gear is durable — built for the trades.")).toBe(
+      "Our gear is durable, built for the trades."
+    );
+  });
+
+  it("replaces an unspaced em dash and en dash", () => {
+    expect(sanitizeDraftText("hoodies—uniforms")).toBe("hoodies, uniforms");
+    expect(sanitizeDraftText("spring–summer season")).toBe("spring, summer season");
+  });
+
+  it("keeps numeric ranges readable with a hyphen", () => {
+    expect(sanitizeDraftText("12—250 employees")).toBe("12-250 employees");
+  });
+
+  it("straightens curly quotes, apostrophes, and ellipses", () => {
+    expect(sanitizeDraftText("“Wear It Forward”")).toBe('"Wear It Forward"');
+    expect(sanitizeDraftText("you’re")).toBe("you're");
+    expect(sanitizeDraftText("just checking in…")).toBe("just checking in...");
+  });
+
+  it("leaves ordinary hyphens untouched", () => {
+    expect(sanitizeDraftText("a co-op with year-round work")).toBe(
+      "a co-op with year-round work"
+    );
+  });
+});
+
+describe("sanitizeDrafts", () => {
+  it("sanitizes every prospect-facing field and leaves booleans intact", () => {
+    const dirty = {
+      website_scrape_summary: "s",
+      community_signals: "c",
+      personalization_hooks: "h",
+      email_touch_1_subject: "Quick idea — for you",
+      email_touch_1_body: "Hi Mike — I saw your site’s work.",
+      email_touch_2_subject: "Following up—briefly",
+      email_touch_2_body: "One more thought — gear.",
+      email_touch_3_subject: "Checking in",
+      email_touch_3_body: "Still keen — let me know.",
+      linkedin_message: "Love your work — let’s connect.",
+      casl_opt_out_check: true,
+      casl_relevance_rationale: "r",
+    } as GeminiDraftOutput;
+
+    const clean = sanitizeDrafts(dirty);
+
+    expect(clean.email_touch_1_subject).toBe("Quick idea, for you");
+    expect(clean.email_touch_1_body).toBe("Hi Mike, I saw your site's work.");
+    expect(clean.email_touch_2_subject).toBe("Following up, briefly");
+    expect(clean.email_touch_3_body).toBe("Still keen, let me know.");
+    expect(clean.linkedin_message).toBe("Love your work, let's connect.");
+    // No em dashes survive anywhere in the outbound copy.
+    const outbound = [
+      clean.email_touch_1_subject, clean.email_touch_1_body,
+      clean.email_touch_2_subject, clean.email_touch_2_body,
+      clean.email_touch_3_subject, clean.email_touch_3_body,
+      clean.linkedin_message,
+    ].join(" ");
+    expect(outbound).not.toContain("—");
+    expect(clean.casl_opt_out_check).toBe(true);
+  });
+});
+
 describe("buildPrompt", () => {
   it("includes prospect data in the prompt", () => {
     const lead = {
@@ -257,6 +324,17 @@ describe("buildPrompt", () => {
     const prompt = buildPrompt(lead, "");
 
     expect(prompt).toContain("No website content available");
+  });
+
+  it("instructs the model to write like a human and avoid AI tells", () => {
+    const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
+    const prompt = buildPrompt(lead, "");
+
+    // The single most common AI tell we care about.
+    expect(prompt.toLowerCase()).toContain("em dash");
+    expect(prompt).toContain("—");
+    // Signals the overall directive is present.
+    expect(prompt.toLowerCase()).toContain("human");
   });
 
   it("includes segment-appropriate social proof", () => {
