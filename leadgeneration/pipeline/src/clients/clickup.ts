@@ -13,6 +13,8 @@ export interface ClickUpClient {
     }
   ): Promise<ClickUpTask[]>;
 
+  getAllTasks(listId: string): Promise<ClickUpTask[]>;
+
   createTask(
     listId: string,
     task: {
@@ -151,6 +153,25 @@ export function createClickUpClient(options: ClickUpClientOptions): ClickUpClien
         `/list/${listId}/task?${params.toString()}`
       )) as { tasks: ClickUpTask[] };
       return data.tasks;
+    },
+
+    async getAllTasks(listId) {
+      const all: ClickUpTask[] = [];
+      for (let page = 0; ; page++) {
+        const params = new URLSearchParams({
+          include_closed: "true",
+          subtasks: "false",
+          page: String(page),
+        });
+        const data = (await request(
+          "GET",
+          `/list/${listId}/task?${params.toString()}`
+        )) as { tasks?: ClickUpTask[]; last_page?: boolean };
+        const batch = data.tasks ?? [];
+        all.push(...batch);
+        if (data.last_page || batch.length < 100) break;
+      }
+      return all;
     },
 
     async createTask(listId, task) {

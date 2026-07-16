@@ -82,6 +82,42 @@ describe("ClickUpClient", () => {
     });
   });
 
+  describe("getAllTasks", () => {
+    it("pages until a short page and returns all tasks", async () => {
+      const page0 = {
+        tasks: Array.from({ length: 100 }, (_, i) => ({
+          id: `t${i}`,
+          custom_fields: [],
+          status: { status: "new inquiry" },
+          date_created: "1",
+        })),
+        last_page: false,
+      };
+      const page1 = {
+        tasks: [{ id: "t100", custom_fields: [], status: { status: "lost" }, date_created: "2" }],
+        last_page: true,
+      };
+      const mockFetch = mockFetchResponses(
+        { status: 200, body: page0 },
+        { status: 200, body: page1 }
+      );
+      const client = createClickUpClient({
+        token: "pk_test",
+        rateLimit: 90,
+        fetchFn: mockFetch,
+        logger,
+      });
+
+      const tasks = await client.getAllTasks("list_x");
+
+      expect(tasks).toHaveLength(101);
+      expect(mockFetch.mock.calls[0][0]).toContain("/list/list_x/task");
+      expect(mockFetch.mock.calls[0][0]).toContain("include_closed=true");
+      expect(mockFetch.mock.calls[0][0]).toContain("page=0");
+      expect(mockFetch.mock.calls[1][0]).toContain("page=1");
+    });
+  });
+
   describe("createTask", () => {
     it("creates a task with custom fields", async () => {
       const mockFetch = mockFetchResponses({
