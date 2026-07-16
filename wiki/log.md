@@ -92,3 +92,21 @@ Findings carried forward: discovery-stack resolution is still inconsistently ref
 
 ## [2026-07-03] update | resolved the two carried-forward lint findings
 Applied fixes for the discovery-stack and Unibox findings the 2026-07-01 lints carried forward. Discovery stack: aligned every page to the 2026-06-11 resolution (Hunter.io Discover API only; Firecrawl, Sales Navigator, and cleanlists.ai superseded) — overview.md (dropped Firecrawl from the client-paid list), systems/lead-generation-system.md ("Discovery approach conflict" → "resolved 2026-06-11", removed "unconfirmed"), people/jenn-milne.md (added the resolution note to the two source to-do lists), decisions/hunter-io-for-discovery-and-enrichment.md ("Confirm with Cody" → resolved), and both index.md summary lines. Unibox reply handling: rewrote systems/lead-generation-system.md pipeline function 5 to describe API polling + reply from the standalone ellie@ Gmail inbox (Growth has no webhooks/Unibox), and fixed the same superseded claim on systems/daily-approval-workflow.md and decisions/separate-cold-outreach-domains.md. Bumped updated dates to 2026-07-03 on all seven pages. Source files untouched; third-party-stack.md (already correct) left as the canonical stack page.
+
+## [2026-07-08] lint | incremental
+Incremental lint read index and log, then pages updated on or after the prior lint date, 2026-07-01, plus their linked pages.
+Counts: contradictions 1, superseded claims 1, orphans 0, missing pages 0, unprocessed raw files 0.
+Finding: the Unibox finding is resolved, but the discovery-stack finding is not fully closed. lead-generation-system and implementation-roadmap still present Google Maps and Firecrawl discovery as current pipeline or setup details even though the 2026-06-11 Cody resolution makes Hunter.io Discover API the current stack. No fixes applied.
+
+## [2026-07-15] lint | incremental
+Incremental lint read index and log; no wiki content pages have updated frontmatter on or after the prior lint date, 2026-07-08.
+Counts: contradictions 1, superseded claims 1, orphans 0, missing pages 0, unprocessed raw files 0.
+Finding carried forward: lead-generation-system and implementation-roadmap still present Google Maps and Firecrawl discovery as current pipeline or setup details even though the 2026-06-11 Cody resolution makes Hunter.io Discover API the current stack. No fixes applied.
+
+## [2026-07-15] ingest | raw/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md
+Ingested the go-live walkthrough call with Jenn (auto-generated Gemini transcript). System is live: two test leads sent, first real batch queued for 2026-07-16.
+Created: systems/prospect-crm-handoff-agent, decisions/anti-ai-writing-guardrails, decisions/hunter-starter-plan, people/tamara.
+Updated: overview (LIVE status + maintenance/reporting phase), systems/lead-generation-system (live operation section), people/jenn-milne (working style + go-live context), topics/third-party-stack (Hunter Starter purchase), topics/engagement-goals (maintenance & reporting phase), index.
+Flags: (1) the maintenance/reporting phase, "final invoice sent", and monthly billing come from Cody's direction this session, NOT the transcript — recorded as such; maintenance scope, report cadence/contents, and the final-invoice discount amount remain undocumented and need an authoritative source. (2) Transcript garbled names/domains (Elliot/Monarch/domain spellings); used the session-verified values (Ellie, Monark, shopjaydees.ca/.net, campaign ShopJaydees - Business - 2026-07). (3) Open compliance item: confirm the CASL unsubscribe link fires on every send. (4) Jenn floated automating Tamara's role — people-impact, flagged not acted on.
+
+Follow-up (2026-07-15): Cody confirmed the monthly billing is the service agreement's $300 CAD/mo management fee (flag 1 resolved for billing). Filed decisions/maintenance-and-reporting-phase and updated overview + engagement-goals accordingly. Defining the monthly report deliverable is deferred to a future session and added to the OS backlog (memory/backlog.md).

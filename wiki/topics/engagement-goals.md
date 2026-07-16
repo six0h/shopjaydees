@@ -5,9 +5,11 @@ category: topic
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-15
 tags: [goals, metrics, reviews]
 sources:
+  - file: "ingested/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md"
+    ingested: 2026-07-15
   - file: ingested/documents/lead-gen-pitch.html
     ingested: 2026-06-11
   - file: ingested/documents/2026-05-20-lead-generation-system-design.md
@@ -45,6 +47,12 @@ Tracked weekly: 50 to 150 companies found with verified contacts per request, 20
 - Owner spending thirty minutes or more per day on reviews: too much volume or too many edits needed.
 - Bounce rate above 5 percent: verify all addresses before sending, raise the confidence threshold.
 - LinkedIn connection rate below 15 percent: revise the connection request copy.
+
+## Maintenance & reporting phase (from 2026-07-15)
+
+Per Cody (2026-07-15, at go-live): the build is delivered and the engagement moves into an **ongoing maintenance and reporting phase, billed monthly** via the service agreement's **$300 CAD/month management fee** (six-month minimum; confirmed by Cody). See [Transition to maintenance & reporting phase](../decisions/maintenance-and-reporting-phase.md). In practice so far this means Cody monitors the system roughly once a day or every couple of days, watches domain health, and adjusts as needed.
+
+**Still to define (future session, tracked in the OS backlog):** the monthly report deliverable — what previous-month analytics and information SixOhQuad delivers Jenn at the start of each month, and its cadence and format. The "monthly reviews" below are the pitched intent and the starting point for that definition.
 
 ## Monthly reviews
 

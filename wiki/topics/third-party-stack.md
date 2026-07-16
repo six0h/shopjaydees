@@ -5,9 +5,11 @@ category: topic
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-15
 tags: [tools, subscriptions, stack]
 sources:
+  - file: "ingested/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md"
+    ingested: 2026-07-15
   - file: ingested/documents/service-agreement.html
     ingested: 2026-06-11
   - file: ingested/documents/lead-gen-pitch.html
@@ -21,6 +23,8 @@ sources:
 # Third-Party Stack
 
 The paid third-party services the [lead generation system](../systems/lead-generation-system.md) depends on. Per the service agreement the client creates, maintains, and pays for all of these accounts, and provides SixOhQuad with credentials before the build begins.
+
+**Confirmed at go-live (2026-07-15).** Jenn upgraded Hunter.io from the free tier (50 credits) to the **Starter plan, paid annually**, on the walkthrough call. Rationale: free was insufficient; Starter (~24,000 credits/yr, ~12,000 email+phone lookups at ~2 credits each) is ample for realistic volume, while Growth's 120,000 credits would be overkill. Starter retains the API access the Discovery Agent needs. See [Hunter.io Starter plan](../decisions/hunter-starter-plan.md). The live sending stack is confirmed as **ClickUp + Hunter.io + Instantly + Google Cloud (Gemini)** — no Firecrawl.
 
 **Resolution (Cody, 2026-06-11).** The current discovery stack is the design spec's version: Hunter.io Discover API only, no Firecrawl, no Sales Navigator, no cleanlists.ai. The tables below preserve the superseded versions for provenance; rely on the [2026-05-20 design spec section](#stack-per-the-2026-05-20-design-spec).
 

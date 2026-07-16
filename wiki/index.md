@@ -5,7 +5,7 @@ category: index
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-07-03
+updated: 2026-07-15
 tags: [wiki, index]
 ---
 
@@ -15,15 +15,17 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 
 ## Overview
 
-- [Overview](overview.md): synthesis of the client (Jaydees Apparel) and the lead generation engagement.
+- [Overview](overview.md): synthesis of the client (Jaydees Apparel) and the lead generation engagement; LIVE as of 2026-07-15, now in the maintenance & reporting phase.
 
 ## People
 
-- [Jenn Milne](people/jenn-milne.md): client contact and signatory at Jaydees Apparel; owns daily approvals and warm lead follow-up.
+- [Jenn Milne](people/jenn-milne.md): client contact and signatory at Jaydees Apparel; owns daily approvals and warm lead follow-up; working style and go-live context.
+- [Tamara](people/tamara.md): Jaydees staff who owns quote/opportunity intake downstream of the CRM handoff; possible future automation target.
 
 ## Systems
 
-- [Lead generation system](systems/lead-generation-system.md): the contracted system; discovery, enrichment, outreach, tracking, and warm lead handling on Google Cloud and ClickUp.
+- [Lead generation system](systems/lead-generation-system.md): the contracted system, now live; daily 5am/6am/9am cadence, status flow, domain rotation, campaigns, reply handling, plus discovery, enrichment, and scoring.
+- [Prospect handoff to CRM agent](systems/prospect-crm-handoff-agent.md): ClickUp agent that copies a replied prospect into the CRM and DMs Jenn on "Responded - Follow-up".
 - [Daily approval workflow](systems/daily-approval-workflow.md): the client's daily ClickUp review of drafts and flagged warm leads, fifteen to twenty minutes per day.
 - [Outreach messaging framework](systems/outreach-messaging-framework.md): research inputs, voice, message structure, personalization layers, credibility claims, and the three-touch sequence.
 - [Lead scoring](systems/lead-scoring.md): the one-to-five fit rubric, its inputs, and routing (three or higher proceeds, lower parks, Jenn can override).
@@ -41,6 +43,9 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 - [Dedicated cold email tool](decisions/dedicated-cold-email-tool.md): Instantly or Smartlead handles sending, warmup, and deliverability instead of ClickUp.
 - [Async approval queue](decisions/async-approval-queue.md): one daily batch review of ten to twenty drafts instead of real-time approvals.
 - [Gemini Flash for personalization](decisions/gemini-flash-for-personalization.md): Gemini 2.5 Flash runs the copywriter agent because the workload needs no frontier model.
+- [Anti-AI-writing guardrails](decisions/anti-ai-writing-guardrails.md): the copywriter must read as human — no em-dashes and other AI tells, enforced by prompt guidance plus a deterministic sanitizer (2026-07-15).
+- [Hunter.io Starter plan](decisions/hunter-starter-plan.md): client subscribed to Hunter.io Starter (not Growth), paid annually; ample credits without overkill (2026-07-15).
+- [Transition to maintenance & reporting phase](decisions/maintenance-and-reporting-phase.md): build delivered, final invoice sent; ongoing monthly maintenance & reporting billed via the $300 CAD/month management fee (2026-07-15).
 
 ## Topics
 

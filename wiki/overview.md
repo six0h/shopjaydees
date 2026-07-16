@@ -5,9 +5,11 @@ category: overview
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-07-03
+updated: 2026-07-15
 tags: [wiki, overview]
 sources:
+  - file: "ingested/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md"
+    ingested: 2026-07-15
   - file: ingested/documents/service-agreement.html
     ingested: 2026-06-11
   - file: ingested/documents/lead-gen-pitch.html
@@ -48,8 +50,10 @@ Pitched targets ([engagement goals](topics/engagement-goals.md)): five to fiftee
 
 The six ingested documents disagreed on two material points; Cody resolved both on 2026-06-11. Discovery: the design spec's stack is current, Hunter.io Discover API only (no Firecrawl, no Sales Navigator, no cleanlists.ai). Cold outreach address: the agreement's rule stands, separate domains only, never shopjaydees.com; the roadmap and setup guide examples are superseded. Details on the [third-party stack](topics/third-party-stack.md) and [separate cold outreach domains](decisions/separate-cold-outreach-domains.md) pages.
 
-## Status
+## Status — LIVE (2026-07-15)
 
-As of the implementation roadmap: design complete, pricing agreed, and the engagement is waiting on the client's account setup, which starts the build clock. The build follows the [implementation roadmap](topics/implementation-roadmap.md) (Foundation, Intelligence, Outreach Engine) with a [start small then scale](decisions/start-small-then-scale.md) ramp.
+The system is live. On the 2026-07-15 walkthrough call with Jenn, Cody demonstrated the full pipeline end to end and sent the first real outreach: two test leads (Monark and Blue Pine Enterprises) into the Instantly campaign `ShopJaydees - Business - 2026-07`, from the `ellie@shopjaydees.ca`/`.net` mailboxes (warmup at 100). Both leads' ClickUp tasks moved to Outreach Active. The first real prospecting batch (youth sports leagues, max 20) was queued for the next morning's 5:00 a.m. pickup (2026-07-16). Operational detail is on the [lead generation system](systems/lead-generation-system.md) page.
+
+**Project delivered; relationship now in the ongoing maintenance & reporting phase.** Per Cody (2026-07-15): the build deliverables are complete and the final project invoice has been sent (with an agreed discount Cody committed to Jenn on the call). The relationship moves to ongoing monthly maintenance and reporting, billed via the service agreement's **$300 CAD/month management fee** (six-month minimum; confirmed by Cody). Cody monitors the system roughly once a day or every couple of days. See [Transition to maintenance & reporting phase](decisions/maintenance-and-reporting-phase.md). **Still to define** (tracked in the OS backlog): the monthly report deliverable — what previous-month analytics and information SixOhQuad delivers each month, and its cadence and format. The exact final-invoice discount amount was not captured.
 
 Wiki seeded 2026-06-11 from engagement documents. The signed service agreement is on file: executed 2026-05-28 by Jennifer Milne and Cody Halovich via Google eSignature, signature cryptographically valid, terms identical to the template. See [service agreement terms](topics/service-agreement-terms.md).

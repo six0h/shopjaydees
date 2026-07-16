@@ -5,9 +5,11 @@ category: system
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-07-03
+updated: 2026-07-15
 tags: [lead-generation, automation, engagement-scope]
 sources:
+  - file: "ingested/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md"
+    ingested: 2026-07-15
   - file: ingested/documents/service-agreement.html
     ingested: 2026-06-11
   - file: ingested/documents/lead-gen-pitch.html
@@ -40,6 +42,25 @@ The System SixOhQuad is contracted to design, build, deploy, and manage for Jayd
 - The sequence is three touches over nine days: day zero personalized email plus LinkedIn request with a soft call to action, day four follow-up with a relevant example from a similar client, day nine lighter final touch. No response triggers a ninety-day cool-off.
 - Only leads scoring three or higher on the one-to-five fit scale move forward to outreach; lower scores are parked. Full rubric: [Lead scoring](lead-scoring.md).
 - ClickUp statuses per the design spec: Enriched or Parked after discovery, then Ready for Review, Approved, Outreach Active, and Responded - Owner Follow-up. The roadmap deck shows a simplified version (New, Enriched and Scored, Ready for Review, Outreach Active, Responded).
+
+## Live operation (observed on the 2026-07-15 walkthrough)
+
+How the running system actually behaves, confirmed live with Jenn:
+
+- **Daily clock.** Prospecting-request tickets are picked up at **5:00 a.m.**; by roughly **6:00 a.m.** leads are enriched, researched, scored, and drafted. Approved prospects **send at 9:00 a.m.** Jenn can still edit an approved email up until the 9:00 a.m. send.
+- **Prospecting requests.** In ClickUp, Jenn adds a task, picks a category (categories come from Hunter.io — e.g. trades, youth sports leagues, post-secondary clubs), sets max results, and sets a target city. Currently **one city per request** (Cody is considering allowing several).
+- **Status flow (live):** Enriched → Personalized → Ready for Review → Approved → Outreach Active → Responded - Follow-up, plus **Parked** (full series sent, no response) and **Lost** (responded, not interested). Nothing sends unless Jenn moves a lead to **Approved**.
+- **Sequence timing (confirmed live, does NOT blast same-day):** touch 1, then +4 days, then +5 days (Day 0 / 4 / 9).
+- **Sending domains rotate** to protect domain health: the two `ellie@shopjaydees.ca` / `.net` mailboxes are both assigned to the campaign, and Instantly keeps each lead's whole sequence on its first-touch mailbox. If one domain's health drops, the account list is narrowed via config to send from the healthy one only. See [Standalone outreach mailboxes](../decisions/standalone-outreach-mailboxes.md).
+- **Campaigns in Instantly:** one campaign per segment per month, now named with the client business name (`ShopJaydees - <segment> - <month>`, e.g. `ShopJaydees - Business - 2026-07`) so a human can identify it when troubleshooting. Daily cap ~**30 emails/day** per campaign, healthy for deliverability. See [Anti-AI-writing guardrails](../decisions/anti-ai-writing-guardrails.md) for the draft-quality controls on the copy these campaigns send.
+- **Timezone quirk:** Instantly's schedule enum has no `America/Vancouver`, so the campaign uses `America/Dawson` (Pacific, DST-equivalent in summer). Send time can drift by an hour across the year; Jenn confirmed she does not mind a send slipping to the next day.
+- **Reply handling:** replies surface in Instantly's inbox ("Unibox"), tagged as a lead (and "interested" when intent is detected). A ClickUp status change signals Jenn a reply came in; Instantly should be the only place she goes, and only when follow-up is needed. On "Responded - Follow-up" the new [Prospect handoff to CRM agent](prospect-crm-handoff-agent.md) copies the prospect into the CRM and DMs Jenn.
+- **Deduplication** is configured so Hunter.io credits are not spent re-finding existing contacts. For it to work, prospects must stay in the prospects list — so the CRM handoff is a **copy, not a move**.
+- **Open-rate tracking** was found disabled on the campaign during the call; Cody is to enable it (both want opens visible).
+- **CASL compliance:** every email must carry an unsubscribe link. Cody committed to confirming it actually fires on every send (currently assumed, not verified). Hunter.io's verify-email endpoint (~0.5 credit) can pre-verify addresses to cut bounces; deferred until domain-health data shows whether bounces warrant it.
+- **LinkedIn message** on a prospect is a manual draft only; nothing is connected to or auto-sent on LinkedIn.
+
+Several small fixes were queued or made during this session (see the go-live handoff in `leadgeneration/docs/`): the `send` agent's Instantly integration (sequence creation, campaign activation, mailbox assignment, `/leads/add` endpoint), business-name campaign naming, and [anti-AI-writing guardrails](../decisions/anti-ai-writing-guardrails.md) on the copywriter.
 
 ## Architecture (per the 2026-05-20 design spec)
 
