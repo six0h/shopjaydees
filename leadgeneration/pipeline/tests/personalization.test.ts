@@ -281,7 +281,9 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("Trades & Contractors");
     expect(prompt).toContain("Surrey");
     expect(prompt).toContain("Serving Surrey since 2005");
-    expect(prompt).toContain("ShopJaydees");
+    // Client rebranded 2026-07-16: the agent communicates as "Jaydees Apparel".
+    expect(prompt).toContain("Jaydees Apparel");
+    expect(prompt).not.toContain("ShopJaydees");
     expect(prompt).toContain("Wear It Forward");
     expect(prompt).toContain("Ellie");
   });

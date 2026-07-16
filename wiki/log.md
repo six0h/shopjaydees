@@ -114,3 +114,7 @@ Follow-up (2026-07-15): Cody confirmed the monthly billing is the service agreem
 ## [2026-07-16] ingest | full autonomous deployment
 Not a source ingest — recording an operational decision + state change. Discovered the pipeline had never had schedulers deployed (a Youth Sports/Surrey ticket sat unprocessed). Ran discover + personalize by hand (4 leads created, drafted), redeployed all 5 functions on latest main, deployed all 5 Cloud Scheduler crons ENABLED including send, removing the gates so the pipeline runs unattended (Jenn's ClickUp approval is the only remaining gate).
 Created: decisions/autonomous-pipeline-deployment. Updated: index. Reference docs (not wiki): leadgeneration/docs/gcp-resources.md (GCP inventory), leadgeneration/docs/2026-07-03-go-live-status-and-session-handoff.md (Phases 4-5 complete).
+
+## [2026-07-16] ingest | client rebrand to Jaydees Apparel
+Not a source ingest — recording a client-requested name change. The client rebranded from "ShopJaydees" to its legal name "Jaydees Apparel"; the outreach agent now communicates as Jaydees Apparel (personalize prompt updated + redeployed, TDD). Domains and internal campaign naming deliberately unchanged (flagged).
+Created: decisions/rebrand-to-jaydees-apparel. Updated: overview, index.

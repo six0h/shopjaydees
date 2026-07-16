@@ -611,11 +611,11 @@ export function buildPrompt(lead: LeadData, scrapedContent: string): string {
   const socialProof =
     socialProofMap[lead.segment] ?? socialProofMap["Business"];
 
-  let prompt = `You are writing cold outreach for ShopJaydees (shopjaydees.com), a custom clothing
+  let prompt = `You are writing cold outreach for Jaydees Apparel (shopjaydees.com), a custom clothing
 company in BC's Lower Mainland. They serve businesses, schools, and teams with
 branded apparel — uniforms, spirit wear, team gear, corporate swag.
 
-ShopJaydees runs "Wear It Forward" — a portion of every order goes to community
+Jaydees Apparel runs "Wear It Forward" — a portion of every order goes to community
 initiatives. This is a genuine differentiator, not a gimmick. Mention it naturally
 once in Touch 1, but don't lead with it.
 
@@ -669,7 +669,7 @@ INSTRUCTIONS:
    by first name. Writing "${lead.companyName}" how a person would say it out loud
    is fine — you need not reproduce the full legal name.
 4. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
-5. Sign all emails as "Ellie" (the ShopJaydees outreach persona — not the owner's name).
+5. Sign all emails as "Ellie" (the Jaydees Apparel outreach persona — not the owner's name).
 6. Write a LinkedIn connection request note (under 300 chars, no pitch).
 7. Check the website content for any "do not contact" or "do not solicit" statements.
 8. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s

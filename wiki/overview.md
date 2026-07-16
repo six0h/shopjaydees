@@ -5,7 +5,7 @@ category: overview
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-07-15
+updated: 2026-07-16
 tags: [wiki, overview]
 sources:
   - file: "ingested/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md"
@@ -28,7 +28,7 @@ sources:
 
 # ShopJayDees Overview
 
-ShopJayDees is a SixOhQuad client: an online custom clothing company serving businesses, schools, and teams in BC's Lower Mainland and Fraser Valley. Legal name on the service agreement: Jaydees Apparel; the pitch uses the brand name ShopJaydees. Primary contact: [Jenn Milne](people/jenn-milne.md), referred to as the owner in the design spec. Cody owns the relationship. The business sells custom apparel (work wear, uniforms, spirit wear, jerseys) and runs a community giving program called [Wear It Forward](topics/wear-it-forward.md), the core differentiator in all outreach messaging ([messaging framework](systems/outreach-messaging-framework.md)). Per that framework's credibility claims, the client works with over 100 schools in the Lower Mainland and with businesses from 12 to over 250 employees.
+ShopJayDees is a SixOhQuad client: an online custom clothing company serving businesses, schools, and teams in BC's Lower Mainland and Fraser Valley. Legal name on the service agreement: Jaydees Apparel. **As of 2026-07-16 the client rebranded to its legal name "Jaydees Apparel"** and the outreach agent now communicates as Jaydees Apparel (formerly the brand name "ShopJaydees"); see [Rebrand to Jaydees Apparel](decisions/rebrand-to-jaydees-apparel.md). Sending domains (`shopjaydees.ca`/`.net`) and the website (`shopjaydees.com`) are unchanged. Primary contact: [Jenn Milne](people/jenn-milne.md), referred to as the owner in the design spec. Cody owns the relationship. The business sells custom apparel (work wear, uniforms, spirit wear, jerseys) and runs a community giving program called [Wear It Forward](topics/wear-it-forward.md), the core differentiator in all outreach messaging ([messaging framework](systems/outreach-messaging-framework.md)). Per that framework's credibility claims, the client works with over 100 schools in the Lower Mainland and with businesses from 12 to over 250 employees.
 
 ## Why the engagement exists
 
