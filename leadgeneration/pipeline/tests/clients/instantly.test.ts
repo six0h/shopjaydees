@@ -4,6 +4,7 @@ import {
   type InstantlyClient,
   type InstantlyCampaign,
   type InstantlyAddLeadsResponse,
+  type InstantlyCampaignAnalytics,
 } from "../../src/clients/instantly.js";
 import { createLogger } from "../../src/logger.js";
 
@@ -241,6 +242,38 @@ describe("InstantlyClient", () => {
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain("starting_after=e9");
       expect(page.nextStartingAfter).toBeNull();
+    });
+  });
+
+  describe("getCampaignAnalytics", () => {
+    it("GETs /campaigns/analytics with ids + date range and normalizes the rows", async () => {
+      const mockFetch = mockFetchResponse(200, [
+        { campaign_id: "c1", emails_sent_count: 40, open_count: 18, reply_count: 4, bounced_count: 1 },
+        { campaign_id: "c2", emails_sent_count: 10, open_count: 3, reply_count: 0, bounced_count: 0 },
+      ]);
+      const client = createInstantlyClient({ apiKey: "test_key", fetchFn: mockFetch, logger });
+
+      const result = await client.getCampaignAnalytics(["c1", "c2"], "2026-07-01", "2026-07-31");
+
+      expect(result).toEqual([
+        { campaignId: "c1", emailsSent: 40, opens: 18, replies: 4, bounced: 1 },
+        { campaignId: "c2", emailsSent: 10, opens: 3, replies: 0, bounced: 0 },
+      ]);
+      const [url, opts] = mockFetch.mock.calls[0];
+      expect(url).toContain("api.instantly.ai/api/v2/campaigns/analytics");
+      expect(url).toContain("start_date=2026-07-01");
+      expect(url).toContain("end_date=2026-07-31");
+      expect(url).toContain("ids=c1");
+      expect(url).toContain("ids=c2");
+      expect(opts.headers["Authorization"]).toBe("Bearer test_key");
+    });
+
+    it("returns [] when given no campaign ids without calling the API", async () => {
+      const mockFetch = mockFetchResponse(200, []);
+      const client = createInstantlyClient({ apiKey: "test_key", fetchFn: mockFetch, logger });
+      const result = await client.getCampaignAnalytics([], "2026-07-01", "2026-07-31");
+      expect(result).toEqual([]);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 

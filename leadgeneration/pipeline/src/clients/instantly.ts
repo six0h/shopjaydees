@@ -59,6 +59,14 @@ export interface InstantlyEmailPage {
   nextStartingAfter: string | null;
 }
 
+export interface InstantlyCampaignAnalytics {
+  campaignId: string;
+  emailsSent: number;
+  opens: number;
+  replies: number;
+  bounced: number;
+}
+
 export class InstantlyApiError extends Error {
   code: number;
   constructor(message: string, code: number) {
@@ -84,6 +92,11 @@ export interface InstantlyClient {
     campaignId: string,
     opts?: { startingAfter?: string; limit?: number }
   ): Promise<InstantlyEmailPage>;
+  getCampaignAnalytics(
+    campaignIds: string[],
+    startDate: string,
+    endDate: string
+  ): Promise<InstantlyCampaignAnalytics[]>;
 }
 
 interface InstantlyClientOptions {
@@ -229,6 +242,28 @@ export function createInstantlyClient(
         items: data.items ?? [],
         nextStartingAfter: data.next_starting_after ?? null,
       };
+    },
+
+    async getCampaignAnalytics(campaignIds, startDate, endDate): Promise<InstantlyCampaignAnalytics[]> {
+      if (campaignIds.length === 0) return [];
+      const params = new URLSearchParams();
+      for (const id of campaignIds) params.append("ids", id);
+      params.set("start_date", startDate);
+      params.set("end_date", endDate);
+      const rows = (await request("GET", `/campaigns/analytics?${params.toString()}`)) as Array<{
+        campaign_id?: string;
+        emails_sent_count?: number;
+        open_count?: number;
+        reply_count?: number;
+        bounced_count?: number;
+      }>;
+      return (rows ?? []).map((r) => ({
+        campaignId: r.campaign_id ?? "",
+        emailsSent: r.emails_sent_count ?? 0,
+        opens: r.open_count ?? 0,
+        replies: r.reply_count ?? 0,
+        bounced: r.bounced_count ?? 0,
+      }));
     },
   };
 }
