@@ -1,4 +1,7 @@
-import type { InstantlyCampaignAnalytics } from "./clients/instantly.js";
+import type { InstantlyCampaignAnalytics, InstantlyClient } from "./clients/instantly.js";
+import type { ClickUpClient } from "./clients/clickup.js";
+import type { Config } from "./config.js";
+import type { Logger } from "./logger.js";
 import type { ClickUpTask } from "./types.js";
 
 export interface MonthWindow {
@@ -96,4 +99,40 @@ export function summarizeMonth(input: {
       wonEstValueSnapshot: won.reduce((a, t) => a + estValue(t, fields.estOrderValue), 0),
     },
   };
+}
+
+function dateFieldInWindow(task: ClickUpTask, fieldId: string, w: MonthWindow): boolean {
+  const v = task.custom_fields.find((f) => f.id === fieldId)?.value;
+  if (v === undefined || v === null || v === "") return false;
+  const ms = Number(v);
+  return Number.isFinite(ms) && ms >= w.startMs && ms < w.endMs;
+}
+
+export async function buildMonthlyReport(
+  deps: { config: Config; instantly: InstantlyClient; clickup: ClickUpClient; logger: Logger },
+  month: string
+): Promise<MonthlyReportSummary> {
+  const { config, instantly, clickup } = deps;
+  const window = monthWindow(month);
+
+  const campaigns = await instantly.listCampaigns();
+  const namePattern = new RegExp(`^${config.businessName} - .+ - ${month}$`);
+  const monthCampaignIds = campaigns.filter((c) => namePattern.test(c.name)).map((c) => c.id);
+  const analytics = await instantly.getCampaignAnalytics(monthCampaignIds, window.startDate, window.endDate);
+
+  const prospects = await clickup.getAllTasks(config.clickupListId);
+  const reachedTasks = prospects.filter((t) => dateFieldInWindow(t, config.outreachFields.outreachStartedDate, window));
+  const warmTasks = prospects.filter((t) => dateFieldInWindow(t, config.outreachFields.lastReplyDate, window));
+
+  const opportunityTasks = await clickup.getAllTasks(config.reportFields.crmLeadsListId);
+
+  return summarizeMonth({
+    month,
+    window,
+    analytics,
+    reachedTasks,
+    warmTasks,
+    opportunityTasks,
+    fields: { leadSource: config.reportFields.leadSource, estOrderValue: config.reportFields.estOrderValue },
+  });
 }

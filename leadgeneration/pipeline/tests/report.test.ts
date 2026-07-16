@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { monthWindow, summarizeMonth } from "../src/report.js";
+import { describe, it, expect, vi } from "vitest";
+import { monthWindow, summarizeMonth, buildMonthlyReport } from "../src/report.js";
+import { createLogger } from "../src/logger.js";
+import { makeSendConfig } from "./helpers.js";
 import type { ClickUpTask } from "../src/types.js";
 
 function oppTask(over: Partial<{ id: string; created: number; status: string; leadSource: number | undefined; est: string | undefined }>): ClickUpTask {
@@ -86,5 +88,44 @@ describe("summarizeMonth", () => {
     });
     expect(s.email.openRate).toBe(0);
     expect(s.email.replyRate).toBe(0);
+  });
+});
+
+describe("buildMonthlyReport", () => {
+  it("wires clients and filters this month's campaigns", async () => {
+    const config = {
+      ...makeSendConfig(),
+      businessName: "ShopJaydees",
+      reportFields: { crmLeadsListId: "crm", leadSource: "field-lead-source", estOrderValue: "field-est-order-value" },
+    };
+    const instantly = {
+      listCampaigns: vi.fn().mockResolvedValue([
+        { id: "c-jul", name: "ShopJaydees - Business - 2026-07", status: 1 },
+        { id: "c-jun", name: "ShopJaydees - Business - 2026-06", status: 1 },
+      ]),
+      getCampaignAnalytics: vi.fn().mockResolvedValue([
+        { campaignId: "c-jul", emailsSent: 20, opens: 8, replies: 2, bounced: 0 },
+      ]),
+    } as any;
+    const outreachField = config.outreachFields.outreachStartedDate;
+    const replyField = config.outreachFields.lastReplyDate;
+    const clickup = {
+      getAllTasks: vi.fn(async (listId: string) => {
+        if (listId === config.clickupListId) return [
+          { id: "p1", status: { status: "Outreach Active" }, date_created: "1", tags: [], custom_fields: [{ id: outreachField, value: String(Date.UTC(2026, 6, 10)) }] },
+          { id: "p2", status: { status: "Responded - Follow-up" }, date_created: "1", tags: [], custom_fields: [{ id: replyField, value: String(Date.UTC(2026, 6, 12)) }] },
+        ];
+        return [{ id: "o1", status: { status: "quote sent" }, date_created: String(Date.UTC(2026, 6, 11)), tags: [], custom_fields: [{ id: "field-lead-source", value: 0 }, { id: "field-est-order-value", value: "800" }] }];
+      }),
+    } as any;
+
+    const s = await buildMonthlyReport({ config, instantly, clickup, logger: createLogger("test") }, "2026-07");
+
+    expect(instantly.getCampaignAnalytics).toHaveBeenCalledWith(["c-jul"], "2026-07-01", "2026-07-31");
+    expect(s.email.sent).toBe(20);
+    expect(s.prospectsReached).toBe(1);
+    expect(s.warmHandoffs).toBe(1);
+    expect(s.aiSourced.openedThisMonth).toBe(1);
+    expect(s.aiSourced.estValueThisMonth).toBe(800);
   });
 });
