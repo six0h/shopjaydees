@@ -47,6 +47,54 @@ describe("InstantlyClient", () => {
     });
   });
 
+  describe("listAllCampaigns", () => {
+    it("paginates through all statuses (no status param) until a short page", async () => {
+      const page1Items: InstantlyCampaign[] = Array.from({ length: 100 }, (_, i) => ({
+        id: `camp_${i}`,
+        name: `Business - ${i} - 2026-07`,
+        status: i % 2 === 0 ? "active" : "completed",
+      }));
+      const page2Items: InstantlyCampaign[] = [
+        { id: "camp_last", name: "Team - 2026-07", status: "completed" },
+      ];
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers({}),
+          json: () => Promise.resolve({ items: page1Items, next_starting_after: "camp_99" }),
+          text: () => Promise.resolve("{}"),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers({}),
+          json: () => Promise.resolve({ items: page2Items, next_starting_after: null }),
+          text: () => Promise.resolve("{}"),
+        });
+      const client = createInstantlyClient({
+        apiKey: "test_key",
+        fetchFn: mockFetch,
+        logger,
+      });
+
+      const result = await client.listAllCampaigns();
+
+      expect(result).toHaveLength(101);
+      expect(result[0].id).toBe("camp_0");
+      expect(result[100].id).toBe("camp_last");
+
+      const [firstUrl] = mockFetch.mock.calls[0];
+      expect(firstUrl).not.toContain("status=");
+      expect(firstUrl).toContain("limit=100");
+
+      const [secondUrl] = mockFetch.mock.calls[1];
+      expect(secondUrl).toContain("starting_after=camp_99");
+      expect(secondUrl).not.toContain("status=");
+    });
+  });
+
   describe("createCampaign", () => {
     it("creates a campaign with weekday 8-17 Pacific schedule", async () => {
       const newCampaign: InstantlyCampaign = {

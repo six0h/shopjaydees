@@ -115,7 +115,7 @@ export async function buildMonthlyReport(
   const { config, instantly, clickup } = deps;
   const window = monthWindow(month);
 
-  const campaigns = await instantly.listCampaigns();
+  const campaigns = await instantly.listAllCampaigns();
   const namePattern = new RegExp(`^${config.businessName} - .+ - ${month}$`);
   const monthCampaignIds = campaigns.filter((c) => namePattern.test(c.name)).map((c) => c.id);
   const analytics = await instantly.getCampaignAnalytics(monthCampaignIds, window.startDate, window.endDate);

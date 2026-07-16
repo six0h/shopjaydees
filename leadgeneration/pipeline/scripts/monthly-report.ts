@@ -56,9 +56,18 @@ function previousMonth(now: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+const MONTH_ARG_PATTERN = /^\d{4}-\d{2}$/;
+
 async function main() {
   loadEnvFile();
-  const month = process.argv[2] ?? previousMonth(new Date());
+  const monthArg = process.argv[2];
+  if (monthArg !== undefined && !MONTH_ARG_PATTERN.test(monthArg)) {
+    process.stderr.write(
+      `Invalid month argument "${monthArg}" — expected format YYYY-MM (e.g. 2026-07).\n`
+    );
+    process.exit(1);
+  }
+  const month = monthArg ?? previousMonth(new Date());
   const config = loadConfig();
   const logger = createLogger("monthly-report");
   const instantly = createInstantlyClient({ apiKey: config.instantlyApiKey, logger });

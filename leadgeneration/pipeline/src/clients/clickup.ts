@@ -156,8 +156,9 @@ export function createClickUpClient(options: ClickUpClientOptions): ClickUpClien
     },
 
     async getAllTasks(listId) {
+      const MAX_PAGES = 200;
       const all: ClickUpTask[] = [];
-      for (let page = 0; ; page++) {
+      for (let page = 0; page < MAX_PAGES; page++) {
         const params = new URLSearchParams({
           include_closed: "true",
           subtasks: "false",
@@ -169,7 +170,13 @@ export function createClickUpClient(options: ClickUpClientOptions): ClickUpClien
         )) as { tasks?: ClickUpTask[]; last_page?: boolean };
         const batch = data.tasks ?? [];
         all.push(...batch);
-        if (data.last_page || batch.length < 100) break;
+        if (data.last_page || batch.length < 100) return all;
+        if (page === MAX_PAGES - 1) {
+          options.logger.warn("ClickUp getAllTasks hit page cap — stopping", {
+            listId,
+            pageCap: MAX_PAGES,
+          });
+        }
       }
       return all;
     },

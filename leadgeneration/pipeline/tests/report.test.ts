@@ -99,7 +99,7 @@ describe("buildMonthlyReport", () => {
       reportFields: { crmLeadsListId: "crm", leadSource: "field-lead-source", estOrderValue: "field-est-order-value" },
     };
     const instantly = {
-      listCampaigns: vi.fn().mockResolvedValue([
+      listAllCampaigns: vi.fn().mockResolvedValue([
         { id: "c-jul", name: "ShopJaydees - Business - 2026-07", status: 1 },
         { id: "c-jun", name: "ShopJaydees - Business - 2026-06", status: 1 },
       ]),

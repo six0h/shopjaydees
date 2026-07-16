@@ -116,6 +116,44 @@ describe("ClickUpClient", () => {
       expect(mockFetch.mock.calls[0][0]).toContain("page=0");
       expect(mockFetch.mock.calls[1][0]).toContain("page=1");
     });
+
+    it("stops at a 200-page ceiling instead of looping forever on a pathological API", async () => {
+      const fn = vi.fn().mockImplementation(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers({}),
+          json: () =>
+            Promise.resolve({
+              tasks: Array.from({ length: 100 }, (_, i) => ({
+                id: `t${i}`,
+                custom_fields: [],
+                status: { status: "new inquiry" },
+                date_created: "1",
+              })),
+              last_page: false, // never signals completion
+            }),
+          text: () => Promise.resolve("{}"),
+        })
+      );
+      const warn = vi.fn();
+      const cappedLogger = { ...logger, warn };
+      const client = createClickUpClient({
+        token: "pk_test",
+        rateLimit: 100_000,
+        fetchFn: fn,
+        logger: cappedLogger,
+      });
+
+      const tasks = await client.getAllTasks("list_pathological");
+
+      expect(fn.mock.calls.length).toBeLessThanOrEqual(200);
+      expect(tasks).toHaveLength(fn.mock.calls.length * 100);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("page cap"),
+        expect.objectContaining({ listId: "list_pathological" })
+      );
+    });
   });
 
   describe("createTask", () => {

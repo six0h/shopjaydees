@@ -78,6 +78,7 @@ export class InstantlyApiError extends Error {
 
 export interface InstantlyClient {
   listCampaigns(): Promise<InstantlyCampaign[]>;
+  listAllCampaigns(): Promise<InstantlyCampaign[]>;
   createCampaign(
     name: string,
     sequences: InstantlySequence[],
@@ -153,6 +154,27 @@ export function createInstantlyClient(
         `/campaigns?${params.toString()}`
       )) as { items?: InstantlyCampaign[] };
       return page.items ?? [];
+    },
+
+    async listAllCampaigns(): Promise<InstantlyCampaign[]> {
+      // Reporting needs campaigns of ANY status (a prior month's campaign has
+      // usually auto-completed to status 3 by report time), so this omits the
+      // `status` filter entirely and pages through the full result set.
+      const all: InstantlyCampaign[] = [];
+      let startingAfter: string | undefined;
+      for (;;) {
+        const params = new URLSearchParams({ limit: "100" });
+        if (startingAfter) params.set("starting_after", startingAfter);
+        const page = (await request(
+          "GET",
+          `/campaigns?${params.toString()}`
+        )) as { items?: InstantlyCampaign[]; next_starting_after?: string | null };
+        const items = page.items ?? [];
+        all.push(...items);
+        if (items.length < 100 || !page.next_starting_after) break;
+        startingAfter = page.next_starting_after;
+      }
+      return all;
     },
 
     async createCampaign(
