@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "npx functions-framework --target=discover --source=dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "report": "npx tsx scripts/monthly-report.ts"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.0"
