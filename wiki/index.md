@@ -5,7 +5,7 @@ category: index
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-07-15
+updated: 2026-07-16
 tags: [wiki, index]
 ---
 
@@ -46,6 +46,7 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 - [Anti-AI-writing guardrails](decisions/anti-ai-writing-guardrails.md): the copywriter must read as human — no em-dashes and other AI tells, enforced by prompt guidance plus a deterministic sanitizer (2026-07-15).
 - [Hunter.io Starter plan](decisions/hunter-starter-plan.md): client subscribed to Hunter.io Starter (not Growth), paid annually; ample credits without overkill (2026-07-15).
 - [Transition to maintenance & reporting phase](decisions/maintenance-and-reporting-phase.md): build delivered, final invoice sent; ongoing monthly maintenance & reporting billed via the $300 CAD/month management fee (2026-07-15).
+- [Autonomous pipeline deployment](decisions/autonomous-pipeline-deployment.md): all 5 schedulers enabled incl. send; pipeline runs unattended with Jenn's ClickUp approval as the only gate (2026-07-16).
 
 ## Topics
 

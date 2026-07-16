@@ -1,11 +1,36 @@
 # Go-Live Status & Session Handoff — 2026-07-03
 
 Living handoff for the ShopJayDees lead-gen deployment. Updated through the
-2026-07-15 session (Phase 5 first live send complete).
+2026-07-16 session (fully autonomous — all phases deployed).
 
 Related: deploy runbook `pipeline/deploy/README.md`; reply-poll design/plan
 `docs/superpowers/{specs,plans}/2026-06-29-instantly-reply-poll-agent*`;
 deployment wiring `docs/superpowers/{specs/2026-06-30-deployment-design.md,plans/2026-06-30-deployment-wiring.md}`.
+
+---
+
+## ▶ RESUME HERE (updated 2026-07-16 session — FULLY AUTONOMOUS, ALL PHASES DEPLOYED)
+
+**The pipeline now runs itself. Every phase is deployed; no gates remain except Jenn's approval.**
+
+Discovered this morning that the project had been treated as "handed off / runs at 5am" but **no schedulers had ever been deployed** — a Youth Sports/Surrey prospecting ticket sat untouched in `requested` because nothing was triggering discovery. Fixed by completing Phases 4 and 5.
+
+### What was done 2026-07-16
+- **Ran the stalled pipeline by hand** to unblock: `discover` on the Youth Sports/Surrey ticket → 4 leads created (Drive Basketball, Surrey Lacrosse, Coastal FC, SOCCERX); then `personalize` → all 4 drafted (with the new anti-AI guardrails), now `Ready for Review`.
+- **Redeployed all 5 functions** on latest `main` + complete `env.yaml` (the 3 stale ones — discover/dormancyCheck/replyPoll — plus send/personalize). All `ACTIVE`, boot-verified via dry-run invoke. `env.yaml` now carries the new required vars (`INSTANTLY_SENDING_ACCOUNTS`, `CAMPAIGN_BUSINESS_NAME`, `CLICKUP_CRM_LEADS_LIST_ID`, `CLICKUP_FIELD_CRM_LEAD_SOURCE`, `CLICKUP_FIELD_CRM_EST_ORDER_VALUE`).
+- **Deployed Phase 4 schedulers** (`deploy-schedulers.sh`): all 5 crons `ENABLED` (discover 4am · personalize 5am · send 9am weekdays · dormancy Sun 6am · replyPoll every 20min 7am–9pm, America/Vancouver).
+- **Removed the send gate (Phase 5):** `send-job` is deployed **ENABLED**, not paused — approved leads now send automatically at 9am. Warmup is at 100; sends were validated 2026-07-15.
+- **§5 go-live flags:** `replyPoll` live-invoke scanned the 2 real sent emails (Monark/Blue Pine) with no errors, validating the reply-poll field-name flag against real traffic. Bounce-reconciliation flag still needs a real bounce.
+
+### Current live state (2026-07-16)
+- 5 Gen2 functions ACTIVE, 5 Cloud Scheduler jobs ENABLED, 5 secrets, `runtime-sa` + `scheduler-sa`. Full inventory + console links: `leadgeneration/docs/gcp-resources.md`.
+- The pipeline is autonomous end to end: discover → personalize → **Jenn approves in ClickUp** → send. Jenn's approval is the only remaining gate (by design).
+- Monthly report metrics-pull module is built and merged (`npm run report`); the render→PDF→Gmail-draft layer (Plan 2) is still to build (backlog).
+
+### Operator to-dos (Cody's side, not blockers)
+1. **Enable open-tracking** in the Instantly campaign — open rate reads 0 (tracking was found disabled).
+2. **`Lead Source = AI Outreach`** tagging habit with Tamara — powers the monthly report's revenue attribution.
+3. Kill switch for any stage: Cloud Scheduler → ⋮ → Pause.
 
 ---
 
