@@ -73,6 +73,10 @@ describe("loadConfig", () => {
     process.env.CLICKUP_OWNER_USER_ID = "42";
     process.env.CLICKUP_FIELD_LAST_REPLY_DATE = "field-last-reply-date";
     process.env.CLICKUP_FIELD_OUTREACH_STARTED_DATE = "field-outreach-started-date";
+    // CRM Report Fields
+    process.env.CLICKUP_CRM_LEADS_LIST_ID = "901416652272";
+    process.env.CLICKUP_FIELD_CRM_LEAD_SOURCE = "fd42ddf6-ff11-45af-b8b5-6130f5558126";
+    process.env.CLICKUP_FIELD_CRM_EST_ORDER_VALUE = "aad67af7-7f18-4a60-be94-28e2efbd9d4f";
   }
 
   it("loads all required environment variables", () => {
@@ -83,6 +87,11 @@ describe("loadConfig", () => {
     expect(config.clickupListId).toBe("111");
     expect(config.clickupProspectingListId).toBe("222");
     expect(config.fields.companyName).toBe("field-company-name");
+    expect(config.reportFields).toEqual({
+      crmLeadsListId: "901416652272",
+      leadSource: "fd42ddf6-ff11-45af-b8b5-6130f5558126",
+      estOrderValue: "aad67af7-7f18-4a60-be94-28e2efbd9d4f",
+    });
   });
 
   it("throws if a required env var is missing", () => {

@@ -27,6 +27,11 @@ export interface Config {
   prospectingFields: ProspectingRequestFieldIds;
   personalizationFields: PersonalizationFieldIds;
   outreachFields: OutreachTrackingFieldIds;
+  reportFields: {
+    crmLeadsListId: string;
+    leadSource: string;
+    estOrderValue: string;
+  };
 }
 
 export interface ClickUpFieldIds {
@@ -179,6 +184,11 @@ export function loadConfig(): Config {
       dormantReactivationDate: required("CLICKUP_FIELD_DORMANT_REACTIVATION_DATE"),
       lastReplyDate: required("CLICKUP_FIELD_LAST_REPLY_DATE"),
       outreachStartedDate: required("CLICKUP_FIELD_OUTREACH_STARTED_DATE"),
+    },
+    reportFields: {
+      crmLeadsListId: required("CLICKUP_CRM_LEADS_LIST_ID"),
+      leadSource: required("CLICKUP_FIELD_CRM_LEAD_SOURCE"),
+      estOrderValue: required("CLICKUP_FIELD_CRM_EST_ORDER_VALUE"),
     },
   };
 }

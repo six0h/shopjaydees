@@ -302,6 +302,11 @@ export function makePersonalizationConfig(): Config {
       lastReplyDate: "field-last-reply-date",
       outreachStartedDate: "field-outreach-started-date",
     },
+    reportFields: {
+      crmLeadsListId: "crm-leads-list",
+      leadSource: "field-lead-source",
+      estOrderValue: "field-est-order-value",
+    },
   };
 }
 
@@ -498,6 +503,11 @@ export function makeSendConfig(): Config {
       dormantReactivationDate: "field-dormant-react-date",
       lastReplyDate: "field-last-reply-date",
       outreachStartedDate: "field-outreach-started-date",
+    },
+    reportFields: {
+      crmLeadsListId: "crm-leads-list",
+      leadSource: "field-lead-source",
+      estOrderValue: "field-est-order-value",
     },
   };
 }
