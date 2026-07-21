@@ -145,6 +145,11 @@ describe("InstantlyClient", () => {
       // Without email_list the campaign has no sending mailboxes and sends
       // nothing even when active with leads.
       expect(body.email_list).toEqual(emailList);
+      // A reply (or auto-reply) must halt the remaining touches — otherwise a
+      // prospect who says "not interested" keeps getting follow-ups (a CASL
+      // risk). Set explicitly, never left to Instantly's implicit default.
+      expect(body.stop_on_reply).toBe(true);
+      expect(body.stop_on_auto_reply).toBe(true);
     });
   });
 
