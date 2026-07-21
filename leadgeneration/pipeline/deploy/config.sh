@@ -22,7 +22,7 @@ SECRET_ENV_VARS=(CLICKUP_API_TOKEN HUNTER_API_KEY FIRECRAWL_API_KEY GEMINI_API_K
 # Per-function deploy + schedule table: target|memory|timeout|cron
 FUNCTIONS=(
   "discover|512MB|540s|0 4 * * 1-5"
-  "personalize|512MB|540s|0 5 * * 1-5"
+  "personalize|512MB|1800s|0 5 * * 1-5"
   "send|256MB|300s|0 9 * * 1-5"
   "dormancyCheck|256MB|120s|0 6 * * 0"
   "replyPoll|256MB|300s|*/20 7-21 * * *"

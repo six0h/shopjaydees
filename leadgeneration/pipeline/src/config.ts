@@ -15,6 +15,12 @@ export interface Config {
   clickupProspectingListId: string;
   clickupRateLimit: number;
   personalizationBatchSize: number;
+  /**
+   * Wall-clock budget (ms) for the personalization drain loop: keep processing
+   * batches until the eligible pool empties or this budget is hit. Kept below the
+   * function timeout so a run exits cleanly instead of being killed mid-lead.
+   */
+  personalizationDrainBudgetMs: number;
   dryRun: boolean;
   alertEmail: string;
   alertWebhookUrl: string;
@@ -120,6 +126,10 @@ export function loadConfig(): Config {
     clickupProspectingListId: required("CLICKUP_PROSPECTING_LIST_ID"),
     clickupRateLimit: parseInt(process.env.CLICKUP_RATE_LIMIT ?? "90", 10),
     personalizationBatchSize: parseInt(process.env.PERSONALIZATION_BATCH_SIZE ?? "15", 10),
+    personalizationDrainBudgetMs: parseInt(
+      process.env.PERSONALIZATION_DRAIN_BUDGET_MS ?? "1500000",
+      10
+    ),
     dryRun: process.env.DRY_RUN === "true",
     alertEmail: required("ALERT_EMAIL"),
     alertWebhookUrl: process.env.ALERT_WEBHOOK_URL ?? "",
