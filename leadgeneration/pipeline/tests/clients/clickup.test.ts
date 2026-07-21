@@ -80,6 +80,62 @@ describe("ClickUpClient", () => {
       const [url] = mockFetch.mock.calls[0];
       expect(url).toContain("custom_fields=");
     });
+
+    it("paginates past 100 tasks and returns every page (dedup + sweeps must see the whole list)", async () => {
+      // ClickUp returns 100 tasks/page. Reading only page 0 silently capped dedup
+      // and the dormancy sweep at the first 100 leads.
+      const page0 = {
+        tasks: Array.from({ length: 100 }, (_, i) => ({
+          id: `t${i}`,
+          name: "Lead",
+          status: { status: "outreach active" },
+          custom_fields: [],
+          tags: [],
+        })),
+        last_page: false,
+      };
+      const page1 = {
+        tasks: Array.from({ length: 30 }, (_, i) => ({
+          id: `t${100 + i}`,
+          name: "Lead",
+          status: { status: "outreach active" },
+          custom_fields: [],
+          tags: [],
+        })),
+        last_page: true,
+      };
+      const mockFetch = mockFetchResponses(
+        { status: 200, body: page0 },
+        { status: 200, body: page1 }
+      );
+      const client = createClickUpClient({
+        token: "pk_test",
+        rateLimit: 90,
+        fetchFn: mockFetch,
+        logger,
+      });
+
+      const tasks = await client.getTasks("list123", { includeClosed: true });
+
+      expect(tasks).toHaveLength(130);
+      expect(tasks[129].id).toBe("t129");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[0][0]).toContain("page=0");
+      expect(mockFetch.mock.calls[1][0]).toContain("page=1");
+    });
+
+    it("stops after one page when the first page is short (no needless second call)", async () => {
+      const mockFetch = mockFetchResponses({
+        status: 200,
+        body: { tasks: [{ id: "t1", name: "L", status: { status: "new" }, custom_fields: [], tags: [] }] },
+      });
+      const client = createClickUpClient({ token: "pk_test", rateLimit: 90, fetchFn: mockFetch, logger });
+
+      const tasks = await client.getTasks("list123", {});
+
+      expect(tasks).toHaveLength(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("getAllTasks", () => {

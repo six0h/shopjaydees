@@ -134,25 +134,42 @@ export function createClickUpClient(options: ClickUpClientOptions): ClickUpClien
 
   return {
     async getTasks(listId, opts) {
-      const params = new URLSearchParams();
-      params.set("subtasks", "false");
-      params.set("page", "0");
-      if (opts.statuses) {
-        for (const s of opts.statuses) {
-          params.append("statuses[]", s);
+      // ClickUp returns 100 tasks/page. Reading only page 0 silently capped every
+      // caller (dedup, dormancy sweep, Approved-lead send) at the first 100 tasks
+      // once a list grew past that. Page through to the end, same stop condition
+      // as getAllTasks (last_page flag or a short page).
+      const MAX_PAGES = 200;
+      const all: ClickUpTask[] = [];
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const params = new URLSearchParams();
+        params.set("subtasks", "false");
+        params.set("page", String(page));
+        if (opts.statuses) {
+          for (const s of opts.statuses) {
+            params.append("statuses[]", s);
+          }
+        }
+        if (opts.includeClosed) {
+          params.set("include_closed", "true");
+        }
+        if (opts.customFields) {
+          params.set("custom_fields", JSON.stringify(opts.customFields));
+        }
+        const data = (await request(
+          "GET",
+          `/list/${listId}/task?${params.toString()}`
+        )) as { tasks?: ClickUpTask[]; last_page?: boolean };
+        const batch = data.tasks ?? [];
+        all.push(...batch);
+        if (data.last_page || batch.length < 100) return all;
+        if (page === MAX_PAGES - 1) {
+          options.logger.warn("ClickUp getTasks hit page cap — stopping", {
+            listId,
+            pageCap: MAX_PAGES,
+          });
         }
       }
-      if (opts.includeClosed) {
-        params.set("include_closed", "true");
-      }
-      if (opts.customFields) {
-        params.set("custom_fields", JSON.stringify(opts.customFields));
-      }
-      const data = (await request(
-        "GET",
-        `/list/${listId}/task?${params.toString()}`
-      )) as { tasks: ClickUpTask[] };
-      return data.tasks;
+      return all;
     },
 
     async getAllTasks(listId) {
