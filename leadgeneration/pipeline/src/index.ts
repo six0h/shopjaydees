@@ -619,8 +619,9 @@ Jaydees Apparel runs "Wear It Forward" — a portion of every order goes to comm
 initiatives. This is a genuine differentiator, not a gimmick. Mention it naturally
 once in Touch 1, but don't lead with it.
 
-TONE: Friendly > Professional > Casual. Like a local business owner reaching out
-to another. First-name basis. No corporate jargon, no buzzwords, no pressure.
+TONE: Friendly > Professional > Casual. Warm and personal, like a real person from
+a local business reaching out. First-name basis. No corporate jargon, no buzzwords,
+no pressure.
 
 WRITE LIKE A HUMAN — AVOID AI TELLS. These patterns scream "written by AI" and
 kill replies. Follow normal human grammar and punctuation:
@@ -669,12 +670,22 @@ INSTRUCTIONS:
    by first name. Writing "${lead.companyName}" how a person would say it out loud
    is fine — you need not reproduce the full legal name.
 4. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
-5. Sign all emails as "Ellie" (the Jaydees Apparel outreach persona — not the owner's name).
-6. Write a LinkedIn connection request note (under 300 chars, no pitch).
-7. Check the website content for any "do not contact" or "do not solicit" statements.
-8. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
+5. Sign all emails as "Ellie". Ellie is part of the outreach team at Jaydees Apparel,
+   NOT the owner or founder. Speak for the company as "we", "our", and "us", and use
+   "I" only for Ellie's own actions (reaching out, sending a mockup). Never claim to
+   own, run, found, or start the company. Do not write "I run", "I own", "I started",
+   or "my shop/business/company". Say "I work for Jaydees Apparel" or "I'm with
+   Jaydees", never that Ellie is the business.
+6. Write a LinkedIn connection request note (under 300 chars, no pitch). The same role
+   rule applies here: Ellie works at Jaydees, she does not run or own it.
+7. Do NOT offer, mention, or promise a catalog, catalogue, brochure, lookbook, or
+   price list — Jaydees does not have one and Ellie cannot send it. If you want to
+   offer something concrete, offer a free mockup of their logo on a product. Never
+   tell the prospect you'll "send over the catalog".
+8. Check the website content for any "do not contact" or "do not solicit" statements.
+9. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
    role at ${lead.companyName}.
-9. If no website content was available, still write the emails using the company data,
+10. If no website content was available, still write the emails using the company data,
    but note that in the website_scrape_summary field.
 
 Return your response as structured JSON matching the schema provided.`;
@@ -710,6 +721,14 @@ const LEGAL_SUFFIXES = new Set([
   "ulc",
 ]);
 
+// Articles a writer drops when naming a company out loud ("The Home Depot" -> "Home Depot").
+const LEADING_ARTICLES = new Set(["the", "a", "an"]);
+
+// Collateral Jaydees Apparel does not have. Ellie must never offer to "send the
+// catalog" (Jenn flagged this live), so any prospect-facing mention is rejected and
+// the draft is regenerated. Ellie may still offer a free mockup — that's real.
+const NONEXISTENT_COLLATERAL_RE = /catalogue|catalog/i;
+
 /** Lowercase, strip punctuation that writers drop naturally ("&", ".", ","). */
 function normalizeForMatch(text: string): string {
   return text
@@ -728,9 +747,18 @@ function normalizeForMatch(text: string): string {
  */
 export function companyNameMentioned(body: string, companyName: string): boolean {
   const haystack = normalizeForMatch(body);
-  const tokens = normalizeForMatch(companyName)
+  let tokens = normalizeForMatch(companyName)
     .split(" ")
     .filter((t) => t && !LEGAL_SUFFIXES.has(t));
+  // Drop a leading article: a writer referring to "The Langley Concrete Group of
+  // Companies" naturally writes "Langley Concrete", never "The Langley". Leaving
+  // "the" as the first token made every candidate fragment start with "the ...",
+  // which no natural mention matches — so the lead bounced Enriched<->Personalizing
+  // on repeated generation-failed until a draft happened to reproduce the full
+  // legal name verbatim.
+  while (tokens.length > 1 && LEADING_ARTICLES.has(tokens[0])) {
+    tokens = tokens.slice(1);
+  }
   if (tokens.length === 0) return false;
 
   const candidates = [tokens.join(" ")];
@@ -792,6 +820,23 @@ export function validateDrafts(
         `${subj.name} length ${subj.value.length} out of range 3-80: "${subj.value}"`
       );
     }
+  }
+
+  // Guardrail: Ellie must not reference a catalog Jaydees can't actually send.
+  // Scan every prospect-facing field; a hit fails the draft so it regenerates.
+  const prospectFacing = [
+    drafts.email_touch_1_body,
+    drafts.email_touch_2_body,
+    drafts.email_touch_3_body,
+    drafts.email_touch_1_subject,
+    drafts.email_touch_2_subject,
+    drafts.email_touch_3_subject,
+    drafts.linkedin_message,
+  ];
+  if (prospectFacing.some((t) => NONEXISTENT_COLLATERAL_RE.test(t))) {
+    errors.push(
+      "draft references a catalog/catalogue, which Jaydees does not have — offer a mockup instead"
+    );
   }
 
   return errors;
@@ -1164,6 +1209,77 @@ export async function runPersonalization(
   return result;
 }
 
+export interface PersonalizationDrainResult {
+  passes: PersonalizationRunResult[];
+  totalProcessed: number;
+  totalSuccess: number;
+  totalGenerationFailed: number;
+  stoppedReason: "pipe_empty" | "no_progress" | "rate_limited" | "budget" | "max_passes";
+}
+
+/**
+ * Drain the eligible-lead pool by running personalization batch-after-batch in a
+ * single invocation, "self-retriggering" while there are more leads in the pipe.
+ *
+ * This is an in-process loop rather than an HTTP self-invocation on purpose: the
+ * function runs with max-instances=1/concurrency=1 (lead-locking isn't atomic, so
+ * concurrent runs would double-process), which means a self-POST would deadlock —
+ * the running instance would await a request that can't be served until it frees.
+ *
+ * Termination is guaranteed: it stops when the pool is empty, when a pass makes no
+ * progress (all remaining leads fail generation — no infinite retry on a poison
+ * lead), when Gemini rate-limits, when the wall-clock budget is spent, or at the
+ * hard pass cap.
+ */
+export async function runPersonalizationDrain(
+  deps: PersonalizationDeps,
+  opts?: {
+    budgetMs?: number;
+    maxPasses?: number;
+    now?: () => number;
+    // Injectable per-pass runner — defaults to runPersonalization; overridden in tests.
+    runOnce?: (deps: PersonalizationDeps) => Promise<PersonalizationRunResult>;
+  }
+): Promise<PersonalizationDrainResult> {
+  const budgetMs = opts?.budgetMs ?? deps.config.personalizationDrainBudgetMs;
+  const maxPasses = opts?.maxPasses ?? 100;
+  const now = opts?.now ?? (() => Date.now());
+  const runOnce = opts?.runOnce ?? runPersonalization;
+  const start = now();
+
+  const passes: PersonalizationRunResult[] = [];
+  let stoppedReason: PersonalizationDrainResult["stoppedReason"] = "pipe_empty";
+
+  for (let i = 0; i < maxPasses; i++) {
+    const r = await runOnce(deps);
+    passes.push(r);
+
+    const moreWaiting = r.leadsAvailable > r.leadsProcessed;
+    const madeProgress = r.results.success > 0;
+    const rateLimited = r.deferredRemaining > 0;
+
+    if (rateLimited) { stoppedReason = "rate_limited"; break; }
+    if (!moreWaiting) { stoppedReason = "pipe_empty"; break; }
+    if (!madeProgress) { stoppedReason = "no_progress"; break; }
+    if (now() - start >= budgetMs) { stoppedReason = "budget"; break; }
+    if (i === maxPasses - 1) { stoppedReason = "max_passes"; }
+  }
+
+  const totalProcessed = passes.reduce((a, p) => a + p.leadsProcessed, 0);
+  const totalSuccess = passes.reduce((a, p) => a + p.results.success, 0);
+  const totalGenerationFailed = passes.reduce((a, p) => a + p.results.generationFailed, 0);
+
+  deps.logger.info("Personalization drain complete", {
+    passes: passes.length,
+    totalProcessed,
+    totalSuccess,
+    totalGenerationFailed,
+    stoppedReason,
+  });
+
+  return { passes, totalProcessed, totalSuccess, totalGenerationFailed, stoppedReason };
+}
+
 // --- Cloud Function Entry Point ---
 
 ff.http("personalize", async (req: Request, res: Response) => {
@@ -1205,7 +1321,7 @@ ff.http("personalize", async (req: Request, res: Response) => {
       ...(dryRunOverride !== undefined ? { dryRun: dryRunOverride } : {}),
     };
 
-    const result = await runPersonalization({
+    const drain = await runPersonalizationDrain({
       config: effectiveConfig,
       clickup,
       firecrawl: firecrawlClient,
@@ -1214,7 +1330,14 @@ ff.http("personalize", async (req: Request, res: Response) => {
       logger,
     });
 
-    res.status(200).json(result);
+    res.status(200).json({
+      passes: drain.passes.length,
+      totalProcessed: drain.totalProcessed,
+      totalSuccess: drain.totalSuccess,
+      totalGenerationFailed: drain.totalGenerationFailed,
+      stoppedReason: drain.stoppedReason,
+      lastPass: drain.passes[drain.passes.length - 1],
+    });
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.critical("Unhandled error in Personalization Agent", {

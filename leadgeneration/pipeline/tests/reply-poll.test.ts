@@ -181,6 +181,18 @@ describe("isSequenceComplete", () => {
     });
     expect(isSequenceComplete(task, config, now)).toBe(true);
   });
+
+  it("treats ClickUp's lowercased 'outreach active' as active (real API casing)", () => {
+    // The ClickUp v2 API returns status names lowercased, so a live "Outreach
+    // Active" lead arrives as "outreach active". A case-sensitive compare wrongly
+    // treats it as non-active and never sweeps it to Dormant.
+    const task = makeOutreachActiveLeadTask({
+      status: "outreach active",
+      startedDaysAgo: 20,
+      outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+    });
+    expect(isSequenceComplete(task, config, now)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -239,6 +251,35 @@ describe("runReplyPoll — Phase A", () => {
     await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(clickup.addComment).not.toHaveBeenCalled();
+  });
+
+  it("is idempotent against ClickUp's lowercased status: a reply on 'responded - follow-up' does nothing", async () => {
+    // Reproduces the production spam bug: ClickUp returns the status lowercased,
+    // so the terminal-status dedup guard (a case-sensitive Set lookup) never
+    // matched and every 20-min poll re-flagged the same reply — re-assigning the
+    // owner and re-posting the comment, notifying the client each time.
+    const config = makeSendConfig();
+    const clickup = makeMockClickUp();
+    const theLead = makeOutreachActiveLeadTask({
+      id: "lead_1",
+      email: "mike@acme.ca",
+      status: "responded - follow-up", // exact casing the ClickUp API returns
+      contactEmailFieldId: config.fields.contactEmail,
+    });
+    (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
+      opts?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+    );
+    const instantly = makeMockInstantly();
+    (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "c", status: "active" }]);
+    (instantly.listEmails as Mock).mockResolvedValue({
+      items: [{ from_address_email: "mike@acme.ca", to_address_email_list: "ellie@shopjaydees.ca", subject: "Re", body: { text: "again" } }],
+      nextStartingAfter: null,
+    });
+
+    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(clickup.addComment).not.toHaveBeenCalled();
+    expect(result.repliesFlagged).toBe(0);
   });
 
   it("auto-reply only tags and comments, no status change", async () => {

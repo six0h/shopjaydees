@@ -186,6 +186,11 @@ export function createInstantlyClient(
         name,
         sequences,
         email_list: emailList,
+        // Stop the sequence as soon as a lead replies (or auto-replies), so a
+        // prospect who declines does not keep receiving follow-up touches.
+        // Set explicitly rather than relying on Instantly's implicit default.
+        stop_on_reply: true,
+        stop_on_auto_reply: true,
         campaign_schedule: {
           schedules: [
             {

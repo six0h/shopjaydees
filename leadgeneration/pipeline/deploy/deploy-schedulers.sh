@@ -33,7 +33,8 @@ for row in "${FUNCTIONS[@]}"; do
     --http-method=POST \
     --oidc-service-account-email="${SCHEDULER_SA}" \
     --oidc-token-audience="${url}" \
-    --max-retry-attempts=0
+    --max-retry-attempts=0 \
+    --attempt-deadline="${timeout}"
 done
 
 echo "==> Schedulers configured."

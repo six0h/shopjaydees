@@ -6,12 +6,14 @@ import type { Alerter } from "../src/alerting.js";
 import { createLogger } from "../src/logger.js";
 import {
   runPersonalization,
+  runPersonalizationDrain,
   extractLeadData,
   validateDrafts,
   buildPrompt,
   sanitizeDraftText,
   sanitizeDrafts,
 } from "../src/index.js";
+import type { PersonalizationRunResult } from "../src/types.js";
 import {
   makeEnrichedClickUpTask,
   makeLeadData,
@@ -337,6 +339,17 @@ describe("buildPrompt", () => {
     expect(prompt).toContain("—");
     // Signals the overall directive is present.
     expect(prompt.toLowerCase()).toContain("human");
+  });
+
+  it("frames Ellie as outreach staff, not the owner of Jaydees", () => {
+    const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
+    const prompt = buildPrompt(lead, "");
+
+    // Ellie works at Jaydees; she does not run/own it. The prompt must say so
+    // and must not carry the old owner-implying tone line.
+    expect(prompt.toLowerCase()).toContain("not the owner");
+    expect(prompt).toContain('Do not write "I run"');
+    expect(prompt).not.toContain("local business owner reaching out");
   });
 
   it("includes segment-appropriate social proof", () => {
@@ -804,6 +817,8 @@ describe("validateDrafts — natural company-name mentions", () => {
     ["A1 Doors & Mouldings", "A1 Doors", "short first token needs the second"],
     ["Monark", "Monark", "single-word name"],
     ["ABC Plumbing Ltd.", "ABC Plumbing", "legal suffix dropped"],
+    ["The Langley Concrete Group of Companies", "Langley Concrete", "leading article stripped"],
+    ["The Home Depot", "Home Depot", "leading article, two-token remainder"],
   ];
 
   for (const [companyName, mention, why] of cases) {
@@ -831,6 +846,42 @@ describe("validateDrafts — natural company-name mentions", () => {
     const lead = makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
     const body = `Hello PARDEEP, Monark caught my eye this week. ${"x".repeat(100)}`;
     expect(validateDrafts(draftsMentioning(body), lead)).toEqual([]);
+  });
+});
+
+describe("validateDrafts — catalog guardrail (Jaydees has no catalog)", () => {
+  const lead = () => makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
+  const cleanBody = `Hi Pardeep, Monark's spring work caught my eye. ${"x".repeat(100)}`;
+
+  it("rejects a draft body that offers to send a catalog", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark looks great. Happy to send over our catalog so you can browse styles. ${"x".repeat(80)}`,
+    });
+    const errors = validateDrafts(drafts, lead());
+    expect(errors.some((e) => e.toLowerCase().includes("catalog"))).toBe(true);
+  });
+
+  it("rejects the British spelling 'catalogue' anywhere in a touch body", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: cleanBody,
+      email_touch_2_body: `Following up, Pardeep — our catalogue has a lot of options. ${"x".repeat(60)}`,
+    });
+    const errors = validateDrafts(drafts, lead());
+    expect(errors.some((e) => e.toLowerCase().includes("catalog"))).toBe(true);
+  });
+
+  it("rejects a catalog mention in a subject line", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: cleanBody,
+      email_touch_1_subject: "Our catalog for Monark",
+    });
+    const errors = validateDrafts(drafts, lead());
+    expect(errors.some((e) => e.toLowerCase().includes("catalog"))).toBe(true);
+  });
+
+  it("passes a clean draft that never mentions a catalog", () => {
+    const drafts = makeMockDraftOutput({ email_touch_1_body: cleanBody });
+    expect(validateDrafts(drafts, lead())).toEqual([]);
   });
 });
 
@@ -870,5 +921,101 @@ describe("stale generation-failed tag", () => {
     await runPersonalization({ config, clickup, firecrawl, gemini, alerter, logger });
 
     expect(clickup.removeTag).not.toHaveBeenCalled();
+  });
+});
+
+describe("runPersonalizationDrain — self-retriggering drain loop", () => {
+  function passResult(over: Partial<PersonalizationRunResult> & {
+    leadsAvailable: number;
+    leadsProcessed: number;
+    success?: number;
+    deferredRemaining?: number;
+    generationFailed?: number;
+  }): PersonalizationRunResult {
+    return {
+      runId: "p",
+      timestamp: "t",
+      batchSizeRequested: 15,
+      leadsAvailable: over.leadsAvailable,
+      leadsProcessed: over.leadsProcessed,
+      results: {
+        success: over.success ?? over.leadsProcessed,
+        generationFailed: over.generationFailed ?? 0,
+        caslBlocked: 0,
+        scrapeFailedButProceeded: 0,
+        stuckLeadsReset: 0,
+      },
+      leads: [],
+      deferredRemaining: over.deferredRemaining ?? 0,
+    };
+  }
+
+  // A scripted runner that returns the next queued pass result on each call.
+  function scriptedRunner(script: PersonalizationRunResult[]) {
+    let i = 0;
+    const fn = vi.fn(async () => script[Math.min(i++, script.length - 1)]);
+    return fn;
+  }
+
+  const deps = () => ({
+    config: makePersonalizationConfig(),
+    clickup: {} as never,
+    firecrawl: {} as never,
+    gemini: {} as never,
+    alerter: {} as never,
+    logger: createLogger("test"),
+  });
+
+  it("keeps running while more leads wait, until the pipe empties", async () => {
+    // 47 eligible, batch 15: three full batches then a short final batch.
+    const runOnce = scriptedRunner([
+      passResult({ leadsAvailable: 47, leadsProcessed: 15 }),
+      passResult({ leadsAvailable: 32, leadsProcessed: 15 }),
+      passResult({ leadsAvailable: 17, leadsProcessed: 15 }),
+      passResult({ leadsAvailable: 2, leadsProcessed: 2 }), // moreWaiting=false -> stop
+    ]);
+    const out = await runPersonalizationDrain(deps(), { runOnce });
+    expect(runOnce).toHaveBeenCalledTimes(4);
+    expect(out.passes).toHaveLength(4);
+    expect(out.totalProcessed).toBe(47);
+    expect(out.totalSuccess).toBe(47);
+    expect(out.stoppedReason).toBe("pipe_empty");
+  });
+
+  it("stops (does not loop forever) when a pass makes no progress — poison leads", async () => {
+    // A full batch where every lead fails generation, with more still queued behind
+    // them. Without the no-progress guard this would re-pick the same failures forever.
+    const runOnce = scriptedRunner([
+      passResult({ leadsAvailable: 20, leadsProcessed: 15, success: 0, generationFailed: 15 }),
+    ]);
+    const out = await runPersonalizationDrain(deps(), { runOnce, maxPasses: 50 });
+    expect(runOnce).toHaveBeenCalledTimes(1);
+    expect(out.stoppedReason).toBe("no_progress");
+  });
+
+  it("stops immediately when Gemini rate-limits (deferredRemaining > 0)", async () => {
+    const runOnce = scriptedRunner([
+      passResult({ leadsAvailable: 40, leadsProcessed: 5, success: 5, deferredRemaining: 10 }),
+    ]);
+    const out = await runPersonalizationDrain(deps(), { runOnce });
+    expect(runOnce).toHaveBeenCalledTimes(1);
+    expect(out.stoppedReason).toBe("rate_limited");
+  });
+
+  it("stops when the wall-clock budget is exhausted, even with leads remaining", async () => {
+    const runOnce = scriptedRunner([passResult({ leadsAvailable: 100, leadsProcessed: 15 })]);
+    let t = 0;
+    const now = () => (t += 60_000); // each call advances 60s; budget 30s -> stop after pass 1
+    const out = await runPersonalizationDrain(deps(), { runOnce, budgetMs: 30_000, now });
+    expect(runOnce).toHaveBeenCalledTimes(1);
+    expect(out.stoppedReason).toBe("budget");
+  });
+
+  it("runs exactly once when the whole pipe fits in one batch", async () => {
+    const runOnce = scriptedRunner([passResult({ leadsAvailable: 8, leadsProcessed: 8 })]);
+    const out = await runPersonalizationDrain(deps(), { runOnce });
+    expect(runOnce).toHaveBeenCalledTimes(1);
+    expect(out.stoppedReason).toBe("pipe_empty");
+    expect(out.totalSuccess).toBe(8);
   });
 });
