@@ -1,11 +1,49 @@
 # Go-Live Status & Session Handoff — 2026-07-03
 
 Living handoff for the ShopJayDees lead-gen deployment. Updated through the
-2026-07-16 session (fully autonomous — all phases deployed).
+2026-07-21 session (production-hardening + Langley Trades run).
 
 Related: deploy runbook `pipeline/deploy/README.md`; reply-poll design/plan
 `docs/superpowers/{specs,plans}/2026-06-29-instantly-reply-poll-agent*`;
 deployment wiring `docs/superpowers/{specs/2026-06-30-deployment-design.md,plans/2026-06-30-deployment-wiring.md}`.
+
+---
+
+## ▶ RESUME HERE (updated 2026-07-21 session — PROD HARDENING + LANGLEY TRADES RUN)
+
+**All work this session is committed, merged to `main`, pushed to origin, and deployed live.** 5 functions redeployed on new revisions; 275 tests green.
+
+### The trigger: client-facing bug
+Jenn was getting a duplicate ClickUp notification **every 20 minutes** for the same reply (Colleen @ Surrey Lacrosse). Root cause: `replyPoll` (cron `*/20`) re-flagged the reply every run because the terminal-status dedup compared **case-sensitively** against title-case constants, while ClickUp's API returns statuses **lowercased** (`"responded - follow-up"`). 146 duplicate comments had piled up. This is the 3rd hit of the ClickUp lowercase-status gotcha family.
+
+### What was done 2026-07-21
+1. **Reply-poll case fix** — normalize status at the read boundary; also un-broke the Phase B dormancy sweep (same defect). Cleaned up 145 of 146 duplicate comments on Colleen's task.
+2. **`getTasks` pagination** — it read only `page=0` (100-task cap), silently limiting discovery dedup, the dormancy sweep, and the Approved-lead send once a list passed 100. Now pages to the end (all callers benefit).
+3. **Self-draining personalization** — `runPersonalizationDrain` keeps processing batches until the pool empties. Timeout raised 540s→1800s, scheduler attempt-deadline→1800s, `PERSONALIZATION_DRAIN_BUDGET_MS` default 25m.
+4. **Catalog guardrail** — Ellie was inventing a catalog Jaydees doesn't have. Prompt now forbids it (offer a mockup instead) + a deterministic `validateDrafts` guard rejects catalog/catalogue.
+5. **Company-name match fix** — strip leading articles; "The Langley Concrete Group of Companies" had been bouncing Enriched↔Personalizing forever (`generation-failed`).
+6. **Ran the "Langley Trades" prospecting request** end to end: discover → **47 leads created** (100 discovered / 50 searched) → personalize (self-drain) → **46 drafts Ready for Review**. Rescanned drafts for catalog: 10 hit, all regenerated clean. **0 catalog mentions remain.**
+
+### Key decisions (this session)
+- **Reply dedup: normalize casing, don't change writes.** ClickUp writes are case-insensitive (title-case write values stay, keeping `ProspectStatus` type-safety); only the read-back comparison needed lowercasing.
+- **Paginate `getTasks` itself** (not redirect callers to `getAllTasks`) so every caller is fixed at the source.
+- **Self-retrigger = in-process drain loop, NOT HTTP self-invocation.** `personalize` runs `max-instances=1/concurrency=1` (lead-locking isn't atomic → concurrent runs would double-process). A self-POST would **deadlock** against the single instance. The loop terminates on: empty pool / no-progress (poison lead) / Gemini 429 / wall-clock budget.
+- **Catalog guard = defense in depth** (prompt *and* validator), blocking only `catalog/catalogue` to avoid over-blocking that would cause new bounces.
+- **Fixed the 10 catalog drafts by regeneration through the guarded pipeline** (chosen over surgical touch-2 edits) — guarantees clean copy and live-verified the new guard.
+- **Warmup fully ungated.** Confirmed there is **no warmup gate in code**; `send` sends **all** `Approved` leads (no `SEND_BATCH_SIZE` cap). Client confirmed mailboxes 100% healthy.
+
+### Current live state (2026-07-21)
+- Revisions: personalize-00012 (timeout **1800s**), discover-00008, send-00009, replypoll-00009, dormancycheck-00006 — all ACTIVE. All 5 schedulers ENABLED; `personalize-job` attempt-deadline now 1800s.
+- **46 Langley Trades drafts sit in `Ready for Review`, catalog-free, awaiting Jenn's approval** for the next 9am send.
+- `main` == `origin/main` (pushed). Merge commit `1190700`.
+
+### Known boundary (not fixed — by design/scope)
+- A **single Hunter `/discover` call returns ~100 companies and we don't paginate it**, so one prospecting request effectively caps at ~100 leads regardless of "Max Results". Hunter *quota* (24k searches) is not the limiter. To reliably exceed ~100 in one go, paginate Hunter discover or split requests by category/city. `targetVolume` ("Max Results") itself has no code cap.
+
+### Still open (carried)
+- Bounce-reconciliation reply-poll flag still needs a real bounce to validate.
+- Monthly report render→PDF→Gmail-draft layer (Plan 2) still backlog.
+- Operator to-dos below (open-tracking, `Lead Source = AI Outreach`) still stand.
 
 ---
 
