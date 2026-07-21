@@ -14,7 +14,7 @@ describe("createAlerter", () => {
     });
   });
 
-  it("sends alert via webhook POST", async () => {
+  it("publishes to the ntfy topic in ntfy format", async () => {
     await alerter.send(
       "ClickUp auth failure — pipeline halted",
       "Discovery agent got 401 from ClickUp API."
@@ -22,12 +22,15 @@ describe("createAlerter", () => {
 
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, opts] = mockFetch.mock.calls[0];
+    // ntfy: the topic is the URL path, the message is the raw body.
     expect(url).toBe("https://hooks.example.com/alert");
     expect(opts.method).toBe("POST");
-    const body = JSON.parse(opts.body);
-    expect(body.subject).toContain("ClickUp auth failure");
-    expect(body.details).toContain("401");
-    expect(body.to).toBe("cody@sixohquad.com");
+    expect(opts.headers.Title).toBe(
+      "[ShopJaydees Pipeline] ClickUp auth failure — pipeline halted"
+    );
+    expect(opts.headers.Priority).toBe("high");
+    // Details go in the plain-text body, not a JSON envelope.
+    expect(opts.body).toBe("Discovery agent got 401 from ClickUp API.");
   });
 
   it("does not throw when webhook URL is empty", async () => {
