@@ -97,7 +97,7 @@ export interface ReplyPollRunResult {
 }
 
 export function isSequenceComplete(task: ClickUpTask, config: Config, now: Date): boolean {
-  if (statusOf(task) !== "Outreach Active") return false;
+  if (statusOf(task) !== normStatus("Outreach Active")) return false;
   const field = task.custom_fields.find((f) => f.id === config.outreachFields.outreachStartedDate);
   if (!field?.value) return false;
   const started = parseInt(String(field.value), 10);
@@ -112,17 +112,27 @@ export function isSequenceComplete(task: ClickUpTask, config: Config, now: Date)
 // dropped and this set never matched, so every poll re-flagged the same lead.
 const RESPONDED_STATUS: ProspectStatus = "Responded - Follow-up";
 
-const CLOSED_STATUSES = new Set(["Won", "Lost", "Unsubscribed", "Bounced"]);
-const TERMINAL_FOR_REPLY: ReadonlySet<string> = new Set<ProspectStatus>([
-  RESPONDED_STATUS,
-  "Won",
-  "Lost",
-  "Unsubscribed",
-  "Bounced",
-]);
+// The ClickUp v2 API returns status names LOWERCASED (e.g. "responded - follow-up"),
+// while our constants are title-case for readable writes (writes are case-insensitive).
+// Every status READ must be normalized before comparison, or these guards silently
+// never match — which re-flagged the same reply on every 20-minute poll, spamming the
+// client with a duplicate "Reply received" comment + owner re-assignment each time.
+function normStatus(s: string): string {
+  return s.toLowerCase();
+}
+
+const CLOSED_STATUSES: ReadonlySet<string> = new Set(
+  (["Won", "Lost", "Unsubscribed", "Bounced"] satisfies ProspectStatus[]).map(normStatus)
+);
+const TERMINAL_FOR_REPLY: ReadonlySet<string> = new Set(
+  ([RESPONDED_STATUS, "Won", "Lost", "Unsubscribed", "Bounced"] satisfies ProspectStatus[]).map(
+    normStatus
+  )
+);
 
 function statusOf(task: ClickUpTask): string {
-  return task.status?.status ?? "";
+  // Normalized (lowercased) for comparison — never written back to ClickUp.
+  return normStatus(task.status?.status ?? "");
 }
 
 async function findTaskByEmail(
