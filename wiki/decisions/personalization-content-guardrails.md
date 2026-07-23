@@ -37,9 +37,14 @@ Prompt guidance plus deterministic enforcement, so the guarantee holds even when
 
 Committed to the lead-gen pipeline and the `personalize` Cloud Function was redeployed. Affects newly personalized leads; drafts written before this change are unaffected. Spec and plan: `leadgeneration/docs/superpowers/specs/2026-07-22-personalization-guardrails-design.md` and the sibling plan.
 
-## Known follow-up
+## Follow-ups
 
-The retry cap covers **validation** failures only. A lead that persistently hits a **hard** Gemini error (SAFETY block, parse failure, transport) still bounces Enriched↔Personalizing uncapped — the same silent-loop shape for a different failure class, deliberately out of this change's scope. A future fix should give the hard-error path the same cap + park + alert treatment. Likewise, hard-excluding schools at discovery (not just in seasonal focus) is a separate targeting change if school leads start appearing in the queue.
+- **Hard-error cap — RESOLVED 2026-07-22.** The retry cap originally covered validation failures only; a persistent hard Gemini error (SAFETY / parse / transport) still bounced Enriched↔Personalizing uncapped. Now both failure paths share one `recordPersonalizationFailure` disposition, so a hard error also escalates the cross-run attempt tag and parks the lead (`personalize-failed` + alert) after two failed runs. Hard errors do not retry in-run (re-running the same prompt reproduces a SAFETY/parse failure); transient transport errors self-heal across runs and only persistent ones park.
+- **Schools at discovery — open.** Schools are dropped from the seasonal segment focus but not hard-excluded at discovery. If school leads start appearing in the queue, that's a separate targeting change.
+
+## Runtime
+
+Cloud Functions run on **nodejs22** as of 2026-07-22 (bumped from the GCP-deprecated nodejs20; `@types/node` and the `engines` floor moved to 22 to match). All five functions redeployed.
 
 ## Related pages
 
