@@ -35,6 +35,17 @@ describe("resolveSeasonalContext", () => {
     expect(resolveSeasonalContext(new Date("2026-03-15T12:00:00Z")).sellingSeason).toBe("summer");
     expect(resolveSeasonalContext(new Date("2026-05-31T12:00:00Z")).sellingSeason).toBe("summer");
   });
+
+  it("resolves every month 0-11 to a quarter with a selling season", () => {
+    const seasons = new Set<string>();
+    for (let month = 0; month < 12; month++) {
+      const s = resolveSeasonalContext(new Date(Date.UTC(2026, month, 15, 12, 0, 0)));
+      expect(s.sellingSeason).toBeTruthy();
+      expect(s.forbiddenSeasons.length).toBeGreaterThan(0);
+      seasons.add(s.sellingSeason);
+    }
+    expect(seasons).toEqual(new Set(["fall", "winter", "spring", "summer"]));
+  });
 });
 
 describe("findForbiddenSeasonMentions", () => {
