@@ -911,6 +911,61 @@ export interface PersonalizationDeps {
   logger: Logger;
 }
 
+/**
+ * Disposition for a lead whose personalization run failed — either all in-run
+ * generation retries were exhausted on validation, or a hard Gemini error
+ * (SAFETY / parse / transport) killed the attempt. Escalates the cross-run
+ * attempt tag, or parks the lead (tag personalize-failed) and alerts once the
+ * run cap is hit. Shared by both failure paths so neither can bounce uncapped.
+ * Mutates leadResult/result and performs the ClickUp/alert side effects.
+ */
+async function recordPersonalizationFailure(params: {
+  lead: LeadData;
+  tags: Array<{ name: string }>;
+  failureKind: "validation" | "gemini-error";
+  reason: string;
+  config: Config;
+  clickup: ClickUpClient;
+  alerter: Alerter;
+  logger: Logger;
+  leadResult: LeadPersonalizationResult;
+  result: PersonalizationRunResult;
+}): Promise<void> {
+  const { lead, tags, failureKind, reason, config, clickup, alerter, logger, leadResult, result } = params;
+  const runsSoFar = crossRunAttemptCount(tags);
+  logger.error("Personalization run failed", {
+    taskId: lead.taskId,
+    company: lead.companyName,
+    failureKind,
+    runsSoFar,
+    reason,
+  });
+  leadResult.status = "generation_failed";
+  leadResult.error = reason;
+  result.results.generationFailed += 1;
+
+  if (runsSoFar >= MAX_PERSONALIZE_RUNS) {
+    if (!config.dryRun) {
+      await clickup.addTag(lead.taskId, "personalize-failed");
+      await clickup.updateTask(lead.taskId, { status: "Enriched" });
+    }
+    leadResult.tagsAdded.push("personalize-failed");
+    await alerter.send(
+      "Personalization permanently failed for a lead",
+      `${lead.companyName} failed personalization (${failureKind}) across ${runsSoFar} runs and is parked (tag personalize-failed). Last failure: ${reason}`
+    );
+  } else {
+    if (!config.dryRun) {
+      await clickup.addTag(lead.taskId, `personalize-attempt-${runsSoFar + 1}`);
+      await clickup.addTag(lead.taskId, "generation-failed");
+      await clickup.updateTask(lead.taskId, { status: "Enriched" });
+    }
+    leadResult.tagsAdded.push(`personalize-attempt-${runsSoFar + 1}`, "generation-failed");
+  }
+  result.leads.push(leadResult);
+  result.leadsProcessed += 1;
+}
+
 export async function runPersonalization(
   deps: PersonalizationDeps
 ): Promise<PersonalizationRunResult> {
@@ -1146,23 +1201,22 @@ export async function runPersonalization(
         break;
       }
 
-      // Hard Gemini error (transport/safety/parse): existing single-run failure path.
+      // Hard Gemini error (transport/safety/parse). No in-run retry can fix these
+      // (a re-run of the same prompt reproduces a SAFETY/parse failure), so they
+      // go straight to the cross-run cap — same disposition as validation failure.
       if (hardGeminiError) {
-        logger.error("Gemini generation failed", {
-          taskId: lead.taskId,
-          company: lead.companyName,
-          error: hardGeminiError,
+        await recordPersonalizationFailure({
+          lead,
+          tags: task.tags,
+          failureKind: "gemini-error",
+          reason: hardGeminiError,
+          config,
+          clickup,
+          alerter,
+          logger,
+          leadResult,
+          result,
         });
-        if (!config.dryRun) {
-          await clickup.addTag(lead.taskId, "generation-failed");
-          await clickup.updateTask(lead.taskId, { status: "Enriched" });
-        }
-        leadResult.tagsAdded.push("generation-failed");
-        leadResult.status = "generation_failed";
-        leadResult.error = hardGeminiError;
-        result.results.generationFailed += 1;
-        result.leads.push(leadResult);
-        result.leadsProcessed += 1;
         continue;
       }
 
@@ -1173,37 +1227,18 @@ export async function runPersonalization(
 
       // Validation still failing after all in-run attempts -> cross-run cap.
       if (!drafts) {
-        const runsSoFar = crossRunAttemptCount(task.tags);
-        logger.error("Draft validation failed after all retries", {
-          taskId: lead.taskId,
-          company: lead.companyName,
-          runsSoFar,
-          errors: validationErrors,
+        await recordPersonalizationFailure({
+          lead,
+          tags: task.tags,
+          failureKind: "validation",
+          reason: `Validation: ${validationErrors.join("; ")}`,
+          config,
+          clickup,
+          alerter,
+          logger,
+          leadResult,
+          result,
         });
-        leadResult.status = "generation_failed";
-        leadResult.error = `Validation: ${validationErrors.join("; ")}`;
-        result.results.generationFailed += 1;
-
-        if (runsSoFar >= MAX_PERSONALIZE_RUNS) {
-          if (!config.dryRun) {
-            await clickup.addTag(lead.taskId, "personalize-failed");
-            await clickup.updateTask(lead.taskId, { status: "Enriched" });
-          }
-          leadResult.tagsAdded.push("personalize-failed");
-          await alerter.send(
-            "Personalization permanently failed for a lead",
-            `${lead.companyName} failed validation across ${runsSoFar} runs and is parked (tag personalize-failed). Last errors: ${validationErrors.join("; ")}`
-          );
-        } else {
-          if (!config.dryRun) {
-            await clickup.addTag(lead.taskId, `personalize-attempt-${runsSoFar + 1}`);
-            await clickup.addTag(lead.taskId, "generation-failed");
-            await clickup.updateTask(lead.taskId, { status: "Enriched" });
-          }
-          leadResult.tagsAdded.push(`personalize-attempt-${runsSoFar + 1}`, "generation-failed");
-        }
-        result.leads.push(leadResult);
-        result.leadsProcessed += 1;
         continue;
       }
 

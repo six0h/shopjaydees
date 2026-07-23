@@ -5,7 +5,7 @@ set -euo pipefail
 
 PROJECT="shop-jaydees-lead-gen"
 REGION="us-west1"
-RUNTIME="nodejs20"
+RUNTIME="nodejs22"
 TIMEZONE="America/Vancouver"
 
 # Service accounts (created by bootstrap.sh).
