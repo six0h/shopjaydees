@@ -208,21 +208,21 @@ export function makeMockDraftOutput(
     community_signals:
       "Sponsors Surrey Minor Hockey Association. Participated in Habitat for Humanity builds in 2025.",
     personalization_hooks:
-      "Family business angle (20+ years), community involvement via minor hockey sponsorship bridges to Wear It Forward, trades segment seasonal ramp in spring.",
-    email_touch_1_subject: "Quick question about your crew's gear",
+      "Family business angle (20+ years), community involvement via minor hockey sponsorship bridges to Wear It Forward.",
+    email_touch_1_subject: "Quick question for your crew",
     email_touch_1_body:
-      "Hi Mike,\n\nI came across ABC Plumbing Ltd. while looking into trades companies in Surrey and really liked what I saw — 20 years of serving the Fraser Valley is no small thing.\n\nI'm Ellie from Jaydees Apparel. We help trades businesses like yours with branded work wear — everything from crew uniforms to safety vests with your logo. One thing that makes us a bit different is our Wear It Forward program, where a portion of every order goes back to community initiatives.\n\nWould it be worth a quick conversation about getting your team set up?\n\nEllie",
-    email_touch_2_subject: "An idea for your crew",
+      "Hi Mike,\n\nI came across ABC Plumbing while looking into trades companies in Surrey and really liked what I saw. Twenty years serving the Fraser Valley is no small thing.\n\nI'm Ellie with Jaydees Apparel. We help trades businesses like yours with custom apparel that puts your brand front and centre. One thing that makes us a bit different is our Wear It Forward program, where a portion of every order goes back to community initiatives.\n\nWould it be worth a quick conversation? Happy to put a no-obligation quote together if you've got something in mind.\n\nEllie",
+    email_touch_2_subject: "An idea for your team",
     email_touch_2_body:
-      "Hi Mike,\n\nOne thing we hear from trades companies is that consistent branded gear across the crew makes a real difference at job sites — clients notice, and it builds trust.\n\nWe make it easy to set up a team store so you can order as you hire, without minimums or inventory headaches.\n\nHappy to share some examples if that would be useful.\n\nEllie",
+      "Hi Mike,\n\nOne thing we hear from trades companies is that a consistent branded look across the crew makes a real difference on site. Clients notice, and it builds trust.\n\nWe make it easy to set that up without minimums or inventory headaches. Happy to share some examples if that would help.\n\nEllie",
     email_touch_3_subject: "Checking in",
     email_touch_3_body:
-      "Hi Mike,\n\nJust a quick follow-up in case the timing is better now. If branded gear for your crew is on the radar, I'd love to help.\n\nNo pressure — happy to connect whenever it makes sense.\n\nEllie",
+      "Hi Mike,\n\nJust a quick follow-up in case the timing is better now. If getting your crew set up is on the radar, I'd love to help. No pressure, happy to connect whenever it makes sense.\n\nEllie",
     linkedin_message:
-      "Hi Mike — came across ABC Plumbing and love that you sponsor Surrey minor hockey. Would love to connect!",
+      "Hi Mike, came across ABC Plumbing and love that you support Surrey minor hockey. Would love to connect!",
     casl_opt_out_check: true,
     casl_relevance_rationale:
-      "As Owner of a 20-person plumbing company, Mike likely oversees purchasing of branded work wear and crew uniforms.",
+      "As Owner of a 20-person plumbing company, Mike likely oversees purchasing of custom branded apparel for the crew.",
     ...overrides,
   };
 }

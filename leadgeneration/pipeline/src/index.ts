@@ -729,6 +729,20 @@ const LEADING_ARTICLES = new Set(["the", "a", "an"]);
 // the draft is regenerated. Ellie may still offer a free mockup — that's real.
 const NONEXISTENT_COLLATERAL_RE = /catalogue|catalog/i;
 
+// Zero product talk: Ellie sells "custom apparel" and nothing more specific.
+// A denylist of the ~30 nouns a model reaches for (not an allowlist — English
+// can't be enumerated). Extend by adding a word when Jenn flags one, exactly
+// like the catalog guard. Bare "gear" is intentionally excluded (too broad);
+// only the "team gear" phrase is caught.
+const PRODUCT_NOUN_RE =
+  /\b(hoodies?|t-?shirts?|tees?|polos?|quarter-?zips?|jerseys?|toques?|beanies?|jackets?|sweatshirts?|crewnecks?|softshells?|vests?|lanyards?|totes?|mugs?|hats?|caps?|uniforms?|work\s?wear|spirit\s?wear|team\s?gear|swag|embroidery|screen\s?print(?:ing|ed)?|dtg)\b/i;
+
+// Stated prices. Currency-anchored ONLY (a digit next to $/dollars, or explicit
+// per-unit phrasing) so the Business social proof ("12 to 250+ employees") never
+// false-positives. Bare "each"/bare numbers are deliberately NOT matched.
+const PRICE_RE =
+  /(\$\s?\d|\b\d[\d,.]*\s?(?:dollars?|usd|cad)\b|\bper[- ](?:unit|shirt|piece|item|garment)\b|\/\s?(?:unit|shirt|piece)\b)/i;
+
 /** Lowercase, strip punctuation that writers drop naturally ("&", ".", ","). */
 function normalizeForMatch(text: string): string {
   return text
@@ -836,6 +850,16 @@ export function validateDrafts(
   if (prospectFacing.some((t) => NONEXISTENT_COLLATERAL_RE.test(t))) {
     errors.push(
       "draft references a catalog/catalogue, which Jaydees does not have — offer a mockup instead"
+    );
+  }
+  if (prospectFacing.some((t) => PRODUCT_NOUN_RE.test(t))) {
+    errors.push(
+      "draft names a specific product/garment — Ellie sells 'custom apparel' only, never a named item"
+    );
+  }
+  if (prospectFacing.some((t) => PRICE_RE.test(t))) {
+    errors.push(
+      "draft states a price — Ellie must offer a no-obligation quote, never quote a number"
     );
   }
 

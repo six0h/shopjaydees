@@ -1019,3 +1019,52 @@ describe("runPersonalizationDrain — self-retriggering drain loop", () => {
     expect(out.totalSuccess).toBe(8);
   });
 });
+
+describe("validateDrafts — product & price guardrails (zero product talk)", () => {
+  const lead = () => makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
+  const cleanBody = `Hi Pardeep, Monark caught my eye. We do custom apparel for local teams. ${"x".repeat(80)}`;
+
+  it("passes a clean draft that names no product", () => {
+    expect(validateDrafts(makeMockDraftOutput({ email_touch_1_body: cleanBody }), lead())).toEqual([]);
+  });
+
+  it("rejects a specific garment noun in a body", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, we can do tri-blend hoodies for your team. ${"x".repeat(80)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("product"))).toBe(true);
+  });
+
+  it("rejects 'spirit wear' and 'team gear' phrases", () => {
+    const d1 = makeMockDraftOutput({ email_touch_2_body: `Following up, our spirit wear is great. ${"x".repeat(60)}` });
+    const d2 = makeMockDraftOutput({ email_touch_2_body: `Following up, our team gear is great. ${"x".repeat(60)}` });
+    expect(validateDrafts(d1, lead()).some((e) => e.includes("product"))).toBe(true);
+    expect(validateDrafts(d2, lead()).some((e) => e.includes("product"))).toBe(true);
+  });
+
+  it("rejects a product noun in a subject line", () => {
+    const drafts = makeMockDraftOutput({ email_touch_1_body: cleanBody, email_touch_1_subject: "Custom polos for Monark" });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("product"))).toBe(true);
+  });
+
+  it("rejects a stated price ($ + digit)", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, we can start around $28 a piece. ${"x".repeat(80)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(true);
+  });
+
+  it("rejects 'per unit' / 'per shirt' pricing language", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, pricing is great per unit. ${"x".repeat(80)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(true);
+  });
+
+  it("does NOT false-positive on the Business social-proof number range", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, we work with businesses of 12 to 250+ employees. ${"x".repeat(60)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(false);
+  });
+});
