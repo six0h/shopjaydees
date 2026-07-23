@@ -36,6 +36,7 @@ import { createAlerter } from "./alerting.js";
 import { createClickUpClient } from "./clients/clickup.js";
 import { createHunterClient, HunterRateLimitError } from "./clients/hunter.js";
 import { runReplyPoll } from "./reply-poll.js";
+import { resolveSeasonalContext, findForbiddenSeasonMentions, crossRunAttemptCount, type SeasonalContext } from "./seasonality.js";
 
 // --- Domain Normalization ---
 
@@ -596,7 +597,12 @@ export function sanitizeDrafts(drafts: GeminiDraftOutput): GeminiDraftOutput {
   };
 }
 
-export function buildPrompt(lead: LeadData, scrapedContent: string): string {
+export function buildPrompt(
+  lead: LeadData,
+  scrapedContent: string,
+  seasonal: SeasonalContext,
+  retryFeedback?: string
+): string {
   const websiteSection =
     scrapedContent.trim().length > 0
       ? scrapedContent
@@ -611,9 +617,10 @@ export function buildPrompt(lead: LeadData, scrapedContent: string): string {
   const socialProof =
     socialProofMap[lead.segment] ?? socialProofMap["Business"];
 
-  let prompt = `You are writing cold outreach for Jaydees Apparel (shopjaydees.com), a custom clothing
-company in BC's Lower Mainland. They serve businesses, schools, and teams with
-branded apparel — uniforms, spirit wear, team gear, corporate swag.
+  let prompt = `You are writing cold outreach for Jaydees Apparel (shopjaydees.com), a custom
+apparel company in BC's Lower Mainland. They make custom apparel for businesses,
+schools, and teams. Keep it at that level — "custom apparel" or "branded apparel"
+is the most specific you may ever be.
 
 Jaydees Apparel runs "Wear It Forward" — a portion of every order goes to community
 initiatives. This is a genuine differentiator, not a gimmick. Mention it naturally
@@ -672,21 +679,35 @@ INSTRUCTIONS:
 4. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
 5. Sign all emails as "Ellie". Ellie is part of the outreach team at Jaydees Apparel,
    NOT the owner or founder. Speak for the company as "we", "our", and "us", and use
-   "I" only for Ellie's own actions (reaching out, sending a mockup). Never claim to
+   "I" only for Ellie's own actions (reaching out, sending a quote). Never claim to
    own, run, found, or start the company. Do not write "I run", "I own", "I started",
    or "my shop/business/company". Say "I work for Jaydees Apparel" or "I'm with
    Jaydees", never that Ellie is the business.
 6. Write a LinkedIn connection request note (under 300 chars, no pitch). The same role
    rule applies here: Ellie works at Jaydees, she does not run or own it.
-7. Do NOT offer, mention, or promise a catalog, catalogue, brochure, lookbook, or
-   price list — Jaydees does not have one and Ellie cannot send it. If you want to
-   offer something concrete, offer a free mockup of their logo on a product. Never
-   tell the prospect you'll "send over the catalog".
+7. Never name a specific product, garment, style, fabric, colour, or price. You sell
+   "custom apparel" — that is the most specific you may ever be (no hoodies, tees,
+   uniforms, spirit wear, team gear, etc.). Do not offer to send any printed
+   materials, sample sheets, or product images — Jaydees has nothing like that ready
+   to send. If you want to offer something concrete, offer a no-obligation quote.
+   Never state or estimate a price yourself.
 8. Check the website content for any "do not contact" or "do not solicit" statements.
 9. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
    role at ${lead.companyName}.
 10. If no website content was available, still write the emails using the company data,
    but note that in the website_scrape_summary field.
+`;
+
+  prompt += `
+
+SEASONAL TIMING (non-negotiable):
+TODAY'S DATE: ${new Date().toISOString().slice(0, 10)}
+CURRENT SELLING PERIOD: ${seasonal.period}
+THEME: ${seasonal.theme}
+You are selling into the ${seasonal.sellingSeason.toUpperCase()} season. Lead times mean
+an order placed now is delivered weeks out, so you always talk about the season that is
+coming, never the one happening now.
+NEVER reference: ${seasonal.forbiddenSeasons.filter((s) => s !== "autumn").join(", ")}.
 
 Return your response as structured JSON matching the schema provided.`;
 
@@ -699,6 +720,14 @@ Their 90-day cool-off period has passed. You MUST:
 - Do NOT reference or acknowledge previous outreach attempts
 - Find a fresh hook — new seasonal angle, different value prop, updated community signal
 - The tone should feel like a first contact, not a follow-up`;
+  }
+
+  if (retryFeedback) {
+    prompt += `
+
+YOUR PREVIOUS DRAFT WAS REJECTED for these reasons:
+- ${retryFeedback}
+Rewrite all touches and fix these specifically.`;
   }
 
   return prompt;
@@ -882,6 +911,7 @@ export async function runPersonalization(
 ): Promise<PersonalizationRunResult> {
   const { config, clickup, firecrawl, gemini, alerter, logger } = deps;
   const now = new Date();
+  const seasonal = resolveSeasonalContext(now);
   const runId = `personalize-${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
   logger.setRunId(runId);
   logger.info("Personalization agent starting");
@@ -1015,7 +1045,7 @@ export async function runPersonalization(
       }
 
       // Step 5: Generate drafts via Gemini
-      const prompt = buildPrompt(lead, scrapedContent);
+      const prompt = buildPrompt(lead, scrapedContent, seasonal);
       const geminiResult = await gemini.generateDrafts(prompt);
       leadResult.geminiTokensUsed = geminiResult.tokensUsed;
 
@@ -1088,6 +1118,20 @@ export async function runPersonalization(
 
       // Step 6 continued: Validate draft quality
       const validationErrors = validateDrafts(drafts, lead);
+      validationErrors.push(
+        ...findForbiddenSeasonMentions(
+          [
+            drafts.email_touch_1_body,
+            drafts.email_touch_2_body,
+            drafts.email_touch_3_body,
+            drafts.email_touch_1_subject,
+            drafts.email_touch_2_subject,
+            drafts.email_touch_3_subject,
+            drafts.linkedin_message,
+          ],
+          seasonal
+        )
+      );
       if (validationErrors.length > 0) {
         logger.error("Draft validation failed", {
           taskId: lead.taskId,

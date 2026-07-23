@@ -22,6 +22,7 @@ import {
 } from "./helpers.js";
 import type { Config } from "../src/config.js";
 import type { GeminiDraftOutput, LeadData } from "../src/types.js";
+import { resolveSeasonalContext } from "../src/seasonality.js";
 
 vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -259,6 +260,8 @@ describe("sanitizeDrafts", () => {
 });
 
 describe("buildPrompt", () => {
+  const seasonal = resolveSeasonalContext(new Date("2026-07-22T12:00:00Z")); // fall
+
   it("includes prospect data in the prompt", () => {
     const lead = {
       companyName: "ABC Plumbing Ltd.",
@@ -274,7 +277,7 @@ describe("buildPrompt", () => {
     } as LeadData;
     const scrapedContent = "# ABC Plumbing\n\nServing Surrey since 2005.";
 
-    const prompt = buildPrompt(lead, scrapedContent);
+    const prompt = buildPrompt(lead, scrapedContent, seasonal);
 
     expect(prompt).toContain("ABC Plumbing Ltd.");
     expect(prompt).toContain("Mike Thompson");
@@ -304,7 +307,7 @@ describe("buildPrompt", () => {
       isReEngagement: true,
     } as LeadData;
 
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     expect(prompt).toContain("RE-ENGAGEMENT NOTICE");
     expect(prompt).toContain("completely different angle");
@@ -325,14 +328,14 @@ describe("buildPrompt", () => {
       isReEngagement: false,
     } as LeadData;
 
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     expect(prompt).toContain("No website content available");
   });
 
   it("instructs the model to write like a human and avoid AI tells", () => {
     const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     // The single most common AI tell we care about.
     expect(prompt.toLowerCase()).toContain("em dash");
@@ -343,7 +346,7 @@ describe("buildPrompt", () => {
 
   it("frames Ellie as outreach staff, not the owner of Jaydees", () => {
     const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     // Ellie works at Jaydees; she does not run/own it. The prompt must say so
     // and must not carry the old owner-implying tone line.
@@ -357,9 +360,33 @@ describe("buildPrompt", () => {
     const teamLead = { segment: "Team" } as LeadData;
     const businessLead = { segment: "Business" } as LeadData;
 
-    expect(buildPrompt(schoolLead, "")).toContain("100 schools");
-    expect(buildPrompt(teamLead, "")).toContain("raise thousands");
-    expect(buildPrompt(businessLead, "")).toContain("12 to 250+");
+    expect(buildPrompt(schoolLead, "", seasonal)).toContain("100 schools");
+    expect(buildPrompt(teamLead, "", seasonal)).toContain("raise thousands");
+    expect(buildPrompt(businessLead, "", seasonal)).toContain("12 to 250+");
+  });
+
+  it("injects the resolved selling season and forbids the others", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    expect(prompt).toContain("FALL");
+    expect(prompt).toContain("NEVER reference: spring, summer, winter");
+    expect(prompt).toContain("Lock in your fall order early");
+  });
+
+  it("does NOT tell the model to offer a mockup or catalog", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    expect(prompt.toLowerCase()).not.toContain("mockup");
+    expect(prompt.toLowerCase()).not.toContain("catalog");
+  });
+
+  it("instructs a no-obligation quote as the concrete offer", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    expect(prompt.toLowerCase()).toContain("no-obligation quote");
+  });
+
+  it("appends retry feedback when provided", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, 'draft names a specific product');
+    expect(prompt).toContain("YOUR PREVIOUS DRAFT WAS REJECTED");
+    expect(prompt).toContain("draft names a specific product");
   });
 });
 
