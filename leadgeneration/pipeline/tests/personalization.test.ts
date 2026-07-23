@@ -1095,3 +1095,120 @@ describe("validateDrafts — product & price guardrails (zero product talk)", ()
     expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(false);
   });
 });
+
+describe("runPersonalization — capped retry & cross-run park", () => {
+  function makeAlerter() {
+    return { send: vi.fn().mockResolvedValue(undefined) };
+  }
+  function badDrafts() {
+    // Names a product -> fails validateDrafts every time.
+    return makeMockDraftOutput({
+      email_touch_1_body: `Hi Mike, ABC Plumbing, we do custom hoodies for your crew. ${"x".repeat(80)}`,
+    });
+  }
+
+  it("retries in-run and succeeds on the second attempt", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([]) // stuck-lead sweep
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]); // enriched
+    const gemini = {
+      generateDrafts: vi
+        .fn()
+        .mockResolvedValueOnce({ drafts: badDrafts(), tokensUsed: 100 })
+        .mockResolvedValueOnce({ drafts: makeMockDraftOutput(), tokensUsed: 100 }),
+    };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(2);
+    expect(result.results.success).toBe(1);
+  });
+
+  it("caps in-run retries at 3 generate calls", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]);
+    const gemini = { generateDrafts: vi.fn().mockResolvedValue({ drafts: badDrafts(), tokensUsed: 100 }) };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(3);
+    expect(result.results.generationFailed).toBe(1);
+    // First failed run -> escalates to attempt-2, not yet permanent.
+    expect(clickup.addTag).toHaveBeenCalledWith("task_lead_001", "personalize-attempt-2");
+  });
+
+  it("parks permanently and alerts on the final failed run", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4, tags: ["personalize-attempt-2"] })]);
+    const gemini = { generateDrafts: vi.fn().mockResolvedValue({ drafts: badDrafts(), tokensUsed: 100 }) };
+    const alerter = makeAlerter();
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: alerter as any,
+      logger: createLogger(),
+    });
+    expect(clickup.addTag).toHaveBeenCalledWith("task_lead_001", "personalize-failed");
+    expect(alerter.send).toHaveBeenCalled();
+    expect(result.results.generationFailed).toBe(1);
+  });
+
+  it("excludes personalize-failed leads from eligibility", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4, tags: ["personalize-failed"] })]);
+    const gemini = { generateDrafts: vi.fn() };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).not.toHaveBeenCalled();
+    expect(result.leadsAvailable).toBe(0);
+  });
+
+  it("does NOT retry on a 429 — defers the batch instead", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]);
+    const gemini = {
+      generateDrafts: vi.fn().mockResolvedValue({ tokensUsed: 0, error: "Gemini 429", isRateLimited: true }),
+    };
+    await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(1);
+  });
+});

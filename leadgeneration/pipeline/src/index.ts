@@ -897,6 +897,11 @@ export function validateDrafts(
 
 // --- Personalization Agent Core ---
 
+// Retry caps. In-run: 1 + 2 retries. Cross-run: after this many failed runs a
+// lead is parked permanently (tagged personalize-failed) and an alert fires.
+const MAX_GENERATION_ATTEMPTS = 3;
+const MAX_PERSONALIZE_RUNS = 2;
+
 export interface PersonalizationDeps {
   config: Config;
   clickup: ClickUpClient;
@@ -954,8 +959,9 @@ export async function runPersonalization(
     statuses: ["Enriched"],
   });
 
-  // Client-side filtering: score >= 3
+  // Client-side filtering: score >= 3, excluding permanently-parked leads
   const eligible = allEnriched.filter((task) => {
+    if (task.tags.some((t) => t.name === "personalize-failed")) return false;
     const scoreField = task.custom_fields.find(
       (f) => f.id === config.fields.leadScore
     );
@@ -1044,42 +1050,108 @@ export async function runPersonalization(
         result.results.scrapeFailedButProceeded += 1;
       }
 
-      // Step 5: Generate drafts via Gemini
-      const prompt = buildPrompt(lead, scrapedContent, seasonal);
-      const geminiResult = await gemini.generateDrafts(prompt);
-      leadResult.geminiTokensUsed = geminiResult.tokensUsed;
+      // Step 5-6: Generate + validate, with bounded in-run retry reusing the scrape.
+      let drafts: GeminiDraftOutput | undefined;
+      let validationErrors: string[] = [];
+      let retryFeedback: string | undefined;
+      let rateLimited = false;
+      let hardGeminiError: string | undefined;
 
-      // Handle Gemini rate limit — defer entire remaining batch
-      if (geminiResult.isRateLimited) {
+      for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+        const prompt = buildPrompt(lead, scrapedContent, seasonal, retryFeedback);
+        const geminiResult = await gemini.generateDrafts(prompt);
+        leadResult.geminiTokensUsed += geminiResult.tokensUsed;
+
+        if (geminiResult.isRateLimited) {
+          rateLimited = true;
+          break;
+        }
+        if (geminiResult.error || !geminiResult.drafts) {
+          hardGeminiError = geminiResult.error ?? "no drafts returned";
+          break;
+        }
+
+        const candidate = sanitizeDrafts(geminiResult.drafts);
+
+        // CASL block is terminal — no retry can fix a do-not-contact site.
+        if (!candidate.casl_opt_out_check) {
+          logger.warn("CASL block — prospect website has do-not-contact", {
+            taskId: lead.taskId,
+            company: lead.companyName,
+          });
+          if (!config.dryRun) {
+            await clickup.addTag(lead.taskId, "casl-block");
+            await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          }
+          leadResult.tagsAdded.push("casl-block");
+          leadResult.status = "casl_blocked";
+          result.results.caslBlocked += 1;
+          result.leads.push(leadResult);
+          result.leadsProcessed += 1;
+          drafts = undefined;
+          validationErrors = [];
+          hardGeminiError = undefined;
+          break;
+        }
+
+        validationErrors = validateDrafts(candidate, lead);
+        validationErrors.push(
+          ...findForbiddenSeasonMentions(
+            [
+              candidate.email_touch_1_body,
+              candidate.email_touch_2_body,
+              candidate.email_touch_3_body,
+              candidate.email_touch_1_subject,
+              candidate.email_touch_2_subject,
+              candidate.email_touch_3_subject,
+              candidate.linkedin_message,
+            ],
+            seasonal
+          )
+        );
+
+        if (validationErrors.length === 0) {
+          drafts = candidate;
+          break;
+        }
+
+        logger.warn("Draft validation failed — retrying", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+          attempt,
+          errors: validationErrors,
+        });
+        retryFeedback = validationErrors.join("; ");
+        drafts = undefined; // keep last-failed drafts out of writeback
+      }
+
+      // Rate limit: defer the whole remaining batch (unchanged behavior).
+      if (rateLimited) {
         logger.warn("Gemini 429 — deferring remaining batch", {
           taskId: lead.taskId,
           company: lead.companyName,
         });
-
         if (!config.dryRun) {
           await clickup.updateTask(lead.taskId, { status: "Enriched" });
         }
         leadResult.status = "deferred";
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
-
         const currentIndex = batch.indexOf(task);
         result.deferredRemaining = batch.length - currentIndex - 1;
-
         await alerter.send(
           "Gemini rate limit — personalization batch deferred",
           `Rate limited after processing lead ${lead.companyName}. ${result.deferredRemaining} leads deferred to next run.`
         );
-
         break;
       }
 
-      // Handle other Gemini errors
-      if (geminiResult.error || !geminiResult.drafts) {
+      // Hard Gemini error (transport/safety/parse): existing single-run failure path.
+      if (hardGeminiError) {
         logger.error("Gemini generation failed", {
           taskId: lead.taskId,
           company: lead.companyName,
-          error: geminiResult.error,
+          error: hardGeminiError,
         });
         if (!config.dryRun) {
           await clickup.addTag(lead.taskId, "generation-failed");
@@ -1087,65 +1159,49 @@ export async function runPersonalization(
         }
         leadResult.tagsAdded.push("generation-failed");
         leadResult.status = "generation_failed";
-        leadResult.error = geminiResult.error;
+        leadResult.error = hardGeminiError;
         result.results.generationFailed += 1;
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
         continue;
       }
 
-      // Strip AI-writing tells (em dashes, curly quotes) before validation and
-      // writeback, so the reviewer and the prospect only ever see clean copy.
-      const drafts = sanitizeDrafts(geminiResult.drafts);
-
-      // Step 6: Validate — CASL opt-out check first
-      if (!drafts.casl_opt_out_check) {
-        logger.warn("CASL block — prospect website has do-not-contact", {
-          taskId: lead.taskId,
-          company: lead.companyName,
-        });
-        if (!config.dryRun) {
-          await clickup.addTag(lead.taskId, "casl-block");
-          await clickup.updateTask(lead.taskId, { status: "Enriched" });
-        }
-        leadResult.tagsAdded.push("casl-block");
-        leadResult.status = "casl_blocked";
-        result.results.caslBlocked += 1;
-        result.leads.push(leadResult);
-        result.leadsProcessed += 1;
+      // CASL-blocked lead already recorded inside the loop.
+      if (leadResult.status === "casl_blocked") {
         continue;
       }
 
-      // Step 6 continued: Validate draft quality
-      const validationErrors = validateDrafts(drafts, lead);
-      validationErrors.push(
-        ...findForbiddenSeasonMentions(
-          [
-            drafts.email_touch_1_body,
-            drafts.email_touch_2_body,
-            drafts.email_touch_3_body,
-            drafts.email_touch_1_subject,
-            drafts.email_touch_2_subject,
-            drafts.email_touch_3_subject,
-            drafts.linkedin_message,
-          ],
-          seasonal
-        )
-      );
-      if (validationErrors.length > 0) {
-        logger.error("Draft validation failed", {
+      // Validation still failing after all in-run attempts -> cross-run cap.
+      if (!drafts) {
+        const runsSoFar = crossRunAttemptCount(task.tags);
+        logger.error("Draft validation failed after all retries", {
           taskId: lead.taskId,
           company: lead.companyName,
+          runsSoFar,
           errors: validationErrors,
         });
-        if (!config.dryRun) {
-          await clickup.addTag(lead.taskId, "generation-failed");
-          await clickup.updateTask(lead.taskId, { status: "Enriched" });
-        }
-        leadResult.tagsAdded.push("generation-failed");
         leadResult.status = "generation_failed";
         leadResult.error = `Validation: ${validationErrors.join("; ")}`;
         result.results.generationFailed += 1;
+
+        if (runsSoFar >= MAX_PERSONALIZE_RUNS) {
+          if (!config.dryRun) {
+            await clickup.addTag(lead.taskId, "personalize-failed");
+            await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          }
+          leadResult.tagsAdded.push("personalize-failed");
+          await alerter.send(
+            "Personalization permanently failed for a lead",
+            `${lead.companyName} failed validation across ${runsSoFar} runs and is parked (tag personalize-failed). Last errors: ${validationErrors.join("; ")}`
+          );
+        } else {
+          if (!config.dryRun) {
+            await clickup.addTag(lead.taskId, `personalize-attempt-${runsSoFar + 1}`);
+            await clickup.addTag(lead.taskId, "generation-failed");
+            await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          }
+          leadResult.tagsAdded.push(`personalize-attempt-${runsSoFar + 1}`, "generation-failed");
+        }
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
         continue;
@@ -1238,7 +1294,7 @@ export async function runPersonalization(
         taskId: lead.taskId,
         company: lead.companyName,
         scrapePages: pagesScraped,
-        tokensUsed: geminiResult.tokensUsed,
+        tokensUsed: leadResult.geminiTokensUsed,
       });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
