@@ -755,7 +755,7 @@ const LEADING_ARTICLES = new Set(["the", "a", "an"]);
 
 // Collateral Jaydees Apparel does not have. Ellie must never offer to "send the
 // catalog" (Jenn flagged this live), so any prospect-facing mention is rejected and
-// the draft is regenerated. Ellie may still offer a free mockup — that's real.
+// the draft is regenerated. Ellie should offer a no-obligation quote instead.
 const NONEXISTENT_COLLATERAL_RE = /catalogue|catalog/i;
 
 // Zero product talk: Ellie sells "custom apparel" and nothing more specific.
@@ -878,7 +878,7 @@ export function validateDrafts(
   ];
   if (prospectFacing.some((t) => NONEXISTENT_COLLATERAL_RE.test(t))) {
     errors.push(
-      "draft references a catalog/catalogue, which Jaydees does not have — offer a mockup instead"
+      "draft references a catalog/catalogue, which Jaydees does not have — offer a no-obligation quote instead"
     );
   }
   if (prospectFacing.some((t) => PRODUCT_NOUN_RE.test(t))) {
