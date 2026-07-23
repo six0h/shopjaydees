@@ -1212,3 +1212,54 @@ describe("runPersonalization — capped retry & cross-run park", () => {
     expect(gemini.generateDrafts).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("runPersonalization — hard Gemini errors are cross-run capped", () => {
+  function makeAlerter() {
+    return { send: vi.fn().mockResolvedValue(undefined) };
+  }
+  // A hard Gemini error (SAFETY / parse / transport) — no drafts, not a 429.
+  const hardError = { tokensUsed: 500, error: "Gemini SAFETY filter triggered" };
+
+  it("does not retry a hard error in-run, and escalates to personalize-attempt-2 on the first failed run", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]);
+    const gemini = { generateDrafts: vi.fn().mockResolvedValue(hardError) };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(1); // hard errors don't in-run retry
+    expect(result.results.generationFailed).toBe(1);
+    expect(clickup.addTag).toHaveBeenCalledWith("task_lead_001", "personalize-attempt-2");
+  });
+
+  it("parks and alerts on a persistent hard error once the run cap is reached", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        makeEnrichedClickUpTask({ leadScore: 4, tags: ["personalize-attempt-2"] }),
+      ]);
+    const gemini = { generateDrafts: vi.fn().mockResolvedValue(hardError) };
+    const alerter = makeAlerter();
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: alerter as any,
+      logger: createLogger(),
+    });
+    expect(clickup.addTag).toHaveBeenCalledWith("task_lead_001", "personalize-failed");
+    expect(alerter.send).toHaveBeenCalled();
+    expect(result.results.generationFailed).toBe(1);
+  });
+});
