@@ -22,6 +22,7 @@ import {
 } from "./helpers.js";
 import type { Config } from "../src/config.js";
 import type { GeminiDraftOutput, LeadData } from "../src/types.js";
+import { resolveSeasonalContext } from "../src/seasonality.js";
 
 vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -259,6 +260,8 @@ describe("sanitizeDrafts", () => {
 });
 
 describe("buildPrompt", () => {
+  const seasonal = resolveSeasonalContext(new Date("2026-07-22T12:00:00Z")); // fall
+
   it("includes prospect data in the prompt", () => {
     const lead = {
       companyName: "ABC Plumbing Ltd.",
@@ -274,7 +277,7 @@ describe("buildPrompt", () => {
     } as LeadData;
     const scrapedContent = "# ABC Plumbing\n\nServing Surrey since 2005.";
 
-    const prompt = buildPrompt(lead, scrapedContent);
+    const prompt = buildPrompt(lead, scrapedContent, seasonal);
 
     expect(prompt).toContain("ABC Plumbing Ltd.");
     expect(prompt).toContain("Mike Thompson");
@@ -304,7 +307,7 @@ describe("buildPrompt", () => {
       isReEngagement: true,
     } as LeadData;
 
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     expect(prompt).toContain("RE-ENGAGEMENT NOTICE");
     expect(prompt).toContain("completely different angle");
@@ -325,14 +328,14 @@ describe("buildPrompt", () => {
       isReEngagement: false,
     } as LeadData;
 
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     expect(prompt).toContain("No website content available");
   });
 
   it("instructs the model to write like a human and avoid AI tells", () => {
     const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     // The single most common AI tell we care about.
     expect(prompt.toLowerCase()).toContain("em dash");
@@ -343,7 +346,7 @@ describe("buildPrompt", () => {
 
   it("frames Ellie as outreach staff, not the owner of Jaydees", () => {
     const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
-    const prompt = buildPrompt(lead, "");
+    const prompt = buildPrompt(lead, "", seasonal);
 
     // Ellie works at Jaydees; she does not run/own it. The prompt must say so
     // and must not carry the old owner-implying tone line.
@@ -357,9 +360,33 @@ describe("buildPrompt", () => {
     const teamLead = { segment: "Team" } as LeadData;
     const businessLead = { segment: "Business" } as LeadData;
 
-    expect(buildPrompt(schoolLead, "")).toContain("100 schools");
-    expect(buildPrompt(teamLead, "")).toContain("raise thousands");
-    expect(buildPrompt(businessLead, "")).toContain("12 to 250+");
+    expect(buildPrompt(schoolLead, "", seasonal)).toContain("100 schools");
+    expect(buildPrompt(teamLead, "", seasonal)).toContain("raise thousands");
+    expect(buildPrompt(businessLead, "", seasonal)).toContain("12 to 250+");
+  });
+
+  it("injects the resolved selling season and forbids the others", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    expect(prompt).toContain("FALL");
+    expect(prompt).toContain("NEVER reference: spring, summer, winter");
+    expect(prompt).toContain("Lock in your fall order early");
+  });
+
+  it("does NOT tell the model to offer a mockup or catalog", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    expect(prompt.toLowerCase()).not.toContain("mockup");
+    expect(prompt.toLowerCase()).not.toContain("catalog");
+  });
+
+  it("instructs a no-obligation quote as the concrete offer", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    expect(prompt.toLowerCase()).toContain("no-obligation quote");
+  });
+
+  it("appends retry feedback when provided", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, 'draft names a specific product');
+    expect(prompt).toContain("YOUR PREVIOUS DRAFT WAS REJECTED");
+    expect(prompt).toContain("draft names a specific product");
   });
 });
 
@@ -1017,5 +1044,171 @@ describe("runPersonalizationDrain — self-retriggering drain loop", () => {
     expect(runOnce).toHaveBeenCalledTimes(1);
     expect(out.stoppedReason).toBe("pipe_empty");
     expect(out.totalSuccess).toBe(8);
+  });
+});
+
+describe("validateDrafts — product & price guardrails (zero product talk)", () => {
+  const lead = () => makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
+  const cleanBody = `Hi Pardeep, Monark caught my eye. We do custom apparel for local teams. ${"x".repeat(80)}`;
+
+  it("passes a clean draft that names no product", () => {
+    expect(validateDrafts(makeMockDraftOutput({ email_touch_1_body: cleanBody }), lead())).toEqual([]);
+  });
+
+  it("rejects a specific garment noun in a body", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, we can do tri-blend hoodies for your team. ${"x".repeat(80)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("product"))).toBe(true);
+  });
+
+  it("rejects 'spirit wear' and 'team gear' phrases", () => {
+    const d1 = makeMockDraftOutput({ email_touch_2_body: `Following up, our spirit wear is great. ${"x".repeat(60)}` });
+    const d2 = makeMockDraftOutput({ email_touch_2_body: `Following up, our team gear is great. ${"x".repeat(60)}` });
+    expect(validateDrafts(d1, lead()).some((e) => e.includes("product"))).toBe(true);
+    expect(validateDrafts(d2, lead()).some((e) => e.includes("product"))).toBe(true);
+  });
+
+  it("rejects a product noun in a subject line", () => {
+    const drafts = makeMockDraftOutput({ email_touch_1_body: cleanBody, email_touch_1_subject: "Custom polos for Monark" });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("product"))).toBe(true);
+  });
+
+  it("rejects a stated price ($ + digit)", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, we can start around $28 a piece. ${"x".repeat(80)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(true);
+  });
+
+  it("rejects 'per unit' / 'per shirt' pricing language", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, pricing is great per unit. ${"x".repeat(80)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(true);
+  });
+
+  it("does NOT false-positive on the Business social-proof number range", () => {
+    const drafts = makeMockDraftOutput({
+      email_touch_1_body: `Hi Pardeep, Monark, we work with businesses of 12 to 250+ employees. ${"x".repeat(60)}`,
+    });
+    expect(validateDrafts(drafts, lead()).some((e) => e.includes("price"))).toBe(false);
+  });
+});
+
+describe("runPersonalization — capped retry & cross-run park", () => {
+  function makeAlerter() {
+    return { send: vi.fn().mockResolvedValue(undefined) };
+  }
+  function badDrafts() {
+    // Names a product -> fails validateDrafts every time.
+    return makeMockDraftOutput({
+      email_touch_1_body: `Hi Mike, ABC Plumbing, we do custom hoodies for your crew. ${"x".repeat(80)}`,
+    });
+  }
+
+  it("retries in-run and succeeds on the second attempt", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([]) // stuck-lead sweep
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]); // enriched
+    const gemini = {
+      generateDrafts: vi
+        .fn()
+        .mockResolvedValueOnce({ drafts: badDrafts(), tokensUsed: 100 })
+        .mockResolvedValueOnce({ drafts: makeMockDraftOutput(), tokensUsed: 100 }),
+    };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(2);
+    expect(result.results.success).toBe(1);
+  });
+
+  it("caps in-run retries at 3 generate calls", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]);
+    const gemini = { generateDrafts: vi.fn().mockResolvedValue({ drafts: badDrafts(), tokensUsed: 100 }) };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(3);
+    expect(result.results.generationFailed).toBe(1);
+    // First failed run -> escalates to attempt-2, not yet permanent.
+    expect(clickup.addTag).toHaveBeenCalledWith("task_lead_001", "personalize-attempt-2");
+  });
+
+  it("parks permanently and alerts on the final failed run", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4, tags: ["personalize-attempt-2"] })]);
+    const gemini = { generateDrafts: vi.fn().mockResolvedValue({ drafts: badDrafts(), tokensUsed: 100 }) };
+    const alerter = makeAlerter();
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: alerter as any,
+      logger: createLogger(),
+    });
+    expect(clickup.addTag).toHaveBeenCalledWith("task_lead_001", "personalize-failed");
+    expect(alerter.send).toHaveBeenCalled();
+    expect(result.results.generationFailed).toBe(1);
+  });
+
+  it("excludes personalize-failed leads from eligibility", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4, tags: ["personalize-failed"] })]);
+    const gemini = { generateDrafts: vi.fn() };
+    const result = await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).not.toHaveBeenCalled();
+    expect(result.leadsAvailable).toBe(0);
+  });
+
+  it("does NOT retry on a 429 — defers the batch instead", async () => {
+    const clickup = makeMockClickUp();
+    clickup.getTasks = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({ leadScore: 4 })]);
+    const gemini = {
+      generateDrafts: vi.fn().mockResolvedValue({ tokensUsed: 0, error: "Gemini 429", isRateLimited: true }),
+    };
+    await runPersonalization({
+      config: makePersonalizationConfig(),
+      clickup,
+      firecrawl: makeMockFirecrawl(),
+      gemini: gemini as any,
+      alerter: makeAlerter() as any,
+      logger: createLogger(),
+    });
+    expect(gemini.generateDrafts).toHaveBeenCalledTimes(1);
   });
 });

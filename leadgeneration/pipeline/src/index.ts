@@ -36,6 +36,7 @@ import { createAlerter } from "./alerting.js";
 import { createClickUpClient } from "./clients/clickup.js";
 import { createHunterClient, HunterRateLimitError } from "./clients/hunter.js";
 import { runReplyPoll } from "./reply-poll.js";
+import { resolveSeasonalContext, findForbiddenSeasonMentions, crossRunAttemptCount, type SeasonalContext } from "./seasonality.js";
 
 // --- Domain Normalization ---
 
@@ -596,7 +597,12 @@ export function sanitizeDrafts(drafts: GeminiDraftOutput): GeminiDraftOutput {
   };
 }
 
-export function buildPrompt(lead: LeadData, scrapedContent: string): string {
+export function buildPrompt(
+  lead: LeadData,
+  scrapedContent: string,
+  seasonal: SeasonalContext,
+  retryFeedback?: string
+): string {
   const websiteSection =
     scrapedContent.trim().length > 0
       ? scrapedContent
@@ -611,9 +617,10 @@ export function buildPrompt(lead: LeadData, scrapedContent: string): string {
   const socialProof =
     socialProofMap[lead.segment] ?? socialProofMap["Business"];
 
-  let prompt = `You are writing cold outreach for Jaydees Apparel (shopjaydees.com), a custom clothing
-company in BC's Lower Mainland. They serve businesses, schools, and teams with
-branded apparel — uniforms, spirit wear, team gear, corporate swag.
+  let prompt = `You are writing cold outreach for Jaydees Apparel (shopjaydees.com), a custom
+apparel company in BC's Lower Mainland. They make custom apparel for businesses,
+schools, and teams. Keep it at that level — "custom apparel" or "branded apparel"
+is the most specific you may ever be.
 
 Jaydees Apparel runs "Wear It Forward" — a portion of every order goes to community
 initiatives. This is a genuine differentiator, not a gimmick. Mention it naturally
@@ -672,21 +679,35 @@ INSTRUCTIONS:
 4. Subject lines: 4-8 words, no clickbait, no ALL CAPS, no emojis.
 5. Sign all emails as "Ellie". Ellie is part of the outreach team at Jaydees Apparel,
    NOT the owner or founder. Speak for the company as "we", "our", and "us", and use
-   "I" only for Ellie's own actions (reaching out, sending a mockup). Never claim to
+   "I" only for Ellie's own actions (reaching out, sending a quote). Never claim to
    own, run, found, or start the company. Do not write "I run", "I own", "I started",
    or "my shop/business/company". Say "I work for Jaydees Apparel" or "I'm with
    Jaydees", never that Ellie is the business.
 6. Write a LinkedIn connection request note (under 300 chars, no pitch). The same role
    rule applies here: Ellie works at Jaydees, she does not run or own it.
-7. Do NOT offer, mention, or promise a catalog, catalogue, brochure, lookbook, or
-   price list — Jaydees does not have one and Ellie cannot send it. If you want to
-   offer something concrete, offer a free mockup of their logo on a product. Never
-   tell the prospect you'll "send over the catalog".
+7. Never name a specific product, garment, style, fabric, colour, or price. You sell
+   "custom apparel" — that is the most specific you may ever be (no hoodies, tees,
+   uniforms, spirit wear, team gear, etc.). Do not offer to send any printed
+   materials, sample sheets, or product images — Jaydees has nothing like that ready
+   to send. If you want to offer something concrete, offer a no-obligation quote.
+   Never state or estimate a price yourself.
 8. Check the website content for any "do not contact" or "do not solicit" statements.
 9. Write one sentence explaining why custom apparel is relevant to ${lead.contactName}'s
    role at ${lead.companyName}.
 10. If no website content was available, still write the emails using the company data,
    but note that in the website_scrape_summary field.
+`;
+
+  prompt += `
+
+SEASONAL TIMING (non-negotiable):
+TODAY'S DATE: ${new Date().toISOString().slice(0, 10)}
+CURRENT SELLING PERIOD: ${seasonal.period}
+THEME: ${seasonal.theme}
+You are selling into the ${seasonal.sellingSeason.toUpperCase()} season. Lead times mean
+an order placed now is delivered weeks out, so you always talk about the season that is
+coming, never the one happening now.
+NEVER reference: ${seasonal.forbiddenSeasons.filter((s) => s !== "autumn").join(", ")}.
 
 Return your response as structured JSON matching the schema provided.`;
 
@@ -699,6 +720,14 @@ Their 90-day cool-off period has passed. You MUST:
 - Do NOT reference or acknowledge previous outreach attempts
 - Find a fresh hook — new seasonal angle, different value prop, updated community signal
 - The tone should feel like a first contact, not a follow-up`;
+  }
+
+  if (retryFeedback) {
+    prompt += `
+
+YOUR PREVIOUS DRAFT WAS REJECTED for these reasons:
+- ${retryFeedback}
+Rewrite all touches and fix these specifically.`;
   }
 
   return prompt;
@@ -726,8 +755,22 @@ const LEADING_ARTICLES = new Set(["the", "a", "an"]);
 
 // Collateral Jaydees Apparel does not have. Ellie must never offer to "send the
 // catalog" (Jenn flagged this live), so any prospect-facing mention is rejected and
-// the draft is regenerated. Ellie may still offer a free mockup — that's real.
+// the draft is regenerated. Ellie should offer a no-obligation quote instead.
 const NONEXISTENT_COLLATERAL_RE = /catalogue|catalog/i;
+
+// Zero product talk: Ellie sells "custom apparel" and nothing more specific.
+// A denylist of the ~30 nouns a model reaches for (not an allowlist — English
+// can't be enumerated). Extend by adding a word when Jenn flags one, exactly
+// like the catalog guard. Bare "gear" is intentionally excluded (too broad);
+// only the "team gear" phrase is caught.
+const PRODUCT_NOUN_RE =
+  /\b(hoodies?|t-?shirts?|tees?|polos?|quarter-?zips?|jerseys?|toques?|beanies?|jackets?|sweatshirts?|crewnecks?|softshells?|vests?|lanyards?|totes?|mugs?|hats?|caps?|uniforms?|work\s?wear|spirit\s?wear|team\s?gear|swag|embroidery|screen\s?print(?:ing|ed)?|dtg)\b/i;
+
+// Stated prices. Currency-anchored ONLY (a digit next to $/dollars, or explicit
+// per-unit phrasing) so the Business social proof ("12 to 250+ employees") never
+// false-positives. Bare "each"/bare numbers are deliberately NOT matched.
+const PRICE_RE =
+  /(\$\s?\d|\b\d[\d,.]*\s?(?:dollars?|usd|cad)\b|\bper[- ](?:unit|shirt|piece|item|garment)\b|\/\s?(?:unit|shirt|piece)\b)/i;
 
 /** Lowercase, strip punctuation that writers drop naturally ("&", ".", ","). */
 function normalizeForMatch(text: string): string {
@@ -835,7 +878,17 @@ export function validateDrafts(
   ];
   if (prospectFacing.some((t) => NONEXISTENT_COLLATERAL_RE.test(t))) {
     errors.push(
-      "draft references a catalog/catalogue, which Jaydees does not have — offer a mockup instead"
+      "draft references a catalog/catalogue, which Jaydees does not have — offer a no-obligation quote instead"
+    );
+  }
+  if (prospectFacing.some((t) => PRODUCT_NOUN_RE.test(t))) {
+    errors.push(
+      "draft names a specific product/garment — Ellie sells 'custom apparel' only, never a named item"
+    );
+  }
+  if (prospectFacing.some((t) => PRICE_RE.test(t))) {
+    errors.push(
+      "draft states a price — Ellie must offer a no-obligation quote, never quote a number"
     );
   }
 
@@ -843,6 +896,11 @@ export function validateDrafts(
 }
 
 // --- Personalization Agent Core ---
+
+// Retry caps. In-run: 1 + 2 retries. Cross-run: after this many failed runs a
+// lead is parked permanently (tagged personalize-failed) and an alert fires.
+const MAX_GENERATION_ATTEMPTS = 3;
+const MAX_PERSONALIZE_RUNS = 2;
 
 export interface PersonalizationDeps {
   config: Config;
@@ -858,6 +916,7 @@ export async function runPersonalization(
 ): Promise<PersonalizationRunResult> {
   const { config, clickup, firecrawl, gemini, alerter, logger } = deps;
   const now = new Date();
+  const seasonal = resolveSeasonalContext(now);
   const runId = `personalize-${now.toISOString().replace(/[:.]/g, "-").slice(0, 19)}`;
   logger.setRunId(runId);
   logger.info("Personalization agent starting");
@@ -900,8 +959,9 @@ export async function runPersonalization(
     statuses: ["Enriched"],
   });
 
-  // Client-side filtering: score >= 3
+  // Client-side filtering: score >= 3, excluding permanently-parked leads
   const eligible = allEnriched.filter((task) => {
+    if (task.tags.some((t) => t.name === "personalize-failed")) return false;
     const scoreField = task.custom_fields.find(
       (f) => f.id === config.fields.leadScore
     );
@@ -990,42 +1050,108 @@ export async function runPersonalization(
         result.results.scrapeFailedButProceeded += 1;
       }
 
-      // Step 5: Generate drafts via Gemini
-      const prompt = buildPrompt(lead, scrapedContent);
-      const geminiResult = await gemini.generateDrafts(prompt);
-      leadResult.geminiTokensUsed = geminiResult.tokensUsed;
+      // Step 5-6: Generate + validate, with bounded in-run retry reusing the scrape.
+      let drafts: GeminiDraftOutput | undefined;
+      let validationErrors: string[] = [];
+      let retryFeedback: string | undefined;
+      let rateLimited = false;
+      let hardGeminiError: string | undefined;
 
-      // Handle Gemini rate limit — defer entire remaining batch
-      if (geminiResult.isRateLimited) {
+      for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
+        const prompt = buildPrompt(lead, scrapedContent, seasonal, retryFeedback);
+        const geminiResult = await gemini.generateDrafts(prompt);
+        leadResult.geminiTokensUsed += geminiResult.tokensUsed;
+
+        if (geminiResult.isRateLimited) {
+          rateLimited = true;
+          break;
+        }
+        if (geminiResult.error || !geminiResult.drafts) {
+          hardGeminiError = geminiResult.error ?? "no drafts returned";
+          break;
+        }
+
+        const candidate = sanitizeDrafts(geminiResult.drafts);
+
+        // CASL block is terminal — no retry can fix a do-not-contact site.
+        if (!candidate.casl_opt_out_check) {
+          logger.warn("CASL block — prospect website has do-not-contact", {
+            taskId: lead.taskId,
+            company: lead.companyName,
+          });
+          if (!config.dryRun) {
+            await clickup.addTag(lead.taskId, "casl-block");
+            await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          }
+          leadResult.tagsAdded.push("casl-block");
+          leadResult.status = "casl_blocked";
+          result.results.caslBlocked += 1;
+          result.leads.push(leadResult);
+          result.leadsProcessed += 1;
+          drafts = undefined;
+          validationErrors = [];
+          hardGeminiError = undefined;
+          break;
+        }
+
+        validationErrors = validateDrafts(candidate, lead);
+        validationErrors.push(
+          ...findForbiddenSeasonMentions(
+            [
+              candidate.email_touch_1_body,
+              candidate.email_touch_2_body,
+              candidate.email_touch_3_body,
+              candidate.email_touch_1_subject,
+              candidate.email_touch_2_subject,
+              candidate.email_touch_3_subject,
+              candidate.linkedin_message,
+            ],
+            seasonal
+          )
+        );
+
+        if (validationErrors.length === 0) {
+          drafts = candidate;
+          break;
+        }
+
+        logger.warn("Draft validation failed — retrying", {
+          taskId: lead.taskId,
+          company: lead.companyName,
+          attempt,
+          errors: validationErrors,
+        });
+        retryFeedback = validationErrors.join("; ");
+        drafts = undefined; // keep last-failed drafts out of writeback
+      }
+
+      // Rate limit: defer the whole remaining batch (unchanged behavior).
+      if (rateLimited) {
         logger.warn("Gemini 429 — deferring remaining batch", {
           taskId: lead.taskId,
           company: lead.companyName,
         });
-
         if (!config.dryRun) {
           await clickup.updateTask(lead.taskId, { status: "Enriched" });
         }
         leadResult.status = "deferred";
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
-
         const currentIndex = batch.indexOf(task);
         result.deferredRemaining = batch.length - currentIndex - 1;
-
         await alerter.send(
           "Gemini rate limit — personalization batch deferred",
           `Rate limited after processing lead ${lead.companyName}. ${result.deferredRemaining} leads deferred to next run.`
         );
-
         break;
       }
 
-      // Handle other Gemini errors
-      if (geminiResult.error || !geminiResult.drafts) {
+      // Hard Gemini error (transport/safety/parse): existing single-run failure path.
+      if (hardGeminiError) {
         logger.error("Gemini generation failed", {
           taskId: lead.taskId,
           company: lead.companyName,
-          error: geminiResult.error,
+          error: hardGeminiError,
         });
         if (!config.dryRun) {
           await clickup.addTag(lead.taskId, "generation-failed");
@@ -1033,51 +1159,49 @@ export async function runPersonalization(
         }
         leadResult.tagsAdded.push("generation-failed");
         leadResult.status = "generation_failed";
-        leadResult.error = geminiResult.error;
+        leadResult.error = hardGeminiError;
         result.results.generationFailed += 1;
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
         continue;
       }
 
-      // Strip AI-writing tells (em dashes, curly quotes) before validation and
-      // writeback, so the reviewer and the prospect only ever see clean copy.
-      const drafts = sanitizeDrafts(geminiResult.drafts);
-
-      // Step 6: Validate — CASL opt-out check first
-      if (!drafts.casl_opt_out_check) {
-        logger.warn("CASL block — prospect website has do-not-contact", {
-          taskId: lead.taskId,
-          company: lead.companyName,
-        });
-        if (!config.dryRun) {
-          await clickup.addTag(lead.taskId, "casl-block");
-          await clickup.updateTask(lead.taskId, { status: "Enriched" });
-        }
-        leadResult.tagsAdded.push("casl-block");
-        leadResult.status = "casl_blocked";
-        result.results.caslBlocked += 1;
-        result.leads.push(leadResult);
-        result.leadsProcessed += 1;
+      // CASL-blocked lead already recorded inside the loop.
+      if (leadResult.status === "casl_blocked") {
         continue;
       }
 
-      // Step 6 continued: Validate draft quality
-      const validationErrors = validateDrafts(drafts, lead);
-      if (validationErrors.length > 0) {
-        logger.error("Draft validation failed", {
+      // Validation still failing after all in-run attempts -> cross-run cap.
+      if (!drafts) {
+        const runsSoFar = crossRunAttemptCount(task.tags);
+        logger.error("Draft validation failed after all retries", {
           taskId: lead.taskId,
           company: lead.companyName,
+          runsSoFar,
           errors: validationErrors,
         });
-        if (!config.dryRun) {
-          await clickup.addTag(lead.taskId, "generation-failed");
-          await clickup.updateTask(lead.taskId, { status: "Enriched" });
-        }
-        leadResult.tagsAdded.push("generation-failed");
         leadResult.status = "generation_failed";
         leadResult.error = `Validation: ${validationErrors.join("; ")}`;
         result.results.generationFailed += 1;
+
+        if (runsSoFar >= MAX_PERSONALIZE_RUNS) {
+          if (!config.dryRun) {
+            await clickup.addTag(lead.taskId, "personalize-failed");
+            await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          }
+          leadResult.tagsAdded.push("personalize-failed");
+          await alerter.send(
+            "Personalization permanently failed for a lead",
+            `${lead.companyName} failed validation across ${runsSoFar} runs and is parked (tag personalize-failed). Last errors: ${validationErrors.join("; ")}`
+          );
+        } else {
+          if (!config.dryRun) {
+            await clickup.addTag(lead.taskId, `personalize-attempt-${runsSoFar + 1}`);
+            await clickup.addTag(lead.taskId, "generation-failed");
+            await clickup.updateTask(lead.taskId, { status: "Enriched" });
+          }
+          leadResult.tagsAdded.push(`personalize-attempt-${runsSoFar + 1}`, "generation-failed");
+        }
         result.leads.push(leadResult);
         result.leadsProcessed += 1;
         continue;
@@ -1170,7 +1294,7 @@ export async function runPersonalization(
         taskId: lead.taskId,
         company: lead.companyName,
         scrapePages: pagesScraped,
-        tokensUsed: geminiResult.tokensUsed,
+        tokensUsed: leadResult.geminiTokensUsed,
       });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
