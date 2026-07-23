@@ -18,7 +18,8 @@ A third, pre-existing defect surfaced while scoping: **there is no retry loop an
 
 - **Product scope: zero product talk.** Ellie offers "custom apparel" / "branded apparel" as a service and never names any product, category, garment, style, fabric, colour, or price. `spirit wear`, `team gear`, `hoodies` are all out.
 - **The offer: no-obligation quote.** The concrete CTA is a quote. Ellie must never state or estimate a price herself.
-- **Season calendar: the wiki playbook** (`wiki/topics/seasonal-playbook.md`) is the single source of truth. It is already lead-time shifted — its June–July row reads "Lock in your fall order early", so applied today it correctly says fall.
+- **Season calendar: the wiki playbook** (`wiki/topics/seasonal-playbook.md`) is the single source of truth. It was **revised 2026-07-22** to a BC-grounded 4-quarter calendar (see Section 1); code mirrors the wiki.
+- **Schools are out of scope** (client decision, Jenn, 2026-07-22 — she runs school outreach herself). Segment focus is businesses, teams, trades only. See "Schools out of scope" below for the follow-up this implies for discovery/targeting (out of scope for *this* spec).
 - **Enforcement: hard-fail all three** new guard classes (product nouns, prices, out-of-period season words), same mechanism as the existing catalog guard: a hit fails validation and forces a regenerate.
 - **Retry is capped:** 2 in-run retries (3 generate calls max per lead), then a cross-run cap after which the lead parks in a terminal failure state and fires an ntfy alert.
 - **Gemini billing is a non-issue:** the account is on auto top-up (confirmed 2026-07-22), so retries multiplying generate calls carries no depletion risk. The 429 path is unchanged regardless.
@@ -33,36 +34,50 @@ resolveSeasonalContext(now: Date): SeasonalContext
 
 `SeasonalContext = { period, theme, segmentFocus, sellingSeason, forbiddenSeasons }`.
 
-- The five-period table lives as a `const` in this file, mirroring `wiki/topics/seasonal-playbook.md`, with a comment naming the wiki as source of truth.
-- Pure and date-injected: tests pin `new Date("2026-07-22")` and assert `fall` without waiting for the calendar. Tests cover all five period boundaries.
+- The four-quarter table lives as a `const` in this file, mirroring `wiki/topics/seasonal-playbook.md`, with a comment naming the wiki as source of truth.
+- Pure and date-injected: tests pin `new Date("2026-07-22")` and assert `fall` without waiting for the calendar. Tests cover all four quarter boundaries.
 
-| Period | Segment focus | Theme | Selling season |
+**BC-grounded calendar** (client-approved 2026-07-22; anchored to BC school year, fall/spring leagues, and ~6-10wk cold-lead-to-delivery lead time — always sells the *coming* season):
+
+| Period | Selling season | Theme | Segment focus |
 | --- | --- | --- | --- |
-| Mar–May | Teams, trades | Get ready for the season | (per period) |
-| Jun–Jul | Schools, businesses | Lock in your fall order early | fall |
-| Aug–Sep | Schools, teams | Back to school, back to the field | fall |
-| Oct–Nov | Businesses | Year-end gear and appreciation | winter |
-| Dec–Feb | Schools, businesses | New year, fresh look | spring |
+| Jun–Aug | fall | Lock in your fall order early | Fall-sports teams, businesses |
+| Sep–Nov | winter | Year-end gear and appreciation | Businesses, teams |
+| Dec–Feb | spring | New year, fresh look | Businesses, spring-sports teams |
+| Mar–May | summer | Gear up for your season | Teams, trades, businesses |
 
-(Selling-season/forbidden-season values are finalized during planning against the table; the point is they are derived in code, never inferred by the model.)
+**Enforcement values, per period** — each period allows only its selling-season word; the other three are forbidden and fail validation:
 
-`buildPrompt()` takes `SeasonalContext` as a new argument and injects:
+| Period | `sellingSeason` (allowed) | `forbiddenSeasons` (fail) |
+| --- | --- | --- |
+| Jun–Aug | fall | spring, summer, winter |
+| Sep–Nov | winter | spring, summer, fall |
+| Dec–Feb | spring | summer, fall, winter |
+| Mar–May | summer | fall, winter, spring |
+
+Rule: **only the selling-season word is allowed.** This deliberately forbids the *current* calendar season too (e.g. "summer" is banned Jun–Aug), which is precisely the reported bug — Ellie talked about a season as upcoming when it was already here. "Always talk the season you're delivering for" is the honest framing anyway.
+
+`buildPrompt()` takes `SeasonalContext` as a new argument and injects theme + selling season (NOT segment focus — see refinement below):
 
 ```
 TODAY'S DATE: 2026-07-22
-CURRENT SELLING PERIOD: June to July
+CURRENT SELLING PERIOD: June to August
 THEME: Lock in your fall order early
-SEGMENT FOCUS: Schools, businesses
-You are selling into the FALL season. Lead times mean buyers order
-6-10 weeks ahead, so you are always talking about the season that is
-coming, never the one happening now.
-NEVER reference: spring, summer, winter, or the current season as if
-it were upcoming.
+You are selling into the FALL season. Lead times mean an order placed
+now is delivered ~6-10 weeks out, so you always talk about the season
+that is coming, never the one happening now.
+NEVER reference: spring, summer, or winter.
 ```
 
-`forbiddenSeasons` is derived from the period and drives a validator (Section 3) that rejects any prospect-facing field naming one.
+`forbiddenSeasons` drives a validator (Section 3) that rejects any prospect-facing field naming one.
+
+**Refinement — segment focus is NOT injected into the per-lead prompt.** The lead already carries its own segment (School/Team/Business), which drives the social-proof line. Injecting the period's segment *focus* on top could contradict it (e.g. telling Ellie to "focus on businesses" while she writes to a Team). Segment focus is a monthly discovery/targeting concern — it stays in the wiki for planning, out of the copy prompt.
 
 **Accepted trade-off:** a blunt word-match on "summer" also kills innocent filler like "hope you're enjoying the summer". That register of filler is already banned by the anti-AI-tells section, so the loss is acceptable.
+
+### Schools out of scope
+
+Jenn confirmed (2026-07-22) she does not use this pipeline for school outreach. This spec drops schools from the seasonal segment focus. It does **not** change discovery/targeting or remove the `School` branch from `socialProofMap` — a School lead would still be handled if one appeared. Flagged as a follow-up: if discovery should hard-exclude schools, that is a separate targeting change, out of scope here.
 
 ## Section 2 — Product scope
 
@@ -101,7 +116,7 @@ This converts most guard trips into self-correction inside one run, costing a Ge
 ## Testing
 
 All four new units are pure functions, testable without network:
-- `resolveSeasonalContext` — pinned dates across all five period boundaries.
+- `resolveSeasonalContext` — pinned dates across all four quarter boundaries, including the Aug→Sep pivot (fall→winter) and a July date asserting `fall`.
 - `PRODUCT_NOUN_RE`, `PRICE_RE` — both directions: "custom apparel" passes, "our tri-blend hoodies" and "$28/unit" fail.
 - retry-prompt builder — given errors, emits the corrective block.
 
