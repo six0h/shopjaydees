@@ -48,13 +48,14 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 - [Transition to maintenance & reporting phase](decisions/maintenance-and-reporting-phase.md): build delivered, final invoice sent; ongoing monthly maintenance & reporting billed via the $300 CAD/month management fee (2026-07-15).
 - [Autonomous pipeline deployment](decisions/autonomous-pipeline-deployment.md): all 5 schedulers enabled incl. send; pipeline runs unattended with Jenn's ClickUp approval as the only gate (2026-07-16).
 - [Rebrand to Jaydees Apparel](decisions/rebrand-to-jaydees-apparel.md): the outreach agent now communicates as "Jaydees Apparel" (legal name), not "ShopJaydees"; domains + internal campaign naming unchanged (2026-07-16).
+- [Personalization content guardrails](decisions/personalization-content-guardrails.md): generic apparel only (no named products/prices), no-obligation-quote CTA, and deterministic BC seasonality — all hard-enforced with a capped regenerate; schools out of scope (2026-07-22).
 
 ## Topics
 
 - [Service agreement terms](topics/service-agreement-terms.md): fees, term, IP, liability, and compliance terms; signed and complete 2026-05-28 via Google eSignature.
 - [Third-party stack](topics/third-party-stack.md): client-paid tools; discovery stack resolved to Hunter.io Discover API only (the Firecrawl and Sales Navigator/cleanlists.ai versions are superseded).
 - [Target market](topics/target-market.md): segment categories with discovery filters and company sizes, plus the four-phase geographic expansion plan.
-- [Seasonal playbook](topics/seasonal-playbook.md): which segments to target with which theme in each part of the year.
+- [Seasonal playbook](topics/seasonal-playbook.md): BC-grounded 4-quarter calendar (revised 2026-07-22) — which segment and theme, and the one selling-season word allowed, in each part of the year; schools out of scope.
 - [Engagement goals](topics/engagement-goals.md): ninety-day targets, six-month outlook, pipeline metrics, health signals, monthly review agenda, and the responsibility split.
 - [Implementation roadmap](topics/implementation-roadmap.md): the three-week build plan, client account to-dos, and flags on timeline and the example outreach address.
 - [Wear It Forward](topics/wear-it-forward.md): the client's community giving program, the core differentiator in every outreach message.

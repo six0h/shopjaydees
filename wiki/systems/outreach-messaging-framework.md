@@ -5,7 +5,7 @@ category: system
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-06-11
+updated: 2026-07-22
 tags: [messaging, personalization, outreach]
 sources:
   - file: ingested/documents/messaging-framework.html
@@ -40,7 +40,17 @@ The design spec's LinkedIn template: a short personalized note, no pitch. "Hi [n
 
 ## Four personalization layers
 
-Segment template (value prop per segment), business context (their name, what they do, their situation), community signals (their visible involvement connected to Wear It Forward), and seasonal timing (what is relevant now; see [seasonal playbook](../topics/seasonal-playbook.md)).
+Segment template (value prop per segment), business context (their name, what they do, their situation), community signals (their visible involvement connected to Wear It Forward), and seasonal timing (see [seasonal playbook](../topics/seasonal-playbook.md)). As of 2026-07-22 the seasonal layer is computed deterministically from the send date — the agent sells the season that is *coming* for the current period, never one inferred by the model.
+
+## Content guardrails (2026-07-22)
+
+Hard limits on what the agent may say, enforced in code, not just prompt guidance (see [personalization content guardrails](../decisions/personalization-content-guardrails.md)):
+
+- **Generic apparel only.** Copy offers "custom apparel" / "branded apparel" and never names a specific product, garment, style, fabric, colour, or price. The segment varies the message, not the product.
+- **The concrete offer is a no-obligation quote**, not a free mockup. The agent never states or estimates a price.
+- **Correct season only.** Each period allows one selling-season word; the others fail validation and force a regenerate.
+
+A draft breaking any of these is regenerated (up to three tries per run) before it can reach the queue.
 
 ## Credibility claims per segment
 
@@ -65,5 +75,8 @@ Every message lands in the ClickUp queue before sending. Options: approve, edit,
 ## Related pages
 
 - [Lead generation system](lead-generation-system.md)
+- [Personalization content guardrails](../decisions/personalization-content-guardrails.md)
+- [Anti-AI-writing guardrails](../decisions/anti-ai-writing-guardrails.md)
+- [Seasonal playbook](../topics/seasonal-playbook.md)
 - [Wear It Forward](../topics/wear-it-forward.md)
 - [Target market](../topics/target-market.md)
