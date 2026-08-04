@@ -5,7 +5,7 @@ category: decision
 status: active
 owner: cody
 created: 2026-07-15
-updated: 2026-07-15
+updated: 2026-08-04
 tags: [engagement, billing, phase, maintenance, reporting]
 sources:
   - file: "ingested/meetings/60 Min between Cody Halovich and Jenn - 2026_07_15 08_57 PDT - Notes by Gemini.md"
@@ -35,7 +35,7 @@ The monthly billing is the service agreement's existing **$300 CAD/month managem
 
 The monthly report is now designed and approved: a value-first, one-to-two-page branded PDF emailed to Jenn as a Gmail draft (Cody sends), delivered at the start of each month for the prior month. It reports prospects reached, reply rate, warm leads handed off, and **AI-sourced revenue attribution** via the CRM `Lead Source = AI Outreach` tag and `Est Order Value`, plus Cody's commentary on what worked and what's next. Full definition, data sources, and caveats: `leadgeneration/docs/superpowers/specs/2026-07-15-monthly-report-design.md`.
 
-**Still to build:** the report itself (metrics-pull + PDF + Gmail draft). First report covers July 2026, due early August. Tracked in the OS backlog (`memory/backlog.md`).
+**Built and delivered (2026-08-04).** The full report is live: metrics-pull (`src/report.ts`), branded PDF (`leadgeneration/reports/2026-07-jaydees-outreach-report.{html,pdf}`), and Gmail draft. The first report (July 2026) was drafted and sent to Jenn. The report now counts warm handoffs as genuinely-interested-only — see [Reply interest classification](reply-interest-classification.md). July result: 77 businesses reached, 2 replies (both declined), 0 warm / $0 pipeline.
 
 ## Related pages
 
