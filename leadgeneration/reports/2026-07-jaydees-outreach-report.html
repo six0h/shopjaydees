@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jaydees Apparel — Outreach Report — July 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-warm: #faf5f0;
+    --bg-peach: #f5e6dc;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #8a8a8a;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+    --green-deep: #2f7d52;
+    --green-soft: #d6f0e0;
+    --line: #e7ddd2;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  @page { size: Letter; margin: 0; }
+  * { box-sizing: border-box; }
+  html { color: var(--text-dark); }
+  body {
+    font-family: var(--font);
+    margin: 0;
+    background: #ece4dc;
+    line-height: 1.55;
+    font-size: 10.5pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet {
+    background: var(--bg-warm);
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto;
+    padding: 0.7in 0.8in 0.75in;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .sheet:last-child { page-break-after: auto; }
+
+  /* Header band */
+  .brandbar { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--green-deep); padding-bottom: 0.5rem; }
+  .brand { font-weight: 800; font-size: 15pt; letter-spacing: -0.01em; color: var(--green-deep); }
+  .brand small { display:block; font-weight: 500; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-light); margin-top: 2px; }
+  .period { text-align: right; font-weight: 600; font-size: 10pt; color: var(--text-mid); }
+  .period small { display:block; font-weight: 400; font-size: 8pt; color: var(--text-light); }
+
+  h2.section { font-size: 12.5pt; font-weight: 700; color: var(--accent-dark); margin: 1.5rem 0 0.6rem; }
+  h2.section::before { content: ""; display:inline-block; width: 14px; height: 3px; background: var(--accent-warm); border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+
+  /* Headline */
+  .headline { font-size: 17pt; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; margin: 1.5rem 0 0.3rem; }
+  .headline b { color: var(--green-deep); }
+  .subhead { color: var(--text-mid); font-size: 10pt; }
+
+  /* Hero number grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-top: 0.8rem; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.85rem 0.9rem; }
+  .stat .n { font-size: 22pt; font-weight: 800; line-height: 1; color: var(--green-deep); letter-spacing: -0.02em; }
+  .stat .n.muted { color: var(--accent-dark); }
+  .stat .l { font-weight: 600; font-size: 9.5pt; margin-top: 0.35rem; }
+  .stat .d { color: var(--text-light); font-size: 8.5pt; margin-top: 0.15rem; line-height: 1.35; }
+
+  /* Funnel */
+  .funnel { display:flex; align-items:stretch; gap: 0.4rem; margin-top: 0.6rem; }
+  .fstep { flex: 1; background: var(--green-soft); border-radius: var(--radius-sm); padding: 0.6rem 0.5rem; text-align:center; }
+  .fstep .fn { font-weight: 800; font-size: 15pt; color: var(--green-deep); }
+  .fstep .fl { font-size: 8pt; color: var(--text-mid); font-weight: 500; }
+  .fstep.dim { background: #f0ece6; }
+  .fstep.dim .fn { color: var(--text-mid); }
+  .farrow { align-self:center; color: var(--accent-warm); font-weight: 800; }
+
+  p { margin: 0.5rem 0; }
+  .note { background: var(--bg-peach); border-left: 3px solid var(--accent-warm); border-radius: 6px; padding: 0.65rem 0.85rem; font-size: 9.5pt; color: #6b4a3a; margin-top: 0.6rem; }
+
+  ul.tuned { list-style: none; padding: 0; margin: 0.4rem 0; }
+  ul.tuned li { padding: 0.35rem 0 0.35rem 1.4rem; position: relative; border-bottom: 1px solid var(--line); font-size: 10pt; }
+  ul.tuned li:last-child { border-bottom: none; }
+  ul.tuned li::before { content: "✓"; position:absolute; left: 0; color: var(--green-deep); font-weight: 800; }
+  ul.tuned b { color: var(--accent-dark); }
+
+  .two { display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .card { background:#fff; border:1px solid var(--line); border-radius: var(--radius-sm); padding: 0.85rem 1rem; }
+  .card h3 { margin:0 0 0.3rem; font-size: 10.5pt; color: var(--accent-dark); }
+  .card p { margin: 0.2rem 0; font-size: 9.5pt; color: var(--text-mid); }
+  .card .todo { font-size: 9.5pt; }
+  .card .todo li { margin-bottom: 0.2rem; }
+
+  footer { position:absolute; bottom: 0.5in; left: 0.8in; right: 0.8in; border-top: 1px solid var(--line); padding-top: 0.5rem; font-size: 8pt; color: var(--text-light); display:flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<section class="sheet">
+  <div class="brandbar">
+    <div class="brand">Jaydees Apparel<small>Outreach — powered by SixOhQuad</small></div>
+    <div class="period">July 2026<small>Covers Jul 15–31 · first two weeks live</small></div>
+  </div>
+
+  <div class="headline">In its first two weeks live, your outreach system reached <b>77 new businesses</b> across the Lower Mainland.</div>
+  <div class="subhead">Here is how the system performed in July, in plain numbers, plus what we tuned and what is next.</div>
+
+  <h2 class="section">The month at a glance</h2>
+  <div class="grid">
+    <div class="stat">
+      <div class="n">77</div>
+      <div class="l">Businesses reached</div>
+      <div class="d">New businesses emailed on your behalf across the Lower Mainland.</div>
+    </div>
+    <div class="stat">
+      <div class="n">2</div>
+      <div class="l">Replies received</div>
+      <div class="d">A 1.5% reply rate. Below the 5–15% goal, expected this early in a half-month at low volume.</div>
+    </div>
+    <div class="stat">
+      <div class="n muted">0</div>
+      <div class="l">Warm leads (this round)</div>
+      <div class="d">Both replies were businesses that already have a supplier. None ready to move forward yet.</div>
+    </div>
+    <div class="stat">
+      <div class="n muted">0</div>
+      <div class="l">AI-sourced opportunities</div>
+      <div class="d">Deals opened in your CRM and tagged to this outreach.</div>
+    </div>
+    <div class="stat">
+      <div class="n muted">$0</div>
+      <div class="l">Estimated pipeline value</div>
+      <div class="d">Estimated value of AI-sourced opportunities. Builds as replies convert.</div>
+    </div>
+    <div class="stat">
+      <div class="n">134</div>
+      <div class="l">Personalised emails sent</div>
+      <div class="d">Each one written for the specific business, across a three-touch follow-up sequence.</div>
+    </div>
+  </div>
+
+  <h2 class="section">Pipeline built this month</h2>
+  <div class="funnel">
+    <div class="fstep"><div class="fn">77</div><div class="fl">Businesses reached</div></div>
+    <div class="farrow">→</div>
+    <div class="fstep"><div class="fn">134</div><div class="fl">Emails delivered</div></div>
+    <div class="farrow">→</div>
+    <div class="fstep"><div class="fn">2</div><div class="fl">Replied</div></div>
+    <div class="farrow">→</div>
+    <div class="fstep dim"><div class="fn">0</div><div class="fl">Warm this round</div></div>
+  </div>
+  <div class="note">Two weeks in, the goal is a running, reliable system reaching the right businesses — and it is. The first replies are declines, which is normal at this early stage and volume. As we widen the net through the fall buying season, replies with genuine interest follow.</div>
+
+  <footer><span>Jaydees Apparel · Monthly Outreach Report</span><span>Prepared by SixOhQuad · cody@sixohquad.com</span></footer>
+</section>
+
+<!-- PAGE 2 -->
+<section class="sheet">
+  <div class="brandbar">
+    <div class="brand">Jaydees Apparel<small>Outreach — powered by SixOhQuad</small></div>
+    <div class="period">July 2026<small>Page 2 of 2</small></div>
+  </div>
+
+  <h2 class="section">Revenue attribution — AI-sourced</h2>
+  <p>No AI-sourced opportunities were logged in your CRM this month, and that is expected this early. Custom-apparel sales cycles run roughly six to ten weeks from first contact to delivered goods, so revenue trails outreach by weeks or months. As replies turn into quotes, tagging each one <b>Lead Source = AI Outreach</b> in your CRM is what makes it show up here in future reports.</p>
+
+  <h2 class="section">What is working, and what we tuned</h2>
+  <p style="font-size:9.5pt;color:var(--text-mid);margin-top:0.2rem;">July was about making the outreach unmistakably <i>yours</i>, based on your feedback:</p>
+  <ul class="tuned">
+    <li><b>Rebranded to Jaydees Apparel.</b> The outreach now introduces the business by its proper name throughout.</li>
+    <li><b>Writing that sounds like a person, not a machine.</b> We tightened the copy so every email reads as a genuine note from Ellie, with the AI tells removed.</li>
+    <li><b>On-brand and on-season.</b> Messaging is locked to a no-obligation quote — no invented products — and always speaks to the correct upcoming season, so July sells fall.</li>
+    <li><b>Running on a schedule.</b> The system finds prospects, writes, and queues each batch automatically. Your prospecting requests steer where it looks, and your approvals decide what goes out.</li>
+  </ul>
+
+  <h2 class="section">Next month — August</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Our focus</h3>
+      <p>Stay in the fall selling window — "lock in your fall order early" — aimed at businesses and teams across the Lower Mainland, and scale the volume of businesses reached as the system settles in.</p>
+    </div>
+    <div class="card">
+      <h3>Your part</h3>
+      <ul class="todo" style="padding-left:1.1rem;margin:0.3rem 0;color:var(--text-mid);">
+        <li>Keep the prospecting requests and draft approvals coming in ClickUp.</li>
+        <li>Tag any AI-sourced deals <b>Lead Source = AI Outreach</b> so pipeline shows up here.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:1rem;">A quick reminder: this report is only as accurate as the CRM. Tagging AI-sourced deals <b>AI Outreach</b> is what lets us show you the revenue this outreach creates.</div>
+
+  <footer><span>Period covered: July 15–31, 2026</span><span>Questions? cody@sixohquad.com · 604-862-2117</span></footer>
+</section>
+
+</body>
+</html>
