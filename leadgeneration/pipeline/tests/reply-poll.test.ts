@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { Mock } from "vitest";
 import type { ClickUpClient } from "../src/clients/clickup.js";
 import type { InstantlyClient } from "../src/clients/instantly.js";
+import type { GeminiClient } from "../src/clients/gemini.js";
 import { InstantlyApiError } from "../src/clients/instantly.js";
 import type { Alerter } from "../src/alerting.js";
 import { createLogger } from "../src/logger.js";
@@ -47,6 +48,66 @@ function makeMockInstantly(): InstantlyClient {
 
 function makeMockAlerter(): Alerter {
   return { send: vi.fn().mockResolvedValue(undefined) };
+}
+
+// Default: classify every genuine reply as "interested" so the pre-existing
+// reply-flag behaviour (Responded - Follow-up) holds unless a test overrides it.
+function makeMockGemini(interest = "interested"): GeminiClient {
+  return {
+    generateDrafts: vi.fn().mockResolvedValue({ tokensUsed: 0 }),
+    classifyReplyInterest: vi.fn().mockResolvedValue({ interest, tokensUsed: 10 }),
+  };
+}
+
+// Drives one genuine inbound reply through runReplyPoll with a chosen
+// classification, returning the config + mocks so tests can assert the writes.
+async function runSingleReply(opts: {
+  interest?: string;
+  classifyResult?: object;
+  bodyText?: string;
+  subject?: string;
+}) {
+  const config = makeSendConfig();
+  const clickup = makeMockClickUp();
+  const theLead = makeOutreachActiveLeadTask({
+    id: "lead_1",
+    email: "mike@acme.ca",
+    contactEmailFieldId: config.fields.contactEmail,
+    outreachStartedFieldId: config.outreachFields.outreachStartedDate,
+  });
+  (clickup.getTasks as Mock).mockImplementation((_listId, o) =>
+    o?.customFields ? Promise.resolve([theLead]) : Promise.resolve([])
+  );
+  const instantly = makeMockInstantly();
+  (instantly.listCampaigns as Mock).mockResolvedValue([
+    { id: "camp_1", name: "Business - 2026-06", status: "active" },
+  ]);
+  (instantly.listEmails as Mock).mockResolvedValue({
+    items: [
+      {
+        from_address_email: "mike@acme.ca",
+        to_address_email_list: "ellie@shopjaydees.ca",
+        subject: opts.subject ?? "Re: hi",
+        body: { text: opts.bodyText ?? "some reply" },
+      },
+    ],
+    nextStartingAfter: null,
+  });
+  const gemini: GeminiClient = opts.classifyResult
+    ? {
+        generateDrafts: vi.fn(),
+        classifyReplyInterest: vi.fn().mockResolvedValue(opts.classifyResult),
+      }
+    : makeMockGemini(opts.interest);
+  const result = await runReplyPoll({
+    config,
+    clickup,
+    instantly,
+    gemini,
+    alerter: makeMockAlerter(),
+    logger: createLogger("test"),
+  });
+  return { config, clickup, result };
 }
 
 // ---------------------------------------------------------------------------
@@ -219,7 +280,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
 
     const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
     expect(upd.status).toBe("Responded - Follow-up");
@@ -227,6 +288,62 @@ describe("runReplyPoll — Phase A", () => {
     expect(upd.custom_fields.find((f: { id: string }) => f.id === config.outreachFields.lastReplyDate)).toBeDefined();
     expect(clickup.addComment).toHaveBeenCalledWith("lead_1", expect.stringContaining("Yes, send pricing"));
     expect(result.repliesFlagged).toBe(1);
+  });
+
+  it("routes a not-interested reply to Lost, unassigned, and tags the interest", async () => {
+    const { clickup, result } = await runSingleReply({
+      interest: "not_interested",
+      bodyText: "No thanks, we already have a supplier.",
+    });
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
+    expect(upd.status).toBe("Lost");
+    expect(upd.assignees).toBeUndefined();
+    expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "interest:not_interested");
+    expect(result.repliesDeclined).toBe(1);
+    expect(result.repliesFlagged).toBe(0);
+  });
+
+  it("routes a wrong-person reply to Lost", async () => {
+    const { clickup, result } = await runSingleReply({
+      interest: "wrong_person",
+      bodyText: "You'll want our purchasing dept, not me.",
+    });
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
+    expect(upd.status).toBe("Lost");
+    expect(result.repliesDeclined).toBe(1);
+  });
+
+  it("keeps an interested reply as a warm handoff and tags it", async () => {
+    const { clickup, result } = await runSingleReply({
+      interest: "interested",
+      bodyText: "Yes, please send pricing.",
+    });
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
+    expect(upd.status).toBe("Responded - Follow-up");
+    expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "interest:interested");
+    expect(result.repliesFlagged).toBe(1);
+  });
+
+  it("fails safe to a warm handoff when classification errors", async () => {
+    const { config, clickup, result } = await runSingleReply({
+      classifyResult: { tokensUsed: 0, error: "Gemini 500" },
+      bodyText: "Ambiguous message.",
+    });
+    const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "lead_1")![1];
+    expect(upd.status).toBe("Responded - Follow-up");
+    expect(upd.assignees).toEqual({ add: [config.ownerUserId] });
+    expect(result.repliesFlagged).toBe(1);
+  });
+
+  it("treats a classifier out_of_office as an auto-reply, not a warm handoff", async () => {
+    const { clickup, result } = await runSingleReply({
+      interest: "out_of_office",
+      bodyText: "I'm away until Monday with limited access.",
+    });
+    expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "auto-reply");
+    expect(clickup.updateTask).not.toHaveBeenCalled();
+    expect(result.autoRepliesTagged).toBe(1);
+    expect(result.repliesFlagged).toBe(0);
   });
 
   it("is idempotent: a reply on an already-Responded lead does nothing", async () => {
@@ -248,7 +365,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(clickup.addComment).not.toHaveBeenCalled();
   });
@@ -276,7 +393,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(clickup.addComment).not.toHaveBeenCalled();
     expect(result.repliesFlagged).toBe(0);
@@ -301,7 +418,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
 
     expect(clickup.addTag).toHaveBeenCalledWith("lead_1", "auto-reply");
     expect(clickup.addComment).toHaveBeenCalledWith("lead_1", expect.stringContaining("I am out of office until Monday"));
@@ -333,7 +450,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
 
     expect(clickup.addTag).not.toHaveBeenCalled();
     expect(clickup.addComment).not.toHaveBeenCalled();
@@ -362,7 +479,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
 
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(result.bounced).toBe(0);
@@ -380,7 +497,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
 
     expect(result.noMatch).toBe(1);
     expect(clickup.updateTask).not.toHaveBeenCalled();
@@ -402,7 +519,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
 
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(clickup.addComment).not.toHaveBeenCalled();
@@ -419,7 +536,7 @@ describe("runReplyPoll — Phase A", () => {
     const instantly = makeMockInstantly();
     (instantly.listCampaigns as Mock).mockRejectedValue(new Error("Instantly API 503 Service Unavailable"));
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter, logger: createLogger("test") });
 
     expect(alerter.send).toHaveBeenCalled();
     expect(result.errors).toBeGreaterThanOrEqual(1);
@@ -453,7 +570,7 @@ describe("runReplyPoll — Phase A", () => {
         nextStartingAfter: null,
       });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter, logger: createLogger("test") });
 
     // Second campaign's reply was still processed.
     expect(result.repliesFlagged).toBeGreaterThanOrEqual(1);
@@ -472,7 +589,7 @@ describe("runReplyPoll — Phase A", () => {
     (instantly.listCampaigns as Mock).mockResolvedValue([{ id: "camp_1", name: "Camp 1", status: "active" }]);
     (instantly.listEmails as Mock).mockRejectedValue(new InstantlyApiError("rate limit", 429));
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter, logger: createLogger("test") });
 
     expect(alerter.send).not.toHaveBeenCalled();
     expect(result.errors).toBeGreaterThanOrEqual(1);
@@ -506,7 +623,7 @@ describe("runReplyPoll — Phase A", () => {
       nextStartingAfter: null,
     });
 
-    const result = await runReplyPoll({ config, clickup, instantly, alerter, logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter, logger: createLogger("test") });
 
     // Phase A should have flagged the reply.
     expect(result.repliesFlagged).toBe(1);
@@ -534,7 +651,7 @@ describe("runReplyPoll — Phase B sweep", () => {
     (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
       opts?.statuses?.includes("Outreach Active") ? Promise.resolve([staleLead]) : Promise.resolve([])
     );
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
     const upd = (clickup.updateTask as Mock).mock.calls.find((c) => c[0] === "old_1")![1];
     expect(upd.status).toBe("Dormant");
     const fids = upd.custom_fields.map((f: { id: string }) => f.id);
@@ -552,7 +669,7 @@ describe("runReplyPoll — Phase B sweep", () => {
     (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
       opts?.statuses?.includes("Outreach Active") ? Promise.resolve([freshLead]) : Promise.resolve([])
     );
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(result.dormant).toBe(0);
   });
@@ -566,7 +683,7 @@ describe("runReplyPoll — Phase B sweep", () => {
     (clickup.getTasks as Mock).mockImplementation((_listId, opts) =>
       opts?.statuses?.includes("Outreach Active") ? Promise.resolve([staleLead]) : Promise.resolve([])
     );
-    const result = await runReplyPoll({ config, clickup, instantly, alerter: makeMockAlerter(), logger: createLogger("test") });
+    const result = await runReplyPoll({ config, clickup, instantly, gemini: makeMockGemini(), alerter: makeMockAlerter(), logger: createLogger("test") });
     expect(clickup.updateTask).not.toHaveBeenCalled();
     expect(result.dormant).toBe(1);
   });

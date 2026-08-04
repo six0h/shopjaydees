@@ -3,6 +3,7 @@ import { InstantlyApiError } from "./clients/instantly.js";
 import type { Config } from "./config.js";
 import type { ClickUpClient } from "./clients/clickup.js";
 import type { InstantlyClient } from "./clients/instantly.js";
+import type { GeminiClient, ReplyInterest } from "./clients/gemini.js";
 import type { ClickUpTask, ProspectStatus } from "./types.js";
 import type { Alerter } from "./alerting.js";
 import type { Logger } from "./logger.js";
@@ -79,6 +80,7 @@ export interface ReplyPollDeps {
   config: Config;
   clickup: ClickUpClient;
   instantly: InstantlyClient;
+  gemini: GeminiClient;
   alerter: Alerter;
   logger: Logger;
 }
@@ -89,6 +91,7 @@ export interface ReplyPollRunResult {
   campaignsPolled: number;
   emailsScanned: number;
   repliesFlagged: number;
+  repliesDeclined: number;
   autoRepliesTagged: number;
   bounced: number;
   noMatch: number;
@@ -157,6 +160,7 @@ export async function runReplyPoll(deps: ReplyPollDeps): Promise<ReplyPollRunRes
     campaignsPolled: 0,
     emailsScanned: 0,
     repliesFlagged: 0,
+    repliesDeclined: 0,
     autoRepliesTagged: 0,
     bounced: 0,
     noMatch: 0,
@@ -270,7 +274,7 @@ async function applySignal(
   result: ReplyPollRunResult,
   touchedInPhaseA: Set<string>
 ): Promise<void> {
-  const { config, clickup, logger } = deps;
+  const { config, clickup, gemini, logger } = deps;
   const task = await findTaskByEmail(deps, signal.leadEmail);
   if (!task) {
     result.noMatch += 1;
@@ -283,15 +287,58 @@ async function applySignal(
     if (TERMINAL_FOR_REPLY.has(status)) return;
     // Fix 3: mark as touched before any write so Phase B skips this lead even on dry-run.
     touchedInPhaseA.add(task.id);
-    if (!config.dryRun) {
-      await clickup.updateTask(task.id, {
-        status: RESPONDED_STATUS,
-        assignees: { add: [config.ownerUserId] },
-        custom_fields: [{ id: config.outreachFields.lastReplyDate, value: Date.now() }],
+
+    // Classify the reply's interest so a decline is not recorded as a warm lead.
+    const classification = await gemini.classifyReplyInterest({
+      subject: signal.subject,
+      snippet: signal.snippet,
+    });
+    if (classification.error) {
+      // Fail safe: an unclassifiable reply is flagged warm for a human to judge,
+      // never silently dropped.
+      logger.warn("Reply interest classification failed — treating as warm", {
+        email: signal.leadEmail,
+        error: classification.error,
       });
-      await clickup.addComment(task.id, `Reply received — ${signal.subject}\n\n${signal.snippet}`);
     }
-    result.repliesFlagged += 1;
+    const interest: ReplyInterest = classification.interest ?? "neutral";
+
+    // A subtle out-of-office the subject-line regex missed: tag, do not flag.
+    if (interest === "out_of_office") {
+      if (!config.dryRun) {
+        await clickup.addTag(task.id, "auto-reply");
+        await clickup.addComment(task.id, `Auto-reply: ${signal.snippet}`);
+      }
+      result.autoRepliesTagged += 1;
+      return;
+    }
+
+    const declined = interest === "not_interested" || interest === "wrong_person";
+    const newStatus: ProspectStatus = declined ? "Lost" : RESPONDED_STATUS;
+
+    if (!config.dryRun) {
+      const update: {
+        status: string;
+        custom_fields: Array<{ id: string; value: unknown }>;
+        assignees?: { add?: number[]; rem?: number[] };
+      } = {
+        status: newStatus,
+        custom_fields: [{ id: config.outreachFields.lastReplyDate, value: Date.now() }],
+      };
+      // Only genuine interest becomes a warm handoff assigned to the owner.
+      if (!declined) update.assignees = { add: [config.ownerUserId] };
+      await clickup.updateTask(task.id, update);
+      await clickup.addTag(task.id, `interest:${interest}`);
+      await clickup.addComment(
+        task.id,
+        `Reply received (${interest}) — ${signal.subject}\n\n${signal.snippet}`
+      );
+    }
+    if (declined) {
+      result.repliesDeclined += 1;
+    } else {
+      result.repliesFlagged += 1;
+    }
   } else if (signal.kind === "auto_reply") {
     if (task.tags.some((t) => t.name === "auto-reply")) return;
     if (!config.dryRun) {

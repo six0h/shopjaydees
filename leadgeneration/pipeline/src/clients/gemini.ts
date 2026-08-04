@@ -13,8 +13,35 @@ export interface GeminiGenerateResult {
   isRateLimited?: boolean;
 }
 
+/** Interest categories for a single inbound reply to cold outreach. */
+export type ReplyInterest =
+  | "interested"
+  | "not_interested"
+  | "wrong_person"
+  | "out_of_office"
+  | "neutral";
+
+export const REPLY_INTERESTS: readonly ReplyInterest[] = [
+  "interested",
+  "not_interested",
+  "wrong_person",
+  "out_of_office",
+  "neutral",
+] as const;
+
+export interface GeminiClassifyResult {
+  interest?: ReplyInterest;
+  tokensUsed: number;
+  error?: string;
+  isRateLimited?: boolean;
+}
+
 export interface GeminiClient {
   generateDrafts(prompt: string): Promise<GeminiGenerateResult>;
+  classifyReplyInterest(input: {
+    subject: string;
+    snippet: string;
+  }): Promise<GeminiClassifyResult>;
 }
 
 interface GeminiClientOptions {
@@ -103,16 +130,54 @@ const RESPONSE_SCHEMA = {
   ],
 } as const;
 
+const CLASSIFY_SCHEMA = {
+  type: "object",
+  properties: {
+    interest: {
+      type: "string",
+      enum: REPLY_INTERESTS as unknown as string[],
+      description:
+        "The recipient's interest level, inferred from their reply to a cold outreach email.",
+    },
+  },
+  required: ["interest"],
+} as const;
+
+function buildClassifyPrompt(subject: string, snippet: string): string {
+  return [
+    'Classify the sentiment of a single reply to a cold outreach email sent by "Ellie" on behalf of Jaydees Apparel, a custom apparel company. Return exactly one interest category.',
+    "",
+    "Categories:",
+    '- "interested": wants to learn more, asks about apparel, pricing, or a quote, or is open to a conversation.',
+    '- "not_interested": declines, says no thanks, already has a supplier, or asks to stop.',
+    '- "wrong_person": says they are not the right contact, or refers you to someone else.',
+    '- "out_of_office": an automated out-of-office or vacation autoresponder.',
+    '- "neutral": a genuine human reply that is none of the above, or is ambiguous.',
+    "",
+    `Reply subject: ${subject}`,
+    `Reply body: ${snippet}`,
+  ].join("\n");
+}
+
 export function createGeminiClient(
   options: GeminiClientOptions
 ): GeminiClient {
   const fetchFn = options.fetchFn ?? fetch;
   const retryDelayMs = options.retryDelayMs ?? 5000;
 
-  async function doGenerate(
+  interface GeminiCallResult {
+    parsed?: unknown;
+    tokensUsed: number;
+    error?: string;
+    isRateLimited?: boolean;
+  }
+
+  async function callModel(
     prompt: string,
+    schema: unknown,
+    generation: { temperature: number; maxOutputTokens: number },
     retries: number
-  ): Promise<GeminiGenerateResult> {
+  ): Promise<GeminiCallResult> {
     try {
       const url = `${BASE_URL}?key=${options.apiKey}`;
 
@@ -128,9 +193,9 @@ export function createGeminiClient(
           ],
           generationConfig: {
             responseMimeType: "application/json",
-            responseSchema: RESPONSE_SCHEMA,
-            temperature: 0.7,
-            maxOutputTokens: 4096,
+            responseSchema: schema,
+            temperature: generation.temperature,
+            maxOutputTokens: generation.maxOutputTokens,
           },
         }),
       });
@@ -156,7 +221,7 @@ export function createGeminiClient(
           retriesLeft: retries - 1,
         });
         await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-        return doGenerate(prompt, retries - 1);
+        return callModel(prompt, schema, generation, retries - 1);
       }
 
       if (!response.ok) {
@@ -207,9 +272,9 @@ export function createGeminiClient(
         };
       }
 
-      let drafts: GeminiDraftOutput;
+      let parsed: unknown;
       try {
-        drafts = JSON.parse(rawText) as GeminiDraftOutput;
+        parsed = JSON.parse(rawText);
       } catch (parseErr) {
         options.logger.error("Gemini JSON parse failure", {
           rawText: rawText.slice(0, 500),
@@ -220,7 +285,7 @@ export function createGeminiClient(
         };
       }
 
-      return { drafts, tokensUsed };
+      return { parsed, tokensUsed };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       options.logger.error("Gemini network error", { error: errorMsg });
@@ -229,8 +294,42 @@ export function createGeminiClient(
   }
 
   return {
-    async generateDrafts(prompt: string) {
-      return doGenerate(prompt, 1);
+    async generateDrafts(prompt: string): Promise<GeminiGenerateResult> {
+      const result = await callModel(
+        prompt,
+        RESPONSE_SCHEMA,
+        { temperature: 0.7, maxOutputTokens: 4096 },
+        1
+      );
+      const { parsed, ...rest } = result;
+      if (parsed === undefined) return rest;
+      return { drafts: parsed as GeminiDraftOutput, tokensUsed: result.tokensUsed };
+    },
+
+    async classifyReplyInterest(input: {
+      subject: string;
+      snippet: string;
+    }): Promise<GeminiClassifyResult> {
+      const result = await callModel(
+        buildClassifyPrompt(input.subject, input.snippet),
+        CLASSIFY_SCHEMA,
+        { temperature: 0, maxOutputTokens: 256 },
+        1
+      );
+      const { parsed, ...rest } = result;
+      if (parsed === undefined) return rest;
+
+      const interest = (parsed as { interest?: unknown }).interest;
+      if (
+        typeof interest !== "string" ||
+        !REPLY_INTERESTS.includes(interest as ReplyInterest)
+      ) {
+        return {
+          tokensUsed: result.tokensUsed,
+          error: `Gemini returned an unrecognized interest value: ${JSON.stringify(interest)}`,
+        };
+      }
+      return { interest: interest as ReplyInterest, tokensUsed: result.tokensUsed };
     },
   };
 }

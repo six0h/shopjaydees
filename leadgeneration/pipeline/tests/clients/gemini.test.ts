@@ -292,4 +292,79 @@ describe("GeminiClient", () => {
       expect(result.error).toContain("ECONNREFUSED");
     });
   });
+
+  describe("classifyReplyInterest", () => {
+    function mockClassifyResponse(interest: string, status = 200) {
+      const body =
+        status >= 200 && status < 300
+          ? {
+              candidates: [
+                {
+                  content: { parts: [{ text: JSON.stringify({ interest }) }] },
+                  finishReason: "STOP",
+                },
+              ],
+              usageMetadata: { totalTokenCount: 42 },
+            }
+          : { error: { message: "Error", code: status } };
+      return vi.fn().mockResolvedValue({
+        ok: status >= 200 && status < 300,
+        status,
+        headers: new Headers(),
+        json: () => Promise.resolve(body),
+        text: () => Promise.resolve(JSON.stringify(body)),
+      });
+    }
+
+    it("returns the interest label from a classified reply", async () => {
+      const mockFetch = mockClassifyResponse("not_interested");
+      const client = createGeminiClient({
+        apiKey: "test_key",
+        fetchFn: mockFetch,
+        logger,
+      });
+
+      const result = await client.classifyReplyInterest({
+        subject: "Re: Quick question about your crew's gear",
+        snippet: "Thanks, but we already have a supplier. Not interested.",
+      });
+
+      expect(result.interest).toBe("not_interested");
+      expect(result.error).toBeUndefined();
+    });
+
+    it("surfaces a 429 as rate limited without an interest label", async () => {
+      const mockFetch = mockClassifyResponse("interested", 429);
+      const client = createGeminiClient({
+        apiKey: "test_key",
+        fetchFn: mockFetch,
+        logger,
+      });
+
+      const result = await client.classifyReplyInterest({
+        subject: "Re: gear",
+        snippet: "Yes please, tell me more.",
+      });
+
+      expect(result.interest).toBeUndefined();
+      expect(result.isRateLimited).toBe(true);
+    });
+
+    it("returns an error when the model emits an unrecognized label", async () => {
+      const mockFetch = mockClassifyResponse("maybe_later");
+      const client = createGeminiClient({
+        apiKey: "test_key",
+        fetchFn: mockFetch,
+        logger,
+      });
+
+      const result = await client.classifyReplyInterest({
+        subject: "Re: gear",
+        snippet: "Circle back next quarter.",
+      });
+
+      expect(result.interest).toBeUndefined();
+      expect(result.error).toContain("unrecognized interest");
+    });
+  });
 });

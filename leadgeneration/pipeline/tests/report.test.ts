@@ -18,6 +18,19 @@ function oppTask(over: Partial<{ id: string; created: number; status: string; le
   } as unknown as ClickUpTask;
 }
 
+// A prospect that replied this month, carrying the interest:<label> tag the
+// reply-poll agent writes. Declines land in Lost; interested/neutral stay warm.
+function replier(interest?: string): ClickUpTask {
+  const declined = interest === "not_interested" || interest === "wrong_person";
+  return {
+    id: `r-${interest ?? "none"}-${Math.random()}`,
+    status: { status: declined ? "Lost" : "Responded - Follow-up" },
+    date_created: "1",
+    tags: interest ? [{ name: `interest:${interest}` }] : [],
+    custom_fields: [],
+  } as unknown as ClickUpTask;
+}
+
 describe("monthWindow", () => {
   it("returns inclusive date strings and a half-open ms range for a 31-day month", () => {
     const w = monthWindow("2026-07");
@@ -47,7 +60,7 @@ describe("summarizeMonth", () => {
         { campaignId: "c2", emailsSent: 10, opens: 2, replies: 1, bounced: 0 },
       ],
       reachedTasks: [{} as ClickUpTask, {} as ClickUpTask, {} as ClickUpTask],
-      warmTasks: [{} as ClickUpTask],
+      replierTasks: [replier("interested")],
       opportunityTasks: [],
     });
     expect(s.email.sent).toBe(50);
@@ -60,10 +73,38 @@ describe("summarizeMonth", () => {
     expect(s.warmHandoffs).toBe(1);
   });
 
+  it("counts warm handoffs as interested-only and breaks replies down by interest", () => {
+    const s = summarizeMonth({
+      month: "2026-07", window, fields, analytics: [],
+      reachedTasks: [],
+      replierTasks: [
+        replier("interested"),
+        replier("interested"),
+        replier("not_interested"),
+        replier("wrong_person"),
+        replier("neutral"),
+        replier(), // untagged (e.g. a reply from before the interest tagging shipped)
+      ],
+      opportunityTasks: [],
+    });
+    // Only genuine interest is a warm handoff — declines and neutrals are not.
+    expect(s.warmHandoffs).toBe(2);
+    expect(s.replyBreakdown).toEqual({
+      interested: 2,
+      not_interested: 1,
+      wrong_person: 1,
+      out_of_office: 0,
+      neutral: 1,
+      unknown: 1,
+    });
+    // Total replies handled this month = every replier, warm or not.
+    expect(s.repliesThisMonth).toBe(6);
+  });
+
   it("attributes only AI-sourced (orderindex 0) opportunities and sums CAD string values", () => {
     const s = summarizeMonth({
       month: "2026-07", window, fields, analytics: [],
-      reachedTasks: [], warmTasks: [],
+      reachedTasks: [], replierTasks: [],
       opportunityTasks: [
         oppTask({ id: "ai-1", leadSource: 0, est: "1500", status: "quote sent" }),
         oppTask({ id: "ai-2", leadSource: 0, est: "500", status: "move to production" }),
@@ -84,7 +125,7 @@ describe("summarizeMonth", () => {
   it("reports zero rates when nothing was sent", () => {
     const s = summarizeMonth({
       month: "2026-07", window, fields, analytics: [],
-      reachedTasks: [], warmTasks: [], opportunityTasks: [],
+      reachedTasks: [], replierTasks: [], opportunityTasks: [],
     });
     expect(s.email.openRate).toBe(0);
     expect(s.email.replyRate).toBe(0);
@@ -113,7 +154,7 @@ describe("buildMonthlyReport", () => {
       getAllTasks: vi.fn(async (listId: string) => {
         if (listId === config.clickupListId) return [
           { id: "p1", status: { status: "Outreach Active" }, date_created: "1", tags: [], custom_fields: [{ id: outreachField, value: String(Date.UTC(2026, 6, 10)) }] },
-          { id: "p2", status: { status: "Responded - Follow-up" }, date_created: "1", tags: [], custom_fields: [{ id: replyField, value: String(Date.UTC(2026, 6, 12)) }] },
+          { id: "p2", status: { status: "Responded - Follow-up" }, date_created: "1", tags: [{ name: "interest:interested" }], custom_fields: [{ id: replyField, value: String(Date.UTC(2026, 6, 12)) }] },
         ];
         return [{ id: "o1", status: { status: "quote sent" }, date_created: String(Date.UTC(2026, 6, 11)), tags: [], custom_fields: [{ id: "field-lead-source", value: 0 }, { id: "field-est-order-value", value: "800" }] }];
       }),

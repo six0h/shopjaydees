@@ -2234,6 +2234,7 @@ ff.http("replyPoll", async (req: Request, res: Response) => {
     logger,
   });
   const instantly = createInstantlyClient({ apiKey: config.instantlyApiKey, logger });
+  const gemini = createGeminiClient({ apiKey: config.geminiApiKey, logger });
 
   try {
     const dryRunOverride =
@@ -2246,7 +2247,7 @@ ff.http("replyPoll", async (req: Request, res: Response) => {
         ? { ...config, dryRun: dryRunOverride }
         : config;
 
-    const result = await runReplyPoll({ config: effectiveConfig, clickup, instantly, alerter, logger });
+    const result = await runReplyPoll({ config: effectiveConfig, clickup, instantly, gemini, alerter, logger });
 
     res.status(200).json(result);
   } catch (err) {

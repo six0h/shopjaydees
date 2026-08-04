@@ -29,11 +29,36 @@ export function monthWindow(month: string): MonthWindow {
 export const AI_OUTREACH_ORDERINDEX = 0;
 export const WON_OPPORTUNITY_STATUS = "move to production";
 
+// The interest labels the reply-poll agent writes as `interest:<label>` tags.
+// "unknown" covers replies from before interest tagging shipped, or a tag we
+// don't recognize.
+export const REPLY_INTEREST_LABELS = [
+  "interested",
+  "not_interested",
+  "wrong_person",
+  "out_of_office",
+  "neutral",
+] as const;
+export type ReplyInterestLabel = (typeof REPLY_INTEREST_LABELS)[number];
+export type ReplyBreakdown = Record<ReplyInterestLabel | "unknown", number>;
+
+/** Read the interest:<label> tag a replied prospect carries; "unknown" if none. */
+export function interestOf(task: ClickUpTask): ReplyInterestLabel | "unknown" {
+  const tag = task.tags?.find((t) => t.name?.startsWith("interest:"));
+  if (!tag) return "unknown";
+  const label = tag.name.slice("interest:".length);
+  return (REPLY_INTEREST_LABELS as readonly string[]).includes(label)
+    ? (label as ReplyInterestLabel)
+    : "unknown";
+}
+
 export interface MonthlyReportSummary {
   month: string;
   email: { sent: number; opens: number; replies: number; bounced: number; openRate: number; replyRate: number };
   prospectsReached: number;
   warmHandoffs: number;
+  repliesThisMonth: number;
+  replyBreakdown: ReplyBreakdown;
   aiSourced: {
     openedThisMonth: number;
     estValueThisMonth: number;
@@ -57,16 +82,28 @@ export function summarizeMonth(input: {
   window: MonthWindow;
   analytics: InstantlyCampaignAnalytics[];
   reachedTasks: ClickUpTask[];
-  warmTasks: ClickUpTask[];
+  replierTasks: ClickUpTask[];
   opportunityTasks: ClickUpTask[];
   fields: { leadSource: string; estOrderValue: string };
 }): MonthlyReportSummary {
-  const { window, analytics, opportunityTasks, fields } = input;
+  const { window, analytics, replierTasks, opportunityTasks, fields } = input;
 
   const sent = analytics.reduce((a, r) => a + r.emailsSent, 0);
   const opens = analytics.reduce((a, r) => a + r.opens, 0);
   const replies = analytics.reduce((a, r) => a + r.replies, 0);
   const bounced = analytics.reduce((a, r) => a + r.bounced, 0);
+
+  // Break this month's replies down by the interest the reply-poll agent tagged.
+  // Only genuine interest is a warm handoff — a decline is not a warm lead.
+  const replyBreakdown: ReplyBreakdown = {
+    interested: 0,
+    not_interested: 0,
+    wrong_person: 0,
+    out_of_office: 0,
+    neutral: 0,
+    unknown: 0,
+  };
+  for (const t of replierTasks) replyBreakdown[interestOf(t)] += 1;
 
   const aiSourced = opportunityTasks.filter(
     (t) => fieldValue(t, fields.leadSource) === AI_OUTREACH_ORDERINDEX
@@ -90,7 +127,9 @@ export function summarizeMonth(input: {
       replyRate: sent === 0 ? 0 : replies / sent,
     },
     prospectsReached: input.reachedTasks.length,
-    warmHandoffs: input.warmTasks.length,
+    warmHandoffs: replyBreakdown.interested,
+    repliesThisMonth: replierTasks.length,
+    replyBreakdown,
     aiSourced: {
       openedThisMonth: openedThisMonth.length,
       estValueThisMonth: openedThisMonth.reduce((a, t) => a + estValue(t, fields.estOrderValue), 0),
@@ -122,7 +161,8 @@ export async function buildMonthlyReport(
 
   const prospects = await clickup.getAllTasks(config.clickupListId);
   const reachedTasks = prospects.filter((t) => dateFieldInWindow(t, config.outreachFields.outreachStartedDate, window));
-  const warmTasks = prospects.filter((t) => dateFieldInWindow(t, config.outreachFields.lastReplyDate, window));
+  // Every prospect that replied this month (warm or not); interest is read per-task.
+  const replierTasks = prospects.filter((t) => dateFieldInWindow(t, config.outreachFields.lastReplyDate, window));
 
   const opportunityTasks = await clickup.getAllTasks(config.reportFields.crmLeadsListId);
 
@@ -131,7 +171,7 @@ export async function buildMonthlyReport(
     window,
     analytics,
     reachedTasks,
-    warmTasks,
+    replierTasks,
     opportunityTasks,
     fields: { leadSource: config.reportFields.leadSource, estOrderValue: config.reportFields.estOrderValue },
   });
