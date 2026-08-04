@@ -30,6 +30,12 @@ export function makeDiscoverResponse(companies: DiscoverCompany[]) {
   };
 }
 
+const COMPANY_SIZE_OPTIONS = [
+  { id: "cs0", name: "Micro (1-10)", orderindex: 0 },
+  { id: "cs1", name: "Small (11-50)", orderindex: 1 },
+  { id: "cs2", name: "1-50 (small+micro)", orderindex: 2 },
+];
+
 export function makeProspectingRequestTask(opts: {
   id?: string;
   segment?: string;
@@ -38,14 +44,29 @@ export function makeProspectingRequestTask(opts: {
   targetVolume?: number;
   status?: string;
   dateUpdated?: string;
+  companySize?: string;
 }): ClickUpTask {
   const segmentIndex = { Business: 0, School: 1, Team: 2 }[opts.segment ?? "Business"] ?? 0;
+  const companySizeField =
+    opts.companySize !== undefined
+      ? [
+          {
+            id: "field-company-size",
+            name: "Company Size",
+            value:
+              COMPANY_SIZE_OPTIONS.find((o) => o.name === opts.companySize)?.orderindex ?? 0,
+            type: "drop_down",
+            type_config: { options: COMPANY_SIZE_OPTIONS },
+          },
+        ]
+      : [];
   return makeClickUpTask({
     id: opts.id ?? "req_001",
     name: `${opts.segment ?? "Business"} — ${opts.category ?? "Trades & Contractors"} in ${opts.city ?? "Surrey"}`,
     status: { status: opts.status ?? "Requested" },
     date_updated: opts.dateUpdated ?? String(Date.now()),
     custom_fields: [
+      ...companySizeField,
       {
         id: "field-segment",
         name: "Segment",

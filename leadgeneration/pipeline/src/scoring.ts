@@ -15,6 +15,13 @@ interface ScoreInput {
   seniority: string | null;
   headcount: string | null;
   hasDomain: boolean;
+  /**
+   * The Prospecting Request deliberately targets small companies (Company Size
+   * band of 50 or fewer). When true, the headcount-size signals are neutralised:
+   * no +1 for larger firms and no -1 for small ones, so intentionally-small leads
+   * compete on contact quality alone rather than being parked for being small.
+   */
+  smallTargeting?: boolean;
 }
 
 function headcountAtLeast11(headcount: string | null): boolean {
@@ -53,8 +60,8 @@ export function scoreLead(input: ScoreInput): LeadScoreResult {
     reasons.push(`${input.contactTitle} title`);
   }
 
-  // +1 for meaningful headcount (11+)
-  if (headcountAtLeast11(input.headcount)) {
+  // +1 for meaningful headcount (11+), unless the ticket is targeting small firms
+  if (!input.smallTargeting && headcountAtLeast11(input.headcount)) {
     score += 1;
     reasons.push(`${input.headcount} headcount`);
   }
@@ -70,8 +77,10 @@ export function scoreLead(input: ScoreInput): LeadScoreResult {
   }
 
   // -1 for small or unknown headcount when a non-DM title is present
-  // (DM titles are exempt: if they're the decision-maker we don't penalise unknown size)
+  // (DM titles are exempt: if they're the decision-maker we don't penalise unknown size).
+  // Skipped entirely when the ticket is deliberately targeting small firms.
   if (
+    !input.smallTargeting &&
     input.contactTitle !== null &&
     !isDecisionMaker(input.contactTitle) &&
     input.seniority !== "executive" &&

@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { categoryToDiscoverFilters, cityToPhase } from "../src/mapping.js";
+import {
+  categoryToDiscoverFilters,
+  cityToPhase,
+  COMPANY_SIZE_HEADCOUNTS,
+  headcountsAreSmall,
+} from "../src/mapping.js";
 
 describe("cityToPhase", () => {
   it("maps Surrey to Phase 1", () => {
@@ -59,5 +64,37 @@ describe("categoryToDiscoverFilters", () => {
   it("falls back to category name as keyword for unknown categories", () => {
     const filters = categoryToDiscoverFilters("Other" as any, "Vancouver");
     expect(filters.keywords?.include).toEqual(["Other"]);
+  });
+});
+
+describe("COMPANY_SIZE_HEADCOUNTS", () => {
+  it("maps Micro (1-10) to the 1-10 headcount range", () => {
+    expect(COMPANY_SIZE_HEADCOUNTS["Micro (1-10)"]).toEqual(["1-10"]);
+  });
+
+  it("maps Small (11-50) to the 11-50 headcount range", () => {
+    expect(COMPANY_SIZE_HEADCOUNTS["Small (11-50)"]).toEqual(["11-50"]);
+  });
+
+  it("maps 1-50 (small+micro) to both small ranges", () => {
+    expect(COMPANY_SIZE_HEADCOUNTS["1-50 (small+micro)"]).toEqual(["1-10", "11-50"]);
+  });
+});
+
+describe("headcountsAreSmall", () => {
+  it("is true when every range tops out at 50 or fewer", () => {
+    expect(headcountsAreSmall(["1-10"])).toBe(true);
+    expect(headcountsAreSmall(["11-50"])).toBe(true);
+    expect(headcountsAreSmall(["1-10", "11-50"])).toBe(true);
+  });
+
+  it("is false when any range exceeds 50", () => {
+    expect(headcountsAreSmall(["1-10", "11-50", "51-200"])).toBe(false);
+    expect(headcountsAreSmall(["51-200"])).toBe(false);
+    expect(headcountsAreSmall(["10001+"])).toBe(false);
+  });
+
+  it("is false for an empty range set", () => {
+    expect(headcountsAreSmall([])).toBe(false);
   });
 });

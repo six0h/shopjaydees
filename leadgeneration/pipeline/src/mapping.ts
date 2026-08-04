@@ -57,3 +57,33 @@ export function categoryToDiscoverFilters(
     keywords: { include: keywords, match: "any" },
   };
 }
+
+/**
+ * Optional per-ticket "Company Size" dropdown on a Prospecting Request, mapped to
+ * the Hunter Discover headcount ranges it should target. A blank field is absent
+ * from this map and the pipeline falls back to config.hunterDefaultHeadcount.
+ * Options are all small on purpose (the client wants to reach smaller businesses).
+ */
+export const COMPANY_SIZE_HEADCOUNTS: Record<string, string[]> = {
+  "Micro (1-10)": ["1-10"],
+  "Small (11-50)": ["11-50"],
+  "1-50 (small+micro)": ["1-10", "11-50"],
+};
+
+/** Upper bound of a Hunter headcount range string ("11-50" -> 50, "10001+" -> Infinity). */
+function headcountRangeMax(range: string): number {
+  const bounded = range.match(/^(\d+)-(\d+)$/);
+  if (bounded) return parseInt(bounded[2], 10);
+  const open = range.match(/^(\d+)\+$/);
+  if (open) return Number.POSITIVE_INFINITY;
+  return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * True when every requested headcount range tops out at 50 or fewer, i.e. the
+ * ticket is deliberately targeting small companies. Used to neutralise the
+ * headcount bias in lead scoring so small leads are not parked for being small.
+ */
+export function headcountsAreSmall(ranges: string[]): boolean {
+  return ranges.length > 0 && ranges.every((r) => headcountRangeMax(r) <= 50);
+}

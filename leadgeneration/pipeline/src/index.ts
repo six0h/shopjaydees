@@ -29,7 +29,12 @@ import type { FirecrawlClient } from "./clients/firecrawl.js";
 import { createGeminiClient } from "./clients/gemini.js";
 import type { GeminiClient } from "./clients/gemini.js";
 import { scoreLead } from "./scoring.js";
-import { categoryToDiscoverFilters, cityToPhase } from "./mapping.js";
+import {
+  categoryToDiscoverFilters,
+  cityToPhase,
+  COMPANY_SIZE_HEADCOUNTS,
+  headcountsAreSmall,
+} from "./mapping.js";
 import { loadConfig } from "./config.js";
 import { createLogger } from "./logger.js";
 import { createAlerter } from "./alerting.js";
@@ -101,11 +106,14 @@ function extractRequestFields(task: ClickUpTask): {
   category: Category;
   targetCity: City;
   targetVolume: number;
+  companySizeHeadcount: string[] | null;
 } {
   let segment: Segment = "Business";
   let category: Category = "Other";
   let targetCity: City = "Surrey";
   let targetVolume = 25;
+  // null = the optional "Company Size" field was left blank; fall back to the default band.
+  let companySizeHeadcount: string[] | null = null;
 
   for (const field of task.custom_fields) {
     if (field.name === "Segment" && field.type_config?.options) {
@@ -126,6 +134,12 @@ function extractRequestFields(task: ClickUpTask): {
       );
       if (opt) targetCity = opt.name as City;
     }
+    if (field.name === "Company Size" && field.type_config?.options) {
+      const opt = field.type_config.options.find(
+        (o) => o.orderindex === field.value
+      );
+      if (opt) companySizeHeadcount = COMPANY_SIZE_HEADCOUNTS[opt.name] ?? null;
+    }
     // The live list names this "Max Results"; "Target Volume" is the legacy
     // name. ClickUp returns number-field values as strings, so coerce.
     if (field.name === "Max Results" || field.name === "Target Volume") {
@@ -136,7 +150,7 @@ function extractRequestFields(task: ClickUpTask): {
     }
   }
 
-  return { segment, category, targetCity, targetVolume };
+  return { segment, category, targetCity, targetVolume, companySizeHeadcount };
 }
 
 // --- Discovery Agent Core ---
@@ -222,8 +236,13 @@ export async function runDiscovery(
 
   // Process each request
   for (const requestTask of requests) {
-    const { segment, category, targetCity, targetVolume } =
+    const { segment, category, targetCity, targetVolume, companySizeHeadcount } =
       extractRequestFields(requestTask);
+    // Ticket's Company Size band overrides the default headcount for this request only.
+    const requestHeadcount = companySizeHeadcount ?? config.hunterDefaultHeadcount;
+    const smallTargeting = companySizeHeadcount
+      ? headcountsAreSmall(companySizeHeadcount)
+      : false;
     const requestResult: RequestResult = {
       requestTaskId: requestTask.id,
       segment,
@@ -245,7 +264,7 @@ export async function runDiscovery(
 
       // Step 1: Discover companies (free)
       const filters = categoryToDiscoverFilters(category, targetCity);
-      filters.headcount = config.hunterDefaultHeadcount;
+      filters.headcount = requestHeadcount;
       logger.info("Discovering companies", { category, targetCity, filters });
       const discoverResponse = await hunter.discover(filters);
       const discoveredCompanies = discoverResponse.data;
@@ -311,8 +330,9 @@ export async function runDiscovery(
           emailConfidence: bestContact.confidence,
           contactTitle: bestContact.position,
           seniority: bestEmail?.seniority ?? null,
-          headcount: config.hunterDefaultHeadcount[0] ?? null,
+          headcount: requestHeadcount[0] ?? null,
           hasDomain: true,
+          smallTargeting,
         });
 
         const status = scoreResult.score >= 3 ? "Enriched" : "Parked";

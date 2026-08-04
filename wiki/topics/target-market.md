@@ -28,6 +28,8 @@ Three prospect segments, each with its own templates and seasonal variation. The
 - **Schools** (heavy late August through February). Elementary and secondary (size 10 to 500), independent and private schools (10 to 200, higher budgets), daycares and preschools (5 to 50), post-secondary clubs. Product angle: spirit wear, staff shirts, event merch, grad gear.
 - **Teams** (heavy spring and fall). Youth sports leagues (size 5 to 100), adult rec leagues (5 to 50), dance and performance (5 to 50), community sport organizations (10 to 200). Product angle: jerseys, warmups, fan gear, tournament gear, performance wear.
 
+Company size is also selectable per prospecting request via an optional **Company Size** band, so Jenn can deliberately target smaller companies on a given request rather than the default size range. See [Per-ticket company size targeting](../decisions/per-ticket-company-size-targeting.md).
+
 ## Geography
 
 The pitch lays out a start-local, scale-wide expansion in phases:

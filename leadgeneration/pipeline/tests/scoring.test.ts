@@ -172,3 +172,51 @@ describe("seniority-based scoring", () => {
     expect(result.score).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("small-targeting scoring", () => {
+  it("suppresses the -1 small-headcount penalty when smallTargeting is set", () => {
+    // Non-owner contact at a 1-10 company would score 2 by default (base 3 - 1).
+    const withoutFlag = scoreLead({
+      emailConfidence: 70,
+      contactTitle: "Manager",
+      seniority: null,
+      headcount: "1-10",
+      hasDomain: true,
+    });
+    expect(withoutFlag.score).toBe(2);
+
+    const withFlag = scoreLead({
+      emailConfidence: 70,
+      contactTitle: "Manager",
+      seniority: null,
+      headcount: "1-10",
+      hasDomain: true,
+      smallTargeting: true,
+    });
+    expect(withFlag.score).toBe(3);
+  });
+
+  it("suppresses the +1 large-headcount bonus when smallTargeting is set", () => {
+    const withFlag = scoreLead({
+      emailConfidence: 70,
+      contactTitle: null,
+      seniority: null,
+      headcount: "11-50",
+      hasDomain: true,
+      smallTargeting: true,
+    });
+    expect(withFlag.score).toBe(3);
+  });
+
+  it("still rewards a decision-maker title under smallTargeting", () => {
+    const result = scoreLead({
+      emailConfidence: 70,
+      contactTitle: "Owner",
+      seniority: null,
+      headcount: "1-10",
+      hasDomain: true,
+      smallTargeting: true,
+    });
+    expect(result.score).toBe(4);
+  });
+});

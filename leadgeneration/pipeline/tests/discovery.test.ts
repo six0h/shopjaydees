@@ -519,6 +519,46 @@ describe("Max Results (target volume) handling", () => {
   });
 });
 
+describe("Company Size (per-ticket headcount) handling", () => {
+  it("uses the ticket's Company Size band as the Discover headcount filter", async () => {
+    const config = makeConfig();
+    const clickup = makeMockClickUp();
+    const hunter = makeMockHunter();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    const getTasksMock = clickup.getTasks as ReturnType<typeof vi.fn>;
+    getTasksMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeProspectingRequestTask({ companySize: "1-50 (small+micro)" })])
+      .mockResolvedValueOnce([]);
+
+    await runDiscovery({ config, clickup, hunter, alerter, logger });
+
+    const filters = (hunter.discover as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(filters.headcount).toEqual(["1-10", "11-50"]);
+  });
+
+  it("falls back to the default headcount when Company Size is blank", async () => {
+    const config = makeConfig();
+    const clickup = makeMockClickUp();
+    const hunter = makeMockHunter();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    const getTasksMock = clickup.getTasks as ReturnType<typeof vi.fn>;
+    getTasksMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeProspectingRequestTask({})])
+      .mockResolvedValueOnce([]);
+
+    await runDiscovery({ config, clickup, hunter, alerter, logger });
+
+    const filters = (hunter.discover as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(filters.headcount).toEqual(config.hunterDefaultHeadcount);
+  });
+});
+
 describe("dry-run performs zero external writes", () => {
   it("never mutates the Prospecting Request or creates leads when dryRun is true", async () => {
     const config = { ...makeConfig(), dryRun: true };
