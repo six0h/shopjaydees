@@ -9,7 +9,9 @@ import {
   runPersonalizationDrain,
   extractLeadData,
   validateDrafts,
+  companyNameMentioned,
   buildPrompt,
+  assignAngle,
   sanitizeDraftText,
   sanitizeDrafts,
 } from "../src/index.js";
@@ -98,6 +100,54 @@ describe("extractLeadData", () => {
     const lead = extractLeadData(task, config);
 
     expect(lead.segment).toBe("School");
+  });
+});
+
+describe("companyNameMentioned", () => {
+  it("matches the full company name (legal suffix dropped)", () => {
+    expect(
+      companyNameMentioned("Glad to help ABC Plumbing win more work.", "ABC Plumbing Ltd.")
+    ).toBe(true);
+  });
+
+  it("matches a distinctive leading fragment", () => {
+    expect(
+      companyNameMentioned("I really liked what Blue Pine is building.", "Blue Pine Enterprises Ltd.")
+    ).toBe(true);
+  });
+
+  it("matches an all-caps acronym first token on its own (3+ chars)", () => {
+    // Natural mention: writers say "IMS", never the full legal name.
+    expect(
+      companyNameMentioned(
+        "I came across IMS while researching mining suppliers.",
+        "IMS Innovative Mining Services Inc"
+      )
+    ).toBe(true);
+  });
+
+  it("a stray hyphen token in the legal name does not block a full-name match", () => {
+    // "... Inc - Metal Wear Solutions": the standalone '-' must not pollute the
+    // candidate fragments. A body naming the company still matches.
+    expect(
+      companyNameMentioned(
+        "Reaching out to IMS Innovative Mining Services about work wear.",
+        "IMS Innovative Mining Services Inc - Metal Wear Solutions"
+      )
+    ).toBe(true);
+  });
+
+  it("a short non-acronym leading token is not distinctive on its own", () => {
+    // "A1" alone should not count as naming the company.
+    expect(
+      companyNameMentioned("We looked at A1 options last week.", "A1 Doors & Mouldings")
+    ).toBe(false);
+  });
+
+  it("returns false when the company is never named", () => {
+    expect(
+      companyNameMentioned("I came across your company while researching trades.", "ABC Plumbing Ltd.")
+    ).toBe(false);
   });
 });
 
@@ -195,6 +245,12 @@ describe("validateDrafts", () => {
 });
 
 describe("sanitizeDraftText", () => {
+  it("converts double-escaped newlines to real newlines", () => {
+    expect(sanitizeDraftText("Hi Mike,\\n\\nQuick note.")).toBe(
+      "Hi Mike,\n\nQuick note."
+    );
+  });
+
   it("replaces a spaced em dash used as a clause separator with a comma", () => {
     expect(sanitizeDraftText("Our gear is durable — built for the trades.")).toBe(
       "Our gear is durable, built for the trades."
@@ -277,7 +333,7 @@ describe("buildPrompt", () => {
     } as LeadData;
     const scrapedContent = "# ABC Plumbing\n\nServing Surrey since 2005.";
 
-    const prompt = buildPrompt(lead, scrapedContent, seasonal);
+    const prompt = buildPrompt(lead, scrapedContent, seasonal, "deadline");
 
     expect(prompt).toContain("ABC Plumbing Ltd.");
     expect(prompt).toContain("Mike Thompson");
@@ -307,7 +363,7 @@ describe("buildPrompt", () => {
       isReEngagement: true,
     } as LeadData;
 
-    const prompt = buildPrompt(lead, "", seasonal);
+    const prompt = buildPrompt(lead, "", seasonal, "deadline");
 
     expect(prompt).toContain("RE-ENGAGEMENT NOTICE");
     expect(prompt).toContain("completely different angle");
@@ -328,14 +384,14 @@ describe("buildPrompt", () => {
       isReEngagement: false,
     } as LeadData;
 
-    const prompt = buildPrompt(lead, "", seasonal);
+    const prompt = buildPrompt(lead, "", seasonal, "deadline");
 
     expect(prompt).toContain("No website content available");
   });
 
   it("instructs the model to write like a human and avoid AI tells", () => {
     const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
-    const prompt = buildPrompt(lead, "", seasonal);
+    const prompt = buildPrompt(lead, "", seasonal, "deadline");
 
     // The single most common AI tell we care about.
     expect(prompt.toLowerCase()).toContain("em dash");
@@ -346,7 +402,7 @@ describe("buildPrompt", () => {
 
   it("frames Ellie as outreach staff, not the owner of Jaydees", () => {
     const lead = { segment: "Business", companyName: "X", contactName: "Y Z" } as LeadData;
-    const prompt = buildPrompt(lead, "", seasonal);
+    const prompt = buildPrompt(lead, "", seasonal, "deadline");
 
     // Ellie works at Jaydees; she does not run/own it. The prompt must say so
     // and must not carry the old owner-implying tone line.
@@ -360,33 +416,65 @@ describe("buildPrompt", () => {
     const teamLead = { segment: "Team" } as LeadData;
     const businessLead = { segment: "Business" } as LeadData;
 
-    expect(buildPrompt(schoolLead, "", seasonal)).toContain("100 schools");
-    expect(buildPrompt(teamLead, "", seasonal)).toContain("raise thousands");
-    expect(buildPrompt(businessLead, "", seasonal)).toContain("12 to 250+");
+    expect(buildPrompt(schoolLead, "", seasonal, "deadline")).toContain("100 schools");
+    expect(buildPrompt(teamLead, "", seasonal, "deadline")).toContain("raise thousands");
+    expect(buildPrompt(businessLead, "", seasonal, "deadline")).toContain("12 to 250+");
   });
 
   it("injects the resolved selling season and forbids the others", () => {
-    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, "deadline");
     expect(prompt).toContain("FALL");
     expect(prompt).toContain("NEVER reference: spring, summer, winter");
     expect(prompt).toContain("Lock in your fall order early");
   });
 
   it("does NOT tell the model to offer a mockup or catalog", () => {
-    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, "deadline");
     expect(prompt.toLowerCase()).not.toContain("mockup");
     expect(prompt.toLowerCase()).not.toContain("catalog");
   });
 
   it("instructs a no-obligation quote as the concrete offer", () => {
-    const prompt = buildPrompt(makeLeadData(), "", seasonal);
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, "deadline");
     expect(prompt.toLowerCase()).toContain("no-obligation quote");
   });
 
   it("appends retry feedback when provided", () => {
-    const prompt = buildPrompt(makeLeadData(), "", seasonal, 'draft names a specific product');
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, "deadline", 'draft names a specific product');
     expect(prompt).toContain("YOUR PREVIOUS DRAFT WAS REJECTED");
     expect(prompt).toContain("draft names a specific product");
+  });
+
+  it("carries the impact rules: real-calendar urgency, direct CTA, break-up Touch 3", () => {
+    const prompt = buildPrompt(makeLeadData(), "", seasonal, "deadline");
+    expect(prompt).toContain("WHY NOW");
+    expect(prompt).toContain("CTA RULES");
+    expect(prompt).toContain("break-up email");
+    // Fake urgency stays banned in the spec itself.
+    expect(prompt.toLowerCase()).toContain("never");
+    expect(prompt).toContain('"spots filling up"');
+    expect(prompt).not.toContain("no pressure.");
+  });
+
+  it("injects the per-lead angle block", () => {
+    const deadline = buildPrompt(makeLeadData(), "", seasonal, "deadline");
+    expect(deadline).toContain("ANGLE FOR THIS PROSPECT: DEADLINE-FIRST");
+
+    const directAsk = buildPrompt(makeLeadData(), "", seasonal, "direct-ask");
+    expect(directAsk).toContain("ANGLE FOR THIS PROSPECT: DIRECT-ASK-FIRST");
+  });
+});
+
+describe("assignAngle", () => {
+  it("is deterministic for the same task id", () => {
+    expect(assignAngle("abc123")).toBe(assignAngle("abc123"));
+  });
+
+  it("splits ids across both angles", () => {
+    const angles = new Set(
+      ["a", "b", "ab", "abc", "task1", "task2"].map((id) => assignAngle(id))
+    );
+    expect(angles).toEqual(new Set(["deadline", "direct-ask"]));
   });
 });
 
@@ -831,9 +919,9 @@ describe("runPersonalization", () => {
 describe("validateDrafts — natural company-name mentions", () => {
   function draftsMentioning(body: string) {
     return makeMockDraftOutput({
-      email_touch_1_body: body,
-      email_touch_2_body: "B".repeat(90),
-      email_touch_3_body: "C".repeat(70),
+      email_touch_1_body: `${body} Want me to put a fall quote together? Ellie`,
+      email_touch_2_body: `${"B".repeat(90)} Should I get a quote together? Ellie`,
+      email_touch_3_body: `${"C".repeat(70)} Should I close the file? Ellie`,
     });
   }
 
@@ -878,7 +966,7 @@ describe("validateDrafts — natural company-name mentions", () => {
 
 describe("validateDrafts — catalog guardrail (Jaydees has no catalog)", () => {
   const lead = () => makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
-  const cleanBody = `Hi Pardeep, Monark's spring work caught my eye. ${"x".repeat(100)}`;
+  const cleanBody = `Hi Pardeep, Monark's spring work caught my eye. ${"x".repeat(100)} Want a fall quote? Ellie`;
 
   it("rejects a draft body that offers to send a catalog", () => {
     const drafts = makeMockDraftOutput({
@@ -1049,7 +1137,7 @@ describe("runPersonalizationDrain — self-retriggering drain loop", () => {
 
 describe("validateDrafts — product & price guardrails (zero product talk)", () => {
   const lead = () => makeLeadData({ companyName: "Monark", contactName: "Pardeep Dosanjh" });
-  const cleanBody = `Hi Pardeep, Monark caught my eye. We do custom apparel for local teams. ${"x".repeat(80)}`;
+  const cleanBody = `Hi Pardeep, Monark caught my eye. We do custom apparel for local teams. ${"x".repeat(80)} Want a fall quote? Ellie`;
 
   it("passes a clean draft that names no product", () => {
     expect(validateDrafts(makeMockDraftOutput({ email_touch_1_body: cleanBody }), lead())).toEqual([]);

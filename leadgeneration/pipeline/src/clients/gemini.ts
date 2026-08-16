@@ -77,7 +77,7 @@ const RESPONSE_SCHEMA = {
     email_touch_1_body: {
       type: "string",
       description:
-        "Full email body for Touch 1. Personalized opening, segment-tailored value prop, Wear It Forward mention, soft CTA.",
+        "Full email body for Touch 1. Personalized opening, segment-tailored value prop, Wear It Forward mention, and a why-now tied to the coming season. Ends with one specific question the reader can answer with a yes or no.",
     },
     email_touch_2_subject: {
       type: "string",
@@ -86,7 +86,7 @@ const RESPONSE_SCHEMA = {
     email_touch_2_body: {
       type: "string",
       description:
-        "Full email body for Touch 2. Lead with a useful insight or specific idea for their situation. Light mention of Jaydees.",
+        "Full email body for Touch 2. Lead with a useful insight or specific idea for their situation, then restate plainly that the seasonal ordering window is getting shorter. Light mention of Jaydees. Ends with one direct question.",
     },
     email_touch_3_subject: {
       type: "string",
@@ -96,7 +96,7 @@ const RESPONSE_SCHEMA = {
     email_touch_3_body: {
       type: "string",
       description:
-        "Full email body for Touch 3. Brief, friendly, leaves door open. No pressure.",
+        "Full email body for Touch 3. The break-up email: brief and warm, Ellie is closing the file for the season, one-line recap of the offer, an easy out, one final yes-or-no question.",
     },
     linkedin_message: {
       type: "string",

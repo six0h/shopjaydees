@@ -230,15 +230,15 @@ export function makeMockDraftOutput(
       "Sponsors Surrey Minor Hockey Association. Participated in Habitat for Humanity builds in 2025.",
     personalization_hooks:
       "Family business angle (20+ years), community involvement via minor hockey sponsorship bridges to Wear It Forward.",
-    email_touch_1_subject: "Quick question for your crew",
+    email_touch_1_subject: "Fall crew apparel for ABC Plumbing",
     email_touch_1_body:
-      "Hi Mike,\n\nI came across ABC Plumbing while looking into trades companies in Surrey and really liked what I saw. Twenty years serving the Fraser Valley is no small thing.\n\nI'm Ellie with Jaydees Apparel. We help trades businesses like yours with custom apparel that puts your brand front and centre. One thing that makes us a bit different is our Wear It Forward program, where a portion of every order goes back to community initiatives.\n\nWould it be worth a quick conversation? Happy to put a no-obligation quote together if you've got something in mind.\n\nEllie",
-    email_touch_2_subject: "An idea for your team",
+      "Hi Mike,\n\nI came across ABC Plumbing while looking into trades companies in Surrey. Twenty years serving the Fraser Valley is no small thing.\n\nI'm Ellie with Jaydees Apparel. We do custom apparel for trades businesses, and fall is when crews are back at full tilt, so the orders being placed now are the ones that arrive in time for it. A portion of every order also goes back to community causes through our Wear It Forward program.\n\nWant me to put a no-obligation fall quote together for you this week?\n\nEllie",
+    email_touch_2_subject: "The fall window for your crew",
     email_touch_2_body:
-      "Hi Mike,\n\nOne thing we hear from trades companies is that a consistent branded look across the crew makes a real difference on site. Clients notice, and it builds trust.\n\nWe make it easy to set that up without minimums or inventory headaches. Happy to share some examples if that would help.\n\nEllie",
-    email_touch_3_subject: "Checking in",
+      "Hi Mike,\n\nOne thing we hear from trades companies is that a consistent branded look across the crew builds trust on site before anyone says a word.\n\nThe timing part is real: production lead times mean orders that start in the next couple of weeks land before the fall rush, and later ones mostly don't. Should I get a quote together for ABC Plumbing so you can see what it looks like?\n\nEllie",
+    email_touch_3_subject: "Should I close your file?",
     email_touch_3_body:
-      "Hi Mike,\n\nJust a quick follow-up in case the timing is better now. If getting your crew set up is on the radar, I'd love to help. No pressure, happy to connect whenever it makes sense.\n\nEllie",
+      "Hi Mike,\n\nI'm wrapping up my fall outreach list this week. If custom apparel for the ABC Plumbing crew isn't in the cards right now, that's an easy no and I'll stop emailing. Should I close the file, or do you want that quote first?\n\nEllie",
     linkedin_message:
       "Hi Mike, came across ABC Plumbing and love that you support Surrey minor hockey. Would love to connect!",
     casl_opt_out_check: true,

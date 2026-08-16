@@ -11,6 +11,13 @@ export interface Config {
   sendBatchSize?: number;
   /** Client business name, prefixed to Instantly campaign names for human troubleshooting. */
   businessName: string;
+  /**
+   * Prior business-name prefixes still present on live Instantly campaigns. The
+   * monthly report matches campaigns named with `businessName` OR any of these, so
+   * a mid-stream rename (e.g. ShopJaydees -> Jaydees Apparel) does not orphan the
+   * campaigns created under the old prefix during the transition month.
+   */
+  legacyBusinessNames?: string[];
   clickupListId: string;
   clickupProspectingListId: string;
   clickupRateLimit: number;
@@ -122,6 +129,10 @@ export function loadConfig(): Config {
       ? parseInt(process.env.SEND_BATCH_SIZE, 10)
       : undefined,
     businessName: process.env.CAMPAIGN_BUSINESS_NAME?.trim() || "ShopJaydees",
+    legacyBusinessNames: (process.env.CAMPAIGN_LEGACY_BUSINESS_NAMES ?? "ShopJaydees")
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean),
     clickupListId: required("CLICKUP_LIST_ID"),
     clickupProspectingListId: required("CLICKUP_PROSPECTING_LIST_ID"),
     clickupRateLimit: parseInt(process.env.CLICKUP_RATE_LIMIT ?? "90", 10),

@@ -594,6 +594,7 @@ export function extractLeadData(task: ClickUpTask, config: Config): LeadData {
  */
 export function sanitizeDraftText(s: string): string {
   return s
+    .replace(/\\n/g, "\n") // Gemini sometimes double-escapes newlines; a literal "\n" would render in the email
     .replace(/(\d)\s*[—–]\s*(\d)/g, "$1-$2") // numeric ranges -> hyphen
     .replace(/\s*[—–]\s*/g, ", ") // em/en dash as clause separator -> comma
     .replace(/[“”]/g, '"') // curly double quotes -> straight
@@ -617,10 +618,24 @@ export function sanitizeDrafts(drafts: GeminiDraftOutput): GeminiDraftOutput {
   };
 }
 
+/**
+ * The two message angles under test. Assignment is a deterministic hash of the
+ * ClickUp task id so retries and re-runs always produce the same angle for the
+ * same lead, and the angle:<name> tag on the task stays truthful.
+ */
+export type OutreachAngle = "deadline" | "direct-ask";
+
+export function assignAngle(taskId: string): OutreachAngle {
+  let sum = 0;
+  for (let i = 0; i < taskId.length; i++) sum += taskId.charCodeAt(i);
+  return sum % 2 === 0 ? "deadline" : "direct-ask";
+}
+
 export function buildPrompt(
   lead: LeadData,
   scrapedContent: string,
   seasonal: SeasonalContext,
+  angle: OutreachAngle,
   retryFeedback?: string
 ): string {
   const websiteSection =
@@ -646,9 +661,37 @@ Jaydees Apparel runs "Wear It Forward" — a portion of every order goes to comm
 initiatives. This is a genuine differentiator, not a gimmick. Mention it naturally
 once in Touch 1, but don't lead with it.
 
-TONE: Friendly > Professional > Casual. Warm and personal, like a real person from
-a local business reaching out. First-name basis. No corporate jargon, no buzzwords,
-no pressure.
+TONE: Warm, direct, confident. Ellie writes like a real person from a local business
+who has a genuine reason to reach out this week, not someone apologizing for taking
+up space in an inbox. First-name basis. No corporate jargon, no buzzwords. Confident
+never means pushy: no guilt trips, no fake scarcity, no invented discounts. The only
+urgency these emails are allowed is the real calendar (see WHY NOW below).
+
+WHY NOW (the engine of every touch):
+Custom apparel has real production lead times. A conversation that starts this week
+means gear in hand before the ${seasonal.sellingSeason} season starts; a conversation
+that starts in a month probably does not. Every touch must make that concrete for
+THIS prospect: name what the coming season looks like in their world (crew back on
+site, league starting, staff in front of customers) and tie the timing to it. Never
+invent a discount, a deadline Jaydees did not set, or "spots filling up". Never
+claim Jaydees is "closing a production window", has a cutoff date, or can only
+guarantee delivery if they order by a certain month. The deadline belongs to the
+prospect's season, not to us: orders that start now arrive before the season,
+orders that start later may not. Real calendar only.
+
+CTA RULES:
+- Every touch ends with exactly one specific question the reader can answer in one
+  short line, followed only by Ellie's sign-off. Good: "Want me to put a
+  no-obligation ${seasonal.sellingSeason} quote together for you this week?" or
+  "Should I close the file on this?"
+- Ask it once, at the end. Do not ask a second question earlier in the same email.
+- Banned closers: "worth a quick chat", "worth a conversation", "just checking in",
+  "no worries if" anything, "whenever you have time", "feel free to reach out",
+  "let me know your thoughts", "no pressure". These are wallpaper and get deleted
+  unread. An easy out is fine, but write it plainly ("that's an easy no and I'll
+  stop emailing"), never as "no worries".
+- Ask for something small and concrete (a yes or no, a quote), never "a call to
+  discuss" or an open-ended chat.
 
 WRITE LIKE A HUMAN — AVOID AI TELLS. These patterns scream "written by AI" and
 kill replies. Follow normal human grammar and punctuation:
@@ -690,8 +733,17 @@ SOCIAL PROOF (use the one matching the segment):
 ${socialProof}
 
 INSTRUCTIONS:
-1. Write 3 email touches following the sequence structure (Touch 1: intro + value,
-   Touch 2: value-add follow-up, Touch 3: friendly check-in).
+1. Write 3 email touches following the sequence structure:
+   - Touch 1 (Day 0): a specific observation about their business, why this matters
+     right now for the coming season, and the direct ask (the quote question).
+   - Touch 2 (Day 4): the window is real and getting shorter. Lead with one genuinely
+     useful, specific idea for their situation, then restate the timing plainly and
+     repeat the ask in fresh words.
+   - Touch 3 (Day 9): the break-up email. Ellie is wrapping up her ${seasonal.sellingSeason}
+     outreach list and will close the file on ${lead.companyName} unless they say
+     otherwise. One-line recap of the offer, a genuinely easy out, and one final
+     yes-or-no question (for example "Should I close the file, or do you want that
+     quote first?"). Brief and warm, never guilt-tripping.
 2. Reference something specific from their website or business. Do not be generic.
 3. Name the company in the Touch 1 body, and address ${(lead.contactName ?? "").split(" ")[0]}
    by first name. Writing "${lead.companyName}" how a person would say it out loud
@@ -717,6 +769,19 @@ INSTRUCTIONS:
 10. If no website content was available, still write the emails using the company data,
    but note that in the website_scrape_summary field.
 `;
+
+  prompt +=
+    angle === "deadline"
+      ? `
+ANGLE FOR THIS PROSPECT: DEADLINE-FIRST.
+Touch 1 opens with the ${seasonal.sellingSeason} lock-in window and the lead-time
+math, then earns it with the personalized observation. The whole email is built
+around "this is the week to start".`
+      : `
+ANGLE FOR THIS PROSPECT: DIRECT-ASK-FIRST.
+Touch 1 opens with the personalized observation and goes straight to the quote
+question, plainly and early. Keep Touch 1 short. The timing and lock-in window
+argument arrives in Touch 2, not Touch 1.`;
 
   prompt += `
 
@@ -792,13 +857,45 @@ const PRODUCT_NOUN_RE =
 const PRICE_RE =
   /(\$\s?\d|\b\d[\d,.]*\s?(?:dollars?|usd|cad)\b|\bper[- ](?:unit|shirt|piece|item|garment)\b|\/\s?(?:unit|shirt|piece)\b)/i;
 
+// Soft closers that read as polite wallpaper and get deleted unread. Every touch
+// must instead end on one specific question the reader can answer in a line, so
+// their presence fails the draft and feeds the retry loop.
+const SOFT_CLOSER_RE =
+  /(worth a quick (?:chat|call|conversation)|worth a conversation|just checking in|just a quick follow[- ]?up|no worries if|whenever you have time|whenever it makes sense|feel free to reach out|let me know your thoughts|no pressure)/i;
+
 /** Lowercase, strip punctuation that writers drop naturally ("&", ".", ","). */
 function normalizeForMatch(text: string): string {
   return text
     .toLowerCase()
     .replace(/[.,&']/g, " ")
+    // Drop standalone hyphen/pipe tokens ("Inc - Metal Wear" -> "Inc Metal Wear",
+    // "Smith | Co" -> "Smith Co"). A writer naming the company omits these
+    // separators, so leaving a lone "-"/"|" token pollutes the candidate
+    // fragments and rejects otherwise-good drafts. Intra-word hyphens
+    // ("quarter-zip") are preserved.
+    .replace(/(^|\s)[-|]+(?=\s|$)/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * The first distinctive token of a company name in its ORIGINAL case, with legal
+ * suffixes and leading articles dropped — used to tell an all-caps acronym ("IMS")
+ * from an ordinary short token ("A1"). Mirrors the tokenization in
+ * `companyNameMentioned` but preserves case, which `normalizeForMatch` discards.
+ */
+function firstSignificantToken(companyName: string): string {
+  let tokens = companyName
+    .replace(/[.,&']/g, " ")
+    .replace(/(^|\s)[-|]+(?=\s|$)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter((t) => t && !LEGAL_SUFFIXES.has(t.toLowerCase()));
+  while (tokens.length > 1 && LEADING_ARTICLES.has(tokens[0].toLowerCase())) {
+    tokens = tokens.slice(1);
+  }
+  return tokens[0] ?? "";
 }
 
 /**
@@ -826,8 +923,16 @@ export function companyNameMentioned(body: string, companyName: string): boolean
 
   const candidates = [tokens.join(" ")];
   if (tokens.length >= 2) candidates.push(`${tokens[0]} ${tokens[1]}`);
-  // A short leading token ("A1") isn't distinctive enough on its own.
-  if (tokens[0].length >= 4) candidates.push(tokens[0]);
+  // A short leading token ("A1") isn't distinctive enough on its own — EXCEPT an
+  // all-caps acronym like "IMS", which is exactly how a writer names that company
+  // ("IMS Innovative Mining Services" is written "IMS"). Check the original-case
+  // first token (normalizeForMatch has already lowercased `tokens`).
+  const firstRaw = firstSignificantToken(companyName);
+  const firstIsAcronym =
+    firstRaw.length >= 3 && /^[A-Z0-9]+$/.test(firstRaw) && /[A-Z]/.test(firstRaw);
+  if (tokens[0].length >= 4 || (firstIsAcronym && tokens[0].length >= 3)) {
+    candidates.push(tokens[0]);
+  }
 
   return candidates.some((c) => haystack.includes(c));
 }
@@ -910,6 +1015,32 @@ export function validateDrafts(
     errors.push(
       "draft states a price — Ellie must offer a no-obligation quote, never quote a number"
     );
+  }
+
+  // CTA guardrails: every touch ends on a real question, and none of them lean on
+  // the soft closers that killed the July reply rate.
+  const bodies = [
+    { name: "email_touch_1_body", value: drafts.email_touch_1_body },
+    { name: "email_touch_2_body", value: drafts.email_touch_2_body },
+    { name: "email_touch_3_body", value: drafts.email_touch_3_body },
+  ];
+  for (const body of bodies) {
+    if (!body.value.includes("?")) {
+      errors.push(
+        `${body.name} has no question — every touch must end with one specific question the reader can answer in a line`
+      );
+    }
+    const softMatch = body.value.match(SOFT_CLOSER_RE);
+    if (softMatch) {
+      errors.push(
+        `${body.name} uses the soft closer "${softMatch[0]}" — replace it with one specific, answerable question`
+      );
+    }
+    if (!body.value.includes("Ellie")) {
+      errors.push(
+        `${body.name} is missing Ellie's sign-off — sign every email as Ellie`
+      );
+    }
   }
 
   return errors;
@@ -1132,8 +1263,10 @@ export async function runPersonalization(
       let rateLimited = false;
       let hardGeminiError: string | undefined;
 
+      const angle = assignAngle(lead.taskId);
+
       for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt++) {
-        const prompt = buildPrompt(lead, scrapedContent, seasonal, retryFeedback);
+        const prompt = buildPrompt(lead, scrapedContent, seasonal, angle, retryFeedback);
         const geminiResult = await gemini.generateDrafts(prompt);
         leadResult.geminiTokensUsed += geminiResult.tokensUsed;
 
@@ -1341,6 +1474,14 @@ export async function runPersonalization(
         // or the lead reaches Jenn's queue looking broken.
         if (task.tags.some((t) => t.name === "generation-failed")) {
           await clickup.removeTag(lead.taskId, "generation-failed");
+        }
+
+        // Record which message angle this lead's drafts follow, so reply rates
+        // can be compared per angle (filter angle:<name> against interest:<label>).
+        const angleTag = `angle:${angle}`;
+        if (!task.tags.some((t) => t.name === angleTag)) {
+          await clickup.addTag(lead.taskId, angleTag);
+          leadResult.tagsAdded.push(angleTag);
         }
       }
 

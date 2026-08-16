@@ -11,6 +11,11 @@ export interface MonthWindow {
   endMs: number;
 }
 
+/** Escape regex metacharacters so a business name is matched literally. */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Parse "YYYY-MM" into an inclusive date-string range and a half-open [startMs, endMs) UTC range. */
 export function monthWindow(month: string): MonthWindow {
   const [y, m] = month.split("-").map((n) => parseInt(n, 10));
@@ -155,7 +160,14 @@ export async function buildMonthlyReport(
   const window = monthWindow(month);
 
   const campaigns = await instantly.listAllCampaigns();
-  const namePattern = new RegExp(`^${config.businessName} - .+ - ${month}$`);
+  // Match the current business-name prefix plus any legacy prefixes still on live
+  // campaigns, so a mid-month rename doesn't split the report. Prefixes are escaped
+  // in case a future business name carries a regex metacharacter.
+  const reportNames = [config.businessName, ...(config.legacyBusinessNames ?? [])]
+    .filter(Boolean)
+    .filter((name, i, all) => all.indexOf(name) === i);
+  const prefixAlternation = reportNames.map(escapeRegExp).join("|");
+  const namePattern = new RegExp(`^(?:${prefixAlternation}) - .+ - ${month}$`);
   const monthCampaignIds = campaigns.filter((c) => namePattern.test(c.name)).map((c) => c.id);
   const analytics = await instantly.getCampaignAnalytics(monthCampaignIds, window.startDate, window.endDate);
 

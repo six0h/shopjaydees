@@ -10,6 +10,13 @@ pipeline/.env
 # Firecrawl cache
 .firecrawl/
 
+# Claude Code local state (settings + agent worktrees)
+.claude/
+
+# Wiki inbox and processed-source archive (kept local; may hold client data)
+raw/
+ingested/
+
 # OS files
 .DS_Store
 Thumbs.db

@@ -169,4 +169,31 @@ describe("buildMonthlyReport", () => {
     expect(s.aiSourced.openedThisMonth).toBe(1);
     expect(s.aiSourced.estValueThisMonth).toBe(800);
   });
+
+  it("matches both the current and a legacy business-name prefix in the transition month", async () => {
+    // Mid-August rename: campaigns exist under both prefixes for 2026-08.
+    const config = {
+      ...makeSendConfig(),
+      businessName: "Jaydees Apparel",
+      legacyBusinessNames: ["ShopJaydees"],
+      reportFields: { crmLeadsListId: "crm", leadSource: "field-lead-source", estOrderValue: "field-est-order-value" },
+    };
+    const instantly = {
+      listAllCampaigns: vi.fn().mockResolvedValue([
+        { id: "c-new", name: "Jaydees Apparel - Business - 2026-08", status: 1 },
+        { id: "c-old", name: "ShopJaydees - Business - 2026-08", status: 1 },
+        { id: "c-other", name: "SomeoneElse - Business - 2026-08", status: 1 },
+        { id: "c-jul", name: "ShopJaydees - Business - 2026-07", status: 1 },
+      ]),
+      getCampaignAnalytics: vi.fn().mockResolvedValue([]),
+    } as any;
+    const clickup = {
+      getAllTasks: vi.fn(async () => []),
+    } as any;
+
+    await buildMonthlyReport({ config, instantly, clickup, logger: createLogger("test") }, "2026-08");
+
+    // Both August prefixes are included; the other business and July are excluded.
+    expect(instantly.getCampaignAnalytics).toHaveBeenCalledWith(["c-new", "c-old"], "2026-08-01", "2026-08-31");
+  });
 });
