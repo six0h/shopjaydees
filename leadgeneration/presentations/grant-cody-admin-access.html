@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Grant Cody Admin Access — ShopJaydees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+    --green-deep: #2f7d52;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --mono: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+  }
+
+  * { box-sizing: border-box; }
+  html { color: var(--text-dark); }
+
+  body {
+    font-family: var(--font);
+    margin: 0;
+    background: #ece4dc;
+    line-height: 1.55;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet {
+    background: var(--bg-warm);
+    max-width: 52em;
+    margin: 1.4rem auto;
+    padding: 2.6rem 3rem 2.9rem;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 30px rgba(61,46,92,0.10);
+    position: relative;
+    overflow: hidden;
+  }
+  .sheet::after {
+    content: attr(data-tag);
+    position: absolute;
+    bottom: 1.1rem; right: 1.6rem;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--text-light);
+  }
+
+  .brand {
+    display: flex; align-items: center; gap: 0.55rem;
+    font-weight: 700; letter-spacing: -0.01em;
+    color: var(--accent-dark); font-size: 1rem; margin-bottom: 1.9rem;
+  }
+  .brand .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent-warm); display: inline-block; }
+
+  .cover {
+    background: linear-gradient(140deg, var(--bg-peach) 0%, var(--bg-lavender) 55%, #ded7ee 100%);
+    padding: 3.4rem 3rem 3rem;
+  }
+  .cover .eyebrow {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--accent-warm); margin: 0 0 0.9rem;
+  }
+  .cover h1 {
+    font-size: 2.7rem; line-height: 1.06; font-weight: 900;
+    letter-spacing: -0.03em; margin: 0 0 1rem; color: var(--text-dark); max-width: 16em;
+  }
+  .cover .lede { font-size: 1.08rem; color: var(--text-mid); margin: 0; max-width: 34em; }
+
+  .kicker {
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent-warm); margin: 0 0 0.5rem;
+  }
+  h2 {
+    font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em;
+    margin: 0 0 0.4rem; color: var(--text-dark); line-height: 1.15;
+  }
+  .sub { font-size: 1rem; color: var(--text-mid); margin: 0 0 1.5rem; max-width: 40em; }
+
+  .url-pill {
+    display: inline-block; font-family: var(--mono); font-size: 0.86rem;
+    background: #fff; border: 1px solid #e4d9cd; color: var(--accent-dark);
+    border-radius: var(--radius-pill); padding: 0.3rem 0.85rem; font-weight: 600;
+  }
+
+  .steps { display: flex; flex-direction: column; gap: 0.6rem; margin: 0.4rem 0 0; }
+  .step {
+    display: flex; align-items: flex-start; gap: 1rem;
+    background: #fff; border: 1px solid #efe6dc; border-radius: var(--radius-sm);
+    padding: 0.95rem 1.15rem; box-shadow: 0 1px 0 rgba(61,46,92,0.05);
+  }
+  .step .n {
+    flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 50%;
+    background: var(--badge-blue); color: var(--accent-dark);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.95rem;
+  }
+  .step .d { margin: 0; font-size: 0.98rem; color: var(--text-mid); padding-top: 0.15rem; }
+  .step .d b { color: var(--accent-dark); font-weight: 700; }
+  code {
+    font-family: var(--mono); font-size: 0.88em; background: #f2ebe2;
+    border: 1px solid #e7ddd0; border-radius: 5px; padding: 0.05em 0.4em; color: var(--accent-dark);
+  }
+
+  .roles { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.9rem 0 0; }
+  .role-pill {
+    background: #f0f8f2; border: 1px solid #bfe4cd; border-radius: var(--radius-sm);
+    padding: 0.55rem 0.9rem; font-size: 0.94rem; color: var(--green-deep); font-weight: 700;
+  }
+  .role-pill span { display: block; font-weight: 500; color: var(--text-mid); font-size: 0.86rem; margin-top: 0.1rem; }
+
+  blockquote.note {
+    margin: 1.4rem 0 0; padding: 0.85rem 1.1rem;
+    background: #fff; border-left: 4px solid var(--accent-warm); border-radius: var(--radius-sm);
+  }
+  blockquote.note p { margin: 0; font-size: 0.92rem; color: var(--text-mid); }
+  blockquote.note b { color: var(--accent-dark); }
+
+  .done h2 { margin-bottom: 0.6rem; }
+  .contact { font-size: 1.2rem; font-weight: 800; color: var(--accent-dark); margin: 1.1rem 0 0; }
+
+  @page { size: A4; margin: 0; }
+  @media print {
+    body { background: #fff; }
+    .sheet { box-shadow: none; margin: 0 auto; border-radius: 0; max-width: none; min-height: 100vh; page-break-after: always; }
+    .sheet:last-child { page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="sheet cover" data-tag="ShopJaydees × SixOhQuad">
+  <div class="brand"><span class="dot"></span> ShopJaydees &nbsp;×&nbsp; SixOhQuad</div>
+  <p class="eyebrow">Google Cloud — Access Setup</p>
+  <h1>Grant Cody full admin access</h1>
+  <p class="lede">Two quick tasks in the Google Cloud console. This gives Cody everything he needs to finish the build and run it for you — no passwords shared. Takes about five minutes.</p>
+</section>
+
+<!-- STEP 1: ORG ROLES -->
+<section class="sheet" data-tag="Task 1 of 2">
+  <p class="kicker">Task 1 of 2</p>
+  <h2>Add Cody at the organization level</h2>
+  <p class="sub">Sign in with your ShopJaydees owner account, then:</p>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><p class="d">Go to <span class="url-pill">console.cloud.google.com/iam-admin/iam</span></p></div>
+    <div class="step"><div class="n">2</div><p class="d">At the very top of the page, click the resource picker and switch it from a project to your <b>Organization</b> (<code>shopjaydees.com</code>) — not a single project.</p></div>
+    <div class="step"><div class="n">3</div><p class="d">Click <b>Grant Access</b>.</p></div>
+    <div class="step"><div class="n">4</div><p class="d">New principals: <b>cody@sixohquad.com</b></p></div>
+    <div class="step"><div class="n">5</div><p class="d">Add <b>both</b> of these roles, then click <b>Save</b>:</p></div>
+  </div>
+  <div class="roles">
+    <div class="role-pill">Organization Administrator<span>Full control over the organization and its projects.</span></div>
+    <div class="role-pill">Organization Policy Administrator<span>Lets Cody clear the security policy that's currently blocking the deploy.</span></div>
+  </div>
+  <blockquote class="note"><p><b>Can't switch to the Organization?</b> You'll need to be signed in as the account that owns <code>shopjaydees.com</code>. If it's greyed out, send Cody a screenshot and he'll point you to the right step.</p></blockquote>
+</section>
+
+<!-- STEP 2: BILLING -->
+<section class="sheet" data-tag="Task 2 of 2">
+  <p class="kicker">Task 2 of 2</p>
+  <h2>Add Cody to billing</h2>
+  <p class="sub">This lets Cody watch costs, set budget alerts, and sort out any billing hiccups. Your card details stay private to you.</p>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><p class="d">Go to <span class="url-pill">console.cloud.google.com/billing</span> and open your billing account.</p></div>
+    <div class="step"><div class="n">2</div><p class="d">In the left menu, click <b>Account management</b>.</p></div>
+    <div class="step"><div class="n">3</div><p class="d">Click <b>Add principal</b> and enter <b>cody@sixohquad.com</b>.</p></div>
+    <div class="step"><div class="n">4</div><p class="d">Role: <b>Billing Account Administrator</b> → <b>Save</b>.</p></div>
+  </div>
+</section>
+
+<!-- DONE -->
+<section class="sheet done" data-tag="ShopJaydees × SixOhQuad">
+  <p class="kicker">That's everything</p>
+  <h2>Send Cody a quick note when done</h2>
+  <p class="sub">Once both tasks are saved, email Cody and he takes it from there. Stuck on any screen? Snap a screenshot and send it over.</p>
+  <p class="contact">cody@sixohquad.com</p>
+</section>
+
+</body>
+</html>

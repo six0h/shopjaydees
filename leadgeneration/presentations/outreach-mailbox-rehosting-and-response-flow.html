@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Giving Your Outreach Addresses Their Own Home — ShopJaydees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f0f0c8;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+    --green-deep: #2f7d52;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { color: var(--text-dark); }
+
+  body {
+    font-family: var(--font);
+    margin: 0;
+    background: var(--bg-warm);
+    line-height: 1.6;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .page {
+    max-width: 50em;
+    margin: 0 auto;
+    padding: 0 3rem 3rem;
+  }
+
+  /* Header band */
+  header {
+    background: linear-gradient(135deg, var(--bg-peach) 0%, var(--bg-lavender) 100%);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 2.4rem 3rem 2rem;
+    margin: 0 -3rem 2.4rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--accent-dark);
+    font-size: 1.05rem;
+    margin-bottom: 1.1rem;
+  }
+  .brand .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--accent-warm);
+    display: inline-block;
+  }
+  header h1 {
+    font-size: 2rem;
+    line-height: 1.15;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.5rem;
+    color: var(--text-dark);
+  }
+  header .sub {
+    font-size: 0.95rem;
+    color: var(--text-mid);
+    margin: 0;
+    max-width: 40em;
+  }
+  .pills { margin-top: 1.1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .pill {
+    background: rgba(255,255,255,0.65);
+    border-radius: var(--radius-pill);
+    padding: 0.3rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--accent-dark);
+    font-family: 'Outfit', monospace;
+  }
+
+  h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 2.2rem 0 0.5rem;
+    color: var(--accent-dark);
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  h2 .num {
+    flex: 0 0 auto;
+    background: var(--accent-dark);
+    color: #fff;
+    width: 1.7rem; height: 1.7rem;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(2px);
+  }
+  h2:first-of-type { margin-top: 0.5rem; }
+
+  /* "Who does this" tag on a heading */
+  .by {
+    margin-left: auto;
+    flex: 0 0 auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.7rem;
+    border-radius: var(--radius-pill);
+    transform: translateY(-1px);
+  }
+  .by.you  { background: var(--badge-mint); color: var(--green-deep); }
+  .by.cody { background: var(--badge-blue); color: var(--accent-dark); }
+
+  p { margin: 0.7em 0; }
+  strong { font-weight: 600; }
+
+  a { color: var(--accent-warm); text-decoration: none; font-weight: 600; }
+
+  ol, ul { padding-left: 1.4em; margin: 0.7em 0; }
+  li { margin: 0.4em 0; }
+
+  code {
+    font-family: 'Outfit', ui-monospace, Menlo, monospace;
+    background: var(--bg-lavender);
+    color: var(--accent-dark);
+    padding: 0.08em 0.4em;
+    border-radius: 6px;
+    font-size: 0.92em;
+    font-weight: 600;
+  }
+
+  em { color: var(--text-mid); font-style: italic; }
+
+  /* Callout / blockquote */
+  blockquote {
+    margin: 1.1em 0;
+    padding: 0.9rem 1.1rem;
+    background: var(--bg-warm);
+    border-left: 4px solid var(--accent-warm);
+    border-radius: var(--radius-sm);
+    color: var(--text-mid);
+    font-size: 0.95rem;
+  }
+  blockquote strong { color: var(--accent-dark); }
+  blockquote p { margin: 0.3em 0; }
+  blockquote.safe { border-left-color: var(--green-deep); background: #f0f8f2; }
+  blockquote.safe strong { color: var(--green-deep); }
+  blockquote.warn { border-left-color: #c98a3c; background: #fcf6ec; }
+  blockquote.warn strong { color: #a96a1c; }
+
+  /* Tables */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.1em 0;
+    font-size: 0.92rem;
+    background: #fff;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(61,46,92,0.06);
+  }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid #efe8e0;
+    vertical-align: top;
+  }
+  thead th {
+    background: var(--accent-dark);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  tbody tr:nth-child(even) td { background: var(--bg-warm); }
+  tbody tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; color: var(--accent-dark); }
+
+  /* Response-flow diagram */
+  .flow { margin: 1.2em 0; }
+  .flow-step {
+    display: flex;
+    gap: 0.9rem;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid #efe6dc;
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    box-shadow: 0 1px 0 rgba(61,46,92,0.05);
+  }
+  .flow-step .n {
+    flex: 0 0 auto;
+    width: 1.6rem; height: 1.6rem;
+    border-radius: 50%;
+    background: var(--accent-warm);
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.1rem;
+  }
+  .flow-step .body { margin: 0; }
+  .flow-step .body strong { color: var(--accent-dark); }
+  .flow-arrow {
+    text-align: center;
+    color: var(--accent-warm);
+    font-size: 1.1rem;
+    line-height: 1;
+    margin: 0.25rem 0;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid #ece4da;
+    margin: 2rem 0 0.5rem;
+  }
+
+  footer {
+    margin-top: 2.4rem;
+    padding-top: 1.2rem;
+    border-top: 2px solid var(--bg-lavender);
+    font-size: 0.9rem;
+    color: var(--text-mid);
+  }
+  footer strong { color: var(--accent-dark); }
+
+  @media print {
+    body { background: #fff; }
+    .page { padding: 0 0 1rem; max-width: none; }
+    header { margin: 0 0 1.8rem; border-radius: 0 0 var(--radius) var(--radius); }
+    h2 { page-break-after: avoid; }
+    table, blockquote, ol, ul, .flow-step { page-break-inside: avoid; }
+  }
+  @page { margin: 14mm 16mm; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="brand"><span class="dot"></span> ShopJaydees &times; SixOhQuad</div>
+  <h1>Giving Your Outreach Addresses Their Own Home</h1>
+  <p class="sub">We're moving your two outreach addresses off your main mailbox and into a separate, dedicated Google Workspace — so cold outreach can never touch your real business email. This guide walks you through the moves on your side, then shows how prospect replies reach you in ClickUp.</p>
+  <div class="pills">
+    <span class="pill">ellie@shopjaydees.ca</span>
+    <span class="pill">ellie@shopjaydees.net</span>
+  </div>
+</header>
+
+<h2 style="margin-top:0.2rem;">What's changing, and why</h2>
+
+<p>Right now, <strong>ellie@shopjaydees.ca</strong> and <strong>ellie@shopjaydees.net</strong> are <strong>aliases</strong> riding on your main mailbox, <code>hello@shopjaydees.com</code>. That works, but it ties your cold outreach to your main business inbox: they share one reputation, and replies and bounces land mixed in with your real email.</p>
+
+<p>We're going to give those two addresses <strong>their own separate home</strong> — a brand-new Google Workspace, completely apart from your main one. After this:</p>
+
+<ul>
+  <li>Cold outreach sends from addresses that stand on their own — it <strong>can never affect the reputation of <code>shopjaydees.com</code></strong> or your main inbox.</li>
+  <li>Each address warms up <strong>properly and independently</strong>, which means better delivery.</li>
+  <li>Your main inbox stays clean — no cold-outreach bounces or replies mixed in.</li>
+</ul>
+
+<blockquote class="safe"><p><strong>Your main email is never touched.</strong> Everything in this guide happens on <code>shopjaydees.ca</code> and <code>shopjaydees.net</code> only. <code>hello@shopjaydees.com</code> and everything on <code>shopjaydees.com</code> keeps working exactly as it does today — we never remove, move, or change it.</p></blockquote>
+
+<blockquote><p><strong>On cost:</strong> the new Workspace runs about <strong>$17 CAD/month</strong> for the two mailboxes. The <strong>$150 credit</strong> on your final invoice more than covers the first three months — so this change costs you nothing extra to get started.</p></blockquote>
+
+<p>There are <strong>six short steps</strong>. You handle the first five — they're done in your Google admin console and your DNS settings; Cody finishes the final hookup. Set aside about <strong>30–40 minutes</strong>.</p>
+
+<hr>
+
+<h2><span class="num">1</span> Free up the two domains <span class="by you">You do this</span></h2>
+
+<p>A domain can only live in one Google Workspace at a time, so first we release <code>shopjaydees.ca</code> and <code>shopjaydees.net</code> from your current Workspace. (Again — this does <em>not</em> touch <code>shopjaydees.com</code>.)</p>
+
+<ol>
+  <li>Sign in to the Google <strong>Admin console</strong> at <a href="https://admin.google.com">admin.google.com</a> with your administrator account.</li>
+  <li><strong>Remove the two aliases first.</strong> Go to <strong>Directory → Users</strong>, open the <code>hello@shopjaydees.com</code> user, and find the <strong>Alternate email addresses (aliases)</strong> section. Delete <code>ellie@shopjaydees.ca</code> and <code>ellie@shopjaydees.net</code>. Save.</li>
+  <li><strong>Remove the two domains.</strong> Go to <strong>Account → Domains → Manage domains</strong>. Find <strong>shopjaydees.ca</strong>, choose <strong>Remove domain</strong>, and confirm. Do the same for <strong>shopjaydees.net</strong>.</li>
+</ol>
+
+<blockquote class="warn"><p><strong>If Google won't let you remove a domain</strong> — it usually means an address is still using it. Double-check both aliases were deleted in the step above, then try again. If it still blocks you, send Cody a screenshot and stop here; he'll sort it before you continue.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">2</span> Create the new Google Workspace <span class="by you">You do this</span></h2>
+
+<p>Now we set up the separate home for the outreach addresses.</p>
+
+<ol>
+  <li>Go to <a href="https://workspace.google.com">workspace.google.com</a> and click <strong>Get started</strong> (or <strong>Start free trial</strong>).</li>
+  <li>When asked for a business name, use something like <strong>ShopJaydees Outreach</strong> — this keeps it clearly separate from your main account.</li>
+  <li>When it asks <strong>"Does your business have a domain?"</strong>, choose <strong>Yes, I have one I can use</strong>, and enter <code>shopjaydees.ca</code>. <em>(It's now free to use, because you released it in Step 1.)</em></li>
+  <li>Pick the <strong>Business Starter</strong> plan — it's the lowest tier and all we need.</li>
+  <li>Create the admin sign-in for this new Workspace. <strong>Use a different password from your main account</strong>, and keep these new login details somewhere safe — this is a brand-new, separate account.</li>
+</ol>
+
+<blockquote><p><strong>Heads up:</strong> this is a <em>second</em> Google Workspace, separate from your main one. You'll have two admin logins now — your existing <code>hello@</code> one, and this new outreach one. That separation is exactly the point.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">3</span> Add &amp; verify both domains <span class="by you">You do this</span></h2>
+
+<p>Inside the new Workspace's setup wizard:</p>
+
+<ol>
+  <li>Follow the prompt to <strong>verify</strong> that you own <code>shopjaydees.ca</code>. Google gives you a <strong>TXT record</strong> to add at your domain registrar (where you manage your DNS). Add it, then click <strong>Verify</strong>.</li>
+  <li>Add <code>shopjaydees.net</code> as a <strong>second domain</strong>: in the new Admin console, go to <strong>Account → Domains → Manage domains → Add a domain</strong>, enter <code>shopjaydees.net</code>, and verify it the same way (another TXT record).</li>
+  <li>The wizard will also show <strong>MX records</strong> (these route incoming mail). Add or confirm them as Google instructs for each domain.</li>
+</ol>
+
+<blockquote><p><strong>Not sure about DNS records?</strong> This is the one fiddly part. If anything is unclear, send Cody a screenshot of where you manage your domain's DNS and he'll give you the exact records to paste — or hop on a quick call. Don't guess.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">4</span> Create the two mailboxes <span class="by you">You do this</span></h2>
+
+<p>These are real mailboxes now — each with its own inbox and password, not aliases.</p>
+
+<ol>
+  <li>In the new Admin console, go to <strong>Directory → Users → Add new user</strong>.</li>
+  <li>Create <strong>ellie@shopjaydees.ca</strong> (First name <code>Ellie</code>). Set a password and note it down.</li>
+  <li>Add a second user, <strong>ellie@shopjaydees.net</strong>, the same way.</li>
+  <li>Send Cody the two new addresses and their passwords (or share them however you prefer) so he can connect them.</li>
+</ol>
+
+<blockquote><p><strong>Almost there</strong> — the mailboxes exist; one set of DNS records to add next, then you're done.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">5</span> Set up email authentication <span class="by you">You do this</span></h2>
+
+<p>This is the set of DNS records that proves your outreach mail is genuine and keeps it out of spam folders — <strong>SPF, DKIM, and DMARC</strong>. Since you manage the DNS, you add all three, on <strong>each</strong> of the two domains. Everything you need is below; Cody is happy to confirm any value if something looks unclear.</p>
+
+<p><strong>SPF</strong> — add this as a <code>TXT</code> record on the domain root (<code>@</code>):</p>
+<ul><li><code>v=spf1 include:_spf.google.com ~all</code></li></ul>
+<blockquote class="warn"><p><strong>If an SPF record already exists</strong> on the domain, don't add a second one — a domain may only have one. Edit the existing record so it includes <code>include:_spf.google.com</code>.</p></blockquote>
+
+<p><strong>DKIM</strong> — Google generates this one for you:</p>
+<ol>
+  <li>In the new Admin console, go to <strong>Apps → Google Workspace → Gmail → Authenticate email</strong>.</li>
+  <li>Pick the domain, click <strong>Generate new record</strong> (use the <strong>2048-bit</strong> key), and copy the <code>TXT</code> record it shows you.</li>
+  <li>Add that <code>TXT</code> record at your DNS host (the host/name is usually <code>google._domainkey</code>), then return to the console and click <strong>Start authentication</strong>.</li>
+  <li>Switch the domain selector to <code>shopjaydees.net</code> and repeat — DKIM is per-domain.</li>
+</ol>
+
+<p><strong>DMARC</strong> — add this as a <code>TXT</code> record at the host <code>_dmarc</code> on each domain:</p>
+<ul><li><code>v=DMARC1; p=none;</code></li></ul>
+<p><em>We start at <code>p=none</code> on purpose — it monitors without affecting delivery while the addresses warm up.</em></p>
+
+<blockquote class="safe"><p><strong>That's your part done.</strong> Once SPF, DKIM, and DMARC are live on both domains, let Cody know (along with the mailbox logins from Step 4) — the rest is his.</p></blockquote>
+
+<hr>
+
+<h2><span class="num">6</span> Cody finishes the hookup <span class="by cody">Cody does this</span></h2>
+
+<p>From here Cody takes over the final pieces:</p>
+
+<ul>
+  <li><strong>Reconnects both addresses to Instantly</strong> — and because they're now real mailboxes, this uses the simple, stable Google sign-in (no more App Password workaround).</li>
+  <li>Runs <strong>warmup</strong> on both addresses for <strong>2–3 weeks</strong> before any real campaign sends, building their sending reputation from scratch.</li>
+  <li>Confirms your <strong>SPF, DKIM, and DMARC</strong> are validating correctly before campaigns start.</li>
+</ul>
+
+<p>He may ask you to approve the Instantly connection once inside the new Admin console — if so, he'll tell you exactly where to click.</p>
+
+<hr>
+
+<h2>How replies reach you — all in ClickUp</h2>
+
+<p>Once campaigns are live, you <strong>never have to watch a separate inbox</strong>. When a prospect replies, everything you need surfaces on that lead's card in ClickUp — right where you already do your daily review.</p>
+
+<div class="flow">
+  <div class="flow-step">
+    <span class="n">1</span>
+    <p class="body">A prospect <strong>replies</strong> to one of your outreach emails. Instantly catches it instantly.</p>
+  </div>
+  <div class="flow-arrow">&#9660;</div>
+  <div class="flow-step">
+    <span class="n">2</span>
+    <p class="body">The system <strong>updates that lead's card in ClickUp automatically</strong>: the status flips to <strong>"Responded — Owner Follow-up,"</strong> the prospect's reply is posted right on the card, and the card is <strong>assigned to you with a notification</strong>.</p>
+  </div>
+  <div class="flow-arrow">&#9660;</div>
+  <div class="flow-step">
+    <span class="n">3</span>
+    <p class="body">In your <strong>daily review</strong>, you open the card. You read the reply <em>alongside</em> everything about that lead — the fit score, what was sent, and their company details.</p>
+  </div>
+  <div class="flow-arrow">&#9660;</div>
+  <div class="flow-step">
+    <span class="n">4</span>
+    <p class="body">You <strong>reply from Instantly's Unibox</strong> (it keeps the conversation on the same thread), and in that reply you <strong>hand over your direct address</strong>, <code>hello@shopjaydees.com</code> — moving the warm conversation onto your main business inbox, where it belongs.</p>
+  </div>
+</div>
+
+<p>So the split stays clean: <strong>cold sending lives on the separate <code>.ca</code>/<code>.net</code> addresses, and real conversations move to your main email</strong> the moment someone's interested.</p>
+
+<blockquote><p><strong>Why not just CC your main inbox on everything?</strong> On purpose. Keeping cold outreach off <code>hello@</code> is what protects your main email's reputation. ClickUp gives you one place to see and act on every reply — <em>with</em> the fit score and full history a CC could never show you.</p></blockquote>
+
+<hr>
+
+<h2>Before &amp; after, at a glance</h2>
+
+<table>
+  <thead><tr><th></th><th>Before (today)</th><th>After (this change)</th></tr></thead>
+  <tbody>
+    <tr><td>Where ellie@ lives</td><td>Alias on your <code>hello@</code> mailbox</td><td>Its own mailbox in a separate Workspace</td></tr>
+    <tr><td>Effect on <code>shopjaydees.com</code></td><td>Shares reputation &amp; risk</td><td>Fully isolated — no effect</td></tr>
+    <tr><td>Warmup</td><td>Shared, not truly independent</td><td>Independent per address</td></tr>
+    <tr><td>Replies &amp; bounces</td><td>Mixed into <code>hello@</code></td><td>Stay on the outreach mailboxes</td></tr>
+    <tr><td>Where you act on replies</td><td>—</td><td>The lead's card in ClickUp</td></tr>
+  </tbody>
+</table>
+
+<footer>
+  <strong>Questions at any point?</strong> Email <a href="mailto:cody@sixohquad.com">cody@sixohquad.com</a> — and if a DNS or domain step looks unclear, send a screenshot rather than guessing.<br>
+  ShopJaydees &times; SixOhQuad — outreach mailbox re-hosting &amp; reply flow
+</footer>
+
+</div>
+</body>
+</html>

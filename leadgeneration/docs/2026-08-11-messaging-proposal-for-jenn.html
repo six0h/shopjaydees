@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Jaydees Apparel — Outreach Messaging Update — August 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-warm: #faf5f0;
+    --bg-peach: #f5e6dc;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #8a8a8a;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+    --green-deep: #2f7d52;
+    --green-soft: #d6f0e0;
+    --line: #e7ddd2;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  @page { size: Letter; margin: 0; }
+  * { box-sizing: border-box; }
+  html { color: var(--text-dark); }
+  body {
+    font-family: var(--font);
+    margin: 0;
+    background: #ece4dc;
+    line-height: 1.55;
+    font-size: 10.5pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .sheet {
+    background: var(--bg-warm);
+    width: 8.5in;
+    min-height: 11in;
+    margin: 0 auto;
+    padding: 0.7in 0.8in 0.75in;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+  .sheet:last-child { page-break-after: auto; }
+
+  .brandbar { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 2px solid var(--green-deep); padding-bottom: 0.5rem; }
+  .brand { font-weight: 800; font-size: 15pt; letter-spacing: -0.01em; color: var(--green-deep); }
+  .brand small { display:block; font-weight: 500; font-size: 8.5pt; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-light); margin-top: 2px; }
+  .period { text-align: right; font-weight: 600; font-size: 10pt; color: var(--text-mid); }
+  .period small { display:block; font-weight: 400; font-size: 8pt; color: var(--text-light); }
+
+  h2.section { font-size: 12.5pt; font-weight: 700; color: var(--accent-dark); margin: 1.1rem 0 0.45rem; }
+  h2.section::before { content: ""; display:inline-block; width: 14px; height: 3px; background: var(--accent-warm); border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+
+  .headline { font-size: 17pt; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; margin: 1rem 0 0.3rem; }
+  .headline b { color: var(--green-deep); }
+  .subhead { color: var(--text-mid); font-size: 10pt; }
+
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-top: 0.8rem; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0.85rem 0.9rem; }
+  .stat .n { font-size: 22pt; font-weight: 800; line-height: 1; color: var(--green-deep); letter-spacing: -0.02em; }
+  .stat .n.muted { color: var(--accent-dark); }
+  .stat .l { font-weight: 600; font-size: 9.5pt; margin-top: 0.35rem; }
+  .stat .d { color: var(--text-light); font-size: 8.5pt; margin-top: 0.15rem; line-height: 1.35; }
+
+  p { margin: 0.5rem 0; }
+  .note { background: var(--bg-peach); border-left: 3px solid var(--accent-warm); border-radius: 6px; padding: 0.55rem 0.85rem; font-size: 9.5pt; color: #6b4a3a; margin-top: 0.55rem; }
+
+  ul.tuned { list-style: none; padding: 0; margin: 0.4rem 0; }
+  ul.tuned li { padding: 0.28rem 0 0.28rem 1.4rem; position: relative; border-bottom: 1px solid var(--line); font-size: 9.5pt; }
+  ul.tuned li:last-child { border-bottom: none; }
+  ul.tuned li::before { content: "✓"; position:absolute; left: 0; color: var(--green-deep); font-weight: 800; }
+  ul.tuned b { color: var(--accent-dark); }
+
+  .email { background:#fff; border:1px solid var(--line); border-radius: var(--radius-sm); margin-top: 0.5rem; overflow: hidden; }
+  .email .subj { background: var(--green-soft); padding: 0.45rem 1rem; font-weight: 700; font-size: 9.5pt; color: var(--green-deep); }
+  .email.old .subj { background: #f0ece6; color: var(--text-mid); }
+  .email .body { padding: 0.55rem 1rem 0.65rem; font-size: 9.5pt; color: var(--text-mid); }
+  .email .body p { margin: 0.4rem 0; }
+  .email .tag { float: right; font-size: 7.5pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .email.old .tag { color: var(--accent-warm); }
+  .email.new .tag { color: var(--green-deep); }
+
+  ol.steps { margin: 0.4rem 0 0; padding-left: 1.2rem; }
+  ol.steps li { margin-bottom: 0.35rem; font-size: 10pt; }
+
+  footer { position:absolute; bottom: 0.5in; left: 0.8in; right: 0.8in; border-top: 1px solid var(--line); padding-top: 0.5rem; font-size: 8pt; color: var(--text-light); display:flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<section class="sheet">
+  <div class="brandbar">
+    <div class="brand">Jaydees Apparel<small>Outreach — powered by SixOhQuad</small></div>
+    <div class="period">Messaging update<small>August 11, 2026</small></div>
+  </div>
+
+  <div class="headline">We've sharpened Ellie's emails to earn <b>more replies</b>, and there's one decision we'd like your call on.</div>
+  <div class="subhead">What July taught us, what we changed inside your guardrails, and two quick asks. Your daily review stays exactly the same.</div>
+
+  <h2 class="section">What July taught us</h2>
+  <div class="grid">
+    <div class="stat">
+      <div class="n">77</div>
+      <div class="l">Businesses reached</div>
+      <div class="d">Across the Lower Mainland in the first two weeks live.</div>
+    </div>
+    <div class="stat">
+      <div class="n">134</div>
+      <div class="l">Personalised emails sent</div>
+      <div class="d">Each one written for the specific business.</div>
+    </div>
+    <div class="stat">
+      <div class="n muted">2</div>
+      <div class="l">Replies, both declines</div>
+      <div class="d">A 1.5% reply rate against the 5 to 15% goal.</div>
+    </div>
+  </div>
+
+  <p style="margin-top:0.9rem;">The copy was doing exactly what we told it to do, and that was the problem. We told Ellie "no pressure", gave her a soft ask ("worth a quick chat?"), and left her nothing concrete to say beyond "custom apparel". The result was polite, safe, and easy to ignore. Nobody says no to an email like that. Nobody says yes either.</p>
+
+  <h2 class="section">What we changed, inside your guardrails</h2>
+  <p style="font-size:9.5pt; color:var(--text-mid); margin-top:-0.2rem;">Every rule from July stands: no product names, no prices, no catalogue, correct season only, and every draft still machine-checked before it reaches your queue.</p>
+  <ul class="tuned">
+    <li><b>Confident voice.</b> Ellie now writes like someone with a genuine reason to reach out this week, not someone apologizing for emailing.</li>
+    <li><b>Real urgency only.</b> Every email anchors to the actual fall calendar: orders that start now arrive before the season, orders that start later may not. Invented discounts, made-up deadlines, and "spots are filling up" are banned outright and machine-checked.</li>
+    <li><b>A real question at the end.</b> Every email closes with one specific question that can be answered in one line, for example "Want me to put a no-obligation fall quote together for you this week?" The soft closers are gone.</li>
+    <li><b>The third email is now a break-up email.</b> Instead of a third "just checking in", Ellie says she is wrapping up her fall list and asks whether to close the file. It is more honest, and in cold outreach it is reliably the email that gets answered.</li>
+    <li><b>Two versions are now being tested.</b> Half the leads get an email that opens with the fall timing; half get one that opens with the personal observation and asks straight away. Each lead is tagged, so in a few weeks we will know which style earns more replies instead of guessing.</li>
+  </ul>
+
+  <div class="note">Nothing changes in your day. Drafts still land in your Ready for Review queue, and nothing sends without your approval.</div>
+
+  <footer><span>Jaydees Apparel · Outreach Messaging Update</span><span>Prepared by SixOhQuad · cody@sixohquad.com</span></footer>
+</section>
+
+<!-- PAGE 2 -->
+<section class="sheet">
+  <div class="brandbar">
+    <div class="brand">Jaydees Apparel<small>Outreach — powered by SixOhQuad</small></div>
+    <div class="period">Before and after<small>Real drafts from the new system</small></div>
+  </div>
+
+  <h2 class="section">The July style</h2>
+  <div class="email old">
+    <div class="subj"><span class="tag">Before</span>Typical closing, July emails</div>
+    <div class="body">
+      <p>"Would it be worth a quick conversation? Happy to put a no-obligation quote together if you've got something in mind."</p>
+    </div>
+  </div>
+
+  <h2 class="section">The new first email</h2>
+  <div class="email new">
+    <div class="subj"><span class="tag">After</span>Fall apparel for Westridge Plumbing</div>
+    <div class="body">
+      <p>Hi Mike,</p>
+      <p>If we want your crew looking sharp when the busy fall season kicks in, we need to start the design process this week. Custom apparel production takes time. Starting now ensures everything is in hand before the weather turns.</p>
+      <p>I saw Westridge Plumbing recently expanded to a second Abbotsford location and that you sponsor Abbotsford Minor Hockey. Supporting local is huge for us too. At Jaydees, we run Wear It Forward, meaning a portion of every custom apparel order goes right back into local community initiatives.</p>
+      <p>Want me to put a no-obligation fall quote together for your team this week?</p>
+      <p>Ellie</p>
+    </div>
+  </div>
+
+  <h2 class="section">The new third email</h2>
+  <div class="email new">
+    <div class="subj"><span class="tag">After</span>Closing your file at Jaydees</div>
+    <div class="body">
+      <p>Hi Mike,</p>
+      <p>I'm wrapping up our fall outreach list this week, so I'll go ahead and close the file on Westridge Plumbing.</p>
+      <p>If you do need custom apparel to keep your crew looking sharp this fall, we can always put a quick, no-obligation quote together for you. If you're already set for the season, that's an easy no and I'll stop emailing.</p>
+      <p>Should I close the file, or do you want that quote first?</p>
+      <p>Ellie</p>
+    </div>
+  </div>
+
+  <div class="note">These are real drafts generated by the updated system this morning (business name from our test set). Every draft is still personalized to the specific company and still passes through your review queue.</div>
+
+  <footer><span>Jaydees Apparel · Outreach Messaging Update</span><span>Prepared by SixOhQuad · cody@sixohquad.com</span></footer>
+</section>
+
+<!-- PAGE 3 -->
+<section class="sheet">
+  <div class="brandbar">
+    <div class="brand">Jaydees Apparel<small>Outreach — powered by SixOhQuad</small></div>
+    <div class="period">Two asks<small>Your call on both</small></div>
+  </div>
+
+  <h2 class="section">Ask one: a small loosening of the product rule</h2>
+  <p>Right now Ellie may only ever say "custom apparel". That was the right call when she was inventing products, and the machine checks that stopped that are staying either way. But it also means a plumbing company and a soccer club get the same abstract words, and abstract copy is easy to ignore.</p>
+  <p><b style="color:var(--accent-dark);">Proposal:</b> allow segment-level words only, so Ellie can say "crew gear" to a contractor, "team wear" or "warm-up gear" to a club, and "staff apparel" to an office or restaurant. Still banned, exactly as today: specific garments, styles, fabrics, colours, prices, and anything Jaydees doesn't have ready to send.</p>
+
+  <div class="email new">
+    <div class="subj"><span class="tag">Illustration only</span>How that would read (does not exist until you approve it)</div>
+    <div class="body">
+      <p>"With your crew back at full tilt this fall, matching crew gear is the fastest way to look like the bigger outfit on site. Want me to put a fall quote together this week?"</p>
+    </div>
+  </div>
+
+  <p style="margin-top:0.7rem;">If you'd rather keep "custom apparel" only, that is completely fine. The new copy on page two already ships without it.</p>
+
+  <h2 class="section">Ask two: turn on open tracking</h2>
+  <p>Open tracking is currently off, so when a lead goes quiet we can't tell whether they never opened the email (a delivery question) or opened it and passed (a copy question). We recommend turning it on for the new campaigns so the two-version test reads cleanly.</p>
+  <p style="font-size:9.5pt; color:var(--text-mid);">Small trade-off to be upfront about: tracking uses an invisible pixel, which very occasionally nudges spam filters. At our sending volumes we think the data is worth it, and we can switch it off again at any time.</p>
+
+  <h2 class="section">What happens next</h2>
+  <ol class="steps">
+    <li>New drafts with the sharper copy are already flowing into your normal Ready for Review queue. Approve, edit, or reject exactly as before.</li>
+    <li>In two to three weeks we compare reply rates between the two versions and keep the winner.</li>
+    <li>If you approve the segment-level wording, we ship it the same day behind the same machine checks.</li>
+  </ol>
+
+  <div class="note">Questions or a quick call to walk through it: cody@sixohquad.com · 604-862-2117.</div>
+
+  <footer><span>Jaydees Apparel · Outreach Messaging Update · August 2026</span><span>Questions? cody@sixohquad.com · 604-862-2117</span></footer>
+</section>
+
+</body>
+</html>

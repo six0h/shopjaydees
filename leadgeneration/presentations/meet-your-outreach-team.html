@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meet Your Outreach Team — ShopJaydees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-peach: #f5e6dc;
+    --bg-lavender: #e4dff0;
+    --bg-warm: #faf5f0;
+    --text-dark: #1a1a1a;
+    --text-mid: #555;
+    --text-light: #888;
+    --badge-mint: #c8f0d8;
+    --badge-yellow: #f3edc4;
+    --badge-pink: #f0d4e0;
+    --badge-blue: #d4dff0;
+    --badge-peach: #f0dcc8;
+    --accent-dark: #3d2e5c;
+    --accent-warm: #d4856a;
+    --green-deep: #2f7d52;
+    --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --radius-pill: 100px;
+  }
+
+  * { box-sizing: border-box; }
+  html { color: var(--text-dark); }
+
+  body {
+    font-family: var(--font);
+    margin: 0;
+    background: #ece4dc;
+    line-height: 1.6;
+    font-size: 11pt;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Each .sheet is one "slide" / page */
+  .sheet {
+    background: var(--bg-warm);
+    max-width: 52em;
+    margin: 1.4rem auto;
+    padding: 2.6rem 3rem 2.8rem;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 30px rgba(61,46,92,0.10);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* small deck footer label bottom-right of each sheet */
+  .sheet::after {
+    content: attr(data-tag);
+    position: absolute;
+    bottom: 1.1rem; right: 1.6rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-light);
+  }
+
+  /* === COVER === */
+  .cover {
+    background: linear-gradient(140deg, var(--bg-peach) 0%, var(--bg-lavender) 55%, #ded7ee 100%);
+    padding: 4rem 3rem 3.4rem;
+  }
+  .cover::after { color: rgba(61,46,92,0.45); }
+  .brand {
+    display: flex; align-items: center; gap: 0.6rem;
+    font-weight: 700; letter-spacing: -0.01em;
+    color: var(--accent-dark); font-size: 1.05rem;
+    margin-bottom: 2.6rem;
+  }
+  .brand .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--accent-warm); display: inline-block;
+  }
+  .cover .eyebrow {
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--accent-warm);
+    margin: 0 0 0.9rem;
+  }
+  .cover h1 {
+    font-size: 3rem; line-height: 1.05; font-weight: 900;
+    letter-spacing: -0.03em; margin: 0 0 1.1rem; color: var(--text-dark);
+    max-width: 15em;
+  }
+  .cover .lede {
+    font-size: 1.12rem; color: var(--text-mid); margin: 0 0 2rem; max-width: 32em;
+  }
+  .cover .meta {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 2rem;
+    font-size: 0.9rem; color: var(--accent-dark);
+    border-top: 1px solid rgba(61,46,92,0.15);
+    padding-top: 1.4rem;
+  }
+  .cover .meta b { font-weight: 700; }
+
+  /* team avatars row on cover */
+  .team-row { display: flex; gap: 0.5rem; margin: 0 0 2.2rem; flex-wrap: wrap; }
+  .avatar {
+    width: 3rem; height: 3rem; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.35rem; box-shadow: 0 2px 6px rgba(61,46,92,0.12);
+  }
+
+  /* === HEADINGS === */
+  .kicker {
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent-warm); margin: 0 0 0.5rem;
+  }
+  h2 {
+    font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em;
+    margin: 0 0 1rem; color: var(--text-dark); line-height: 1.15;
+  }
+  h3 { font-size: 1.15rem; font-weight: 700; color: var(--accent-dark); margin: 1.4rem 0 0.4rem; }
+
+  p { margin: 0.7em 0; color: var(--text-mid); }
+  p.big { font-size: 1.08rem; color: var(--text-dark); }
+  strong { font-weight: 600; color: var(--text-dark); }
+  em { color: var(--text-mid); font-style: italic; }
+
+  /* === JENN'S TWO JOBS cards === */
+  .jobs { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.6rem 0; }
+  .job {
+    background: #fff; border-radius: var(--radius-sm);
+    padding: 1.3rem 1.4rem; border: 1px solid #efe6dc;
+    box-shadow: 0 2px 8px rgba(61,46,92,0.05);
+  }
+  .job .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 2rem; height: 2rem; border-radius: 50%;
+    background: var(--badge-mint); color: var(--green-deep);
+    font-weight: 800; font-size: 1rem; margin-bottom: 0.7rem;
+  }
+  .job h4 { margin: 0 0 0.35rem; font-size: 1.05rem; color: var(--accent-dark); font-weight: 700; }
+  .job p { margin: 0; font-size: 0.94rem; }
+
+  /* === PIPELINE FLOW === */
+  .pipeline { display: flex; flex-direction: column; gap: 0.2rem; margin: 1.4rem 0 0.5rem; }
+  .p-step {
+    display: flex; align-items: center; gap: 1rem;
+    background: #fff; border: 1px solid #efe6dc; border-radius: var(--radius-sm);
+    padding: 0.85rem 1.1rem; box-shadow: 0 1px 0 rgba(61,46,92,0.05);
+  }
+  .p-step .ic {
+    flex: 0 0 auto; width: 2.7rem; height: 2.7rem; border-radius: 12px;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.35rem;
+  }
+  .p-step .tx { margin: 0; }
+  .p-step .tx b { color: var(--accent-dark); font-size: 1rem; }
+  .p-step .tx span { display: block; font-size: 0.9rem; color: var(--text-mid); }
+  .p-step.you { background: #f0f8f2; border-color: #bfe4cd; }
+  .p-arrow { text-align: center; color: var(--accent-warm); font-size: 1rem; line-height: 1; margin: 0.15rem 0; }
+  .p-arrow.you-note { color: var(--green-deep); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em; }
+
+  /* === AGENT SHEETS === */
+  .agent-head { display: flex; align-items: flex-start; gap: 1.2rem; margin-bottom: 0.4rem; }
+  .agent-badge {
+    flex: 0 0 auto; width: 4.6rem; height: 4.6rem; border-radius: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 2.3rem; box-shadow: 0 4px 12px rgba(61,46,92,0.10);
+  }
+  .agent-head .titles { flex: 1 1 auto; }
+  .agent-head .role { font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent-warm); margin: 0.2rem 0 0.15rem; }
+  .agent-head h2 { margin: 0 0 0.15rem; font-size: 1.7rem; }
+  .agent-head .nick { font-size: 1rem; color: var(--text-mid); font-weight: 500; margin: 0; }
+
+  .agent-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.1rem 0 1.2rem; }
+  .chip {
+    background: rgba(255,255,255,0.8); border: 1px solid #efe6dc;
+    border-radius: var(--radius-pill); padding: 0.32rem 0.9rem;
+    font-size: 0.82rem; font-weight: 600; color: var(--accent-dark);
+  }
+  .chip .lbl { color: var(--text-light); font-weight: 600; }
+
+  .agent-body h3 { margin-top: 1.1rem; }
+  .agent-body h3::before { content: ""; }
+
+  /* why-it-matters callout */
+  blockquote.why {
+    margin: 1.3rem 0 0; padding: 1rem 1.2rem;
+    background: #f0f8f2; border-left: 4px solid var(--green-deep);
+    border-radius: var(--radius-sm);
+  }
+  blockquote.why p { margin: 0; color: var(--text-mid); font-size: 0.96rem; }
+  blockquote.why b { color: var(--green-deep); }
+
+  blockquote.note {
+    margin: 1.2rem 0 0; padding: 0.9rem 1.1rem;
+    background: #fff; border-left: 4px solid var(--accent-warm);
+    border-radius: var(--radius-sm);
+  }
+  blockquote.note p { margin: 0; font-size: 0.94rem; }
+  blockquote.note b { color: var(--accent-dark); }
+
+  ul { padding-left: 0; margin: 0.7em 0; list-style: none; }
+  ul li { margin: 0.5em 0; padding-left: 1.6em; position: relative; color: var(--text-mid); }
+  ul li::before { content: "→"; position: absolute; left: 0; color: var(--accent-warm); font-weight: 700; }
+
+  /* === APPROVAL sheet === */
+  .approve-hero {
+    background: linear-gradient(135deg, var(--badge-mint) 0%, #d6f0e0 100%);
+    border-radius: var(--radius-sm); padding: 1.4rem 1.6rem; margin: 1.2rem 0 1.4rem;
+  }
+  .approve-hero .time { font-size: 2.4rem; font-weight: 900; color: var(--green-deep); letter-spacing: -0.02em; line-height: 1; }
+  .approve-hero .time small { font-size: 1rem; font-weight: 600; color: var(--green-deep); }
+  .approve-hero p { margin: 0.5rem 0 0; color: #2a5c3e; font-weight: 500; }
+  .three { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.9rem; margin: 1rem 0; }
+  .three .opt { background:#fff; border:1px solid #efe6dc; border-radius: var(--radius-sm); padding: 1rem; text-align: center; }
+  .three .opt .e { font-size: 1.6rem; }
+  .three .opt b { display:block; margin: 0.3rem 0 0.15rem; color: var(--accent-dark); }
+  .three .opt span { font-size: 0.85rem; color: var(--text-mid); }
+
+  /* === DAY IN THE LIFE timeline === */
+  .timeline { margin: 1.4rem 0 0.5rem; position: relative; padding-left: 1.4rem; }
+  .timeline::before { content:""; position:absolute; left: 0.42rem; top: 0.4rem; bottom: 0.4rem; width: 2px; background: var(--bg-lavender); }
+  .tl {
+    position: relative; display: flex; gap: 1rem; align-items: baseline;
+    padding: 0.55rem 0;
+  }
+  .tl::before {
+    content:""; position: absolute; left: -1.17rem; top: 0.95rem;
+    width: 0.7rem; height: 0.7rem; border-radius: 50%;
+    background: var(--accent-warm); border: 2px solid var(--bg-warm);
+  }
+  .tl .clock { flex: 0 0 5.6rem; font-weight: 800; color: var(--accent-dark); font-size: 0.92rem; }
+  .tl .what b { color: var(--text-dark); }
+  .tl .what { margin: 0; font-size: 0.95rem; }
+  .tl.you .clock { color: var(--green-deep); }
+  .tl.you::before { background: var(--green-deep); }
+
+  /* === PLATE / reassurance === */
+  .plate { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.4rem 0; }
+  .plate .card { background: #fff; border: 1px solid #efe6dc; border-radius: var(--radius-sm); padding: 1.2rem 1.3rem; }
+  .plate .card.yours { background: #f0f8f2; border-color: #bfe4cd; }
+  .plate .card h4 { margin: 0 0 0.6rem; font-size: 1.02rem; color: var(--accent-dark); display:flex; align-items:center; gap:0.5rem; }
+  .plate .card.yours h4 { color: var(--green-deep); }
+  .plate .card ul { margin: 0; }
+  .plate .card ul li { font-size: 0.9rem; }
+
+  /* === CLOSING === */
+  .closing {
+    background: linear-gradient(140deg, var(--bg-lavender) 0%, var(--bg-peach) 100%);
+  }
+  .closing::after { color: rgba(61,46,92,0.45); }
+  .closing h2 { font-size: 2.1rem; }
+  .reassure { display: flex; flex-direction: column; gap: 0.7rem; margin: 1.6rem 0; }
+  .reassure .r { display:flex; gap: 0.8rem; align-items: flex-start; background: rgba(255,255,255,0.6); border-radius: var(--radius-sm); padding: 0.9rem 1.1rem; }
+  .reassure .r .e { font-size: 1.3rem; line-height: 1.3; }
+  .reassure .r p { margin: 0; color: var(--text-mid); }
+  .reassure .r p b { color: var(--accent-dark); }
+  .signoff { margin-top: 1.8rem; padding-top: 1.3rem; border-top: 1px solid rgba(61,46,92,0.15); font-size: 0.95rem; color: var(--text-mid); }
+  .signoff b { color: var(--accent-dark); }
+  a { color: var(--accent-warm); text-decoration: none; font-weight: 600; }
+
+  @media print {
+    body { background: #fff; }
+    .sheet {
+      margin: 0; max-width: none; border-radius: 0; box-shadow: none;
+      min-height: 96vh; page-break-after: always; break-after: page;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 3rem 3.4rem;
+    }
+    .sheet:last-child { page-break-after: auto; }
+    .cover, .closing { justify-content: flex-start; }
+    .agent-body, .job, .p-step, blockquote, .three, .plate, .timeline { page-break-inside: avoid; }
+  }
+  @page { size: A4; margin: 0; }
+</style>
+</head>
+<body>
+
+<!-- ============ SLIDE 1 · COVER ============ -->
+<section class="sheet cover" data-tag="ShopJaydees × SixOhQuad">
+  <div class="brand"><span class="dot"></span> ShopJaydees &times; SixOhQuad</div>
+  <p class="eyebrow">Your outbound lead-generation system</p>
+  <h1>Meet Your Outreach Team</h1>
+  <p class="lede">We've built you a small team of five automated specialists that find the right businesses, write to them in your voice, and hand you the warm replies — quietly, in the background, every week.</p>
+  <div class="team-row">
+    <span class="avatar" style="background:var(--badge-blue)">🔎</span>
+    <span class="avatar" style="background:var(--badge-pink)">✍️</span>
+    <span class="avatar" style="background:var(--badge-peach)">📬</span>
+    <span class="avatar" style="background:var(--badge-mint)">👀</span>
+    <span class="avatar" style="background:var(--badge-yellow)">🔁</span>
+  </div>
+  <div class="meta">
+    <span><b>Prepared for</b> &nbsp;Jenn, ShopJaydees</span>
+    <span><b>From</b> &nbsp;Cody, SixOhQuad</span>
+    <span><b>What this is</b> &nbsp;A plain-English tour, no tech required</span>
+  </div>
+</section>
+
+<!-- ============ SLIDE 2 · THE BIG PICTURE ============ -->
+<section class="sheet" data-tag="The big picture">
+  <p class="kicker">The big picture</p>
+  <h2>An outreach team that runs itself</h2>
+  <p class="big">Think of the system as five specialists working a production line. A lead comes in one end as just a name on a list, and comes out the other end as a real person who's interested in ShopJaydees — sitting in front of you, ready for a conversation.</p>
+  <p>They run on a schedule, mostly early on weekday mornings, so fresh work is always waiting for you. You never have to start them, watch them, or understand how they work under the hood. In fact, across the whole system there are only <strong>two things that ever need you</strong>:</p>
+
+  <div class="jobs">
+    <div class="job">
+      <span class="n">1</span>
+      <h4>Point them at a target</h4>
+      <p>Tell the team who to go after — for example, <em>"breweries in Langley"</em> — by picking from a few simple dropdowns. That's it. No lists to build, no research to do.</p>
+    </div>
+    <div class="job">
+      <span class="n">2</span>
+      <h4>Reply to people who write back</h4>
+      <p>Each day you spend a few minutes approving the outreach, then simply reply to the warm leads the team surfaces for you. You only ever talk to interested people.</p>
+    </div>
+  </div>
+
+  <blockquote class="why"><p><b>Everything else is automatic.</b> Finding companies, tracking down the right contact, researching each business, writing the emails, sending them on the right schedule, watching the inbox, and reviving quiet leads months later — all handled by the team, in the background.</p></blockquote>
+</section>
+
+<!-- ============ SLIDE 3 · PIPELINE AT A GLANCE ============ -->
+<section class="sheet" data-tag="How they work together">
+  <p class="kicker">How they connect</p>
+  <h2>The journey of a single lead</h2>
+  <p>Here's the path every prospect travels, and which teammate owns each step. The only green step is yours — everything else moves on its own.</p>
+
+  <div class="pipeline">
+    <div class="p-step"><span class="ic" style="background:var(--badge-blue)">🔎</span><p class="tx"><b>The Prospector</b> finds real companies and the right decision-maker at each, then scores how good a fit they are.</p></div>
+    <div class="p-arrow">▼</div>
+    <div class="p-step"><span class="ic" style="background:var(--badge-pink)">✍️</span><p class="tx"><b>The Copywriter</b> researches each business and writes a friendly, personalized set of emails in your voice.</p></div>
+    <div class="p-arrow you-note">▼ &nbsp; YOU APPROVE &nbsp; ▼</div>
+    <div class="p-step you"><span class="ic" style="background:#fff">✅</span><p class="tx"><b>You</b> review the ready-to-go emails each day — approve, tweak, or skip. Nothing sends without you.</p></div>
+    <div class="p-arrow">▼</div>
+    <div class="p-step"><span class="ic" style="background:var(--badge-peach)">📬</span><p class="tx"><b>The Mailer</b> sends the approved emails on the right schedule so they land in inboxes, not spam.</p></div>
+    <div class="p-arrow">▼</div>
+    <div class="p-step"><span class="ic" style="background:var(--badge-mint)">👀</span><p class="tx"><b>The Inbox Watcher</b> spots genuine replies and hands the warm leads straight to you.</p></div>
+    <div class="p-arrow">▼</div>
+    <div class="p-step"><span class="ic" style="background:var(--badge-yellow)">🔁</span><p class="tx"><b>The Follow-Up</b> quietly revives good leads who went quiet — months later, with a fresh angle.</p></div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 4 · AGENT 1 — PROSPECTOR ============ -->
+<section class="sheet" data-tag="Agent 1 of 5">
+  <div class="agent-head">
+    <span class="agent-badge" style="background:var(--badge-blue)">🔎</span>
+    <div class="titles">
+      <p class="role">Agent 1 · The Prospector</p>
+      <h2>Finds the right businesses</h2>
+      <p class="nick">Turns your targeting request into a list of real, contactable leads.</p>
+    </div>
+  </div>
+  <div class="agent-meta">
+    <span class="chip"><span class="lbl">Runs</span> &nbsp;Weekday mornings</span>
+    <span class="chip"><span class="lbl">You give it</span> &nbsp;A target (e.g. "restaurants in Abbotsford")</span>
+    <span class="chip"><span class="lbl">It hands off</span> &nbsp;Scored leads</span>
+  </div>
+  <div class="agent-body">
+    <p>When you create a request like <em>"Restaurants in Abbotsford — 25 leads,"</em> the Prospector goes out and finds real companies that match. For each one, it tracks down the right person to talk to — their name, their title, and a verified email address — so you're never emailing a generic <code>info@</code> black hole.</p>
+    <p>It then gives every lead a <strong>fit score from 1 to 5</strong>, so the best-matched prospects rise to the top. And it checks each name against everyone you've already contacted, so nobody ever gets emailed twice.</p>
+    <ul>
+      <li>Strong leads (scored 3 and up) move forward automatically to be written to.</li>
+      <li>Weaker leads are quietly set aside for later, not deleted.</li>
+      <li>You can override any score you disagree with.</li>
+    </ul>
+    <blockquote class="why"><p><b>Why it matters to you:</b> you skip the most tedious part of outbound entirely — building lists and hunting for the right contact. You just say who you want, and a clean, prioritized list appears.</p></blockquote>
+  </div>
+</section>
+
+<!-- ============ SLIDE 5 · AGENT 2 — COPYWRITER ============ -->
+<section class="sheet" data-tag="Agent 2 of 5">
+  <div class="agent-head">
+    <span class="agent-badge" style="background:var(--badge-pink)">✍️</span>
+    <div class="titles">
+      <p class="role">Agent 2 · The Copywriter</p>
+      <h2>Writes to them in your voice</h2>
+      <p class="nick">Turns a bare contact into ready-to-send, on-brand outreach.</p>
+    </div>
+  </div>
+  <div class="agent-meta">
+    <span class="chip"><span class="lbl">Runs</span> &nbsp;Weekday mornings</span>
+    <span class="chip"><span class="lbl">It receives</span> &nbsp;Strong leads from the Prospector</span>
+    <span class="chip"><span class="lbl">It produces</span> &nbsp;A 3-email sequence + LinkedIn note</span>
+  </div>
+  <div class="agent-body">
+    <p>For each strong lead, the Copywriter visits the company's website, reads what they do, and looks for the human details — a sponsorship, a charity they support, a local event they run. Then it writes a warm, personalized <strong>set of three emails</strong> plus a short LinkedIn connection note.</p>
+    <p>Every message naturally works in your <strong>"Wear It Forward"</strong> community-giveback story and mentions something specific about <em>that</em> business — so it reads like a real note from you, not mass-produced spam. It's all signed by <strong>"Ellie,"</strong> your consistent outreach persona. It also checks for any "do not contact" signals so everything stays compliant with Canada's anti-spam law.</p>
+    <blockquote class="why"><p><b>Why it matters to you:</b> you get outreach that sounds personal and on-brand for every single lead — the kind of writing that would take hours by hand — waiting for you to approve.</p></blockquote>
+  </div>
+</section>
+
+<!-- ============ SLIDE 6 · YOUR DAILY 15 MINUTES ============ -->
+<section class="sheet" data-tag="Your one daily touchpoint">
+  <p class="kicker">Your part</p>
+  <h2>Your daily 15 minutes</h2>
+  <p>This is the one recurring thing the system asks of you — and it's the important one, because it keeps you fully in control. Each morning, a fresh batch of personalized emails is waiting, marked <strong>"Ready for Review."</strong></p>
+
+  <div class="approve-hero">
+    <div class="time">~15 min <small>a day</small></div>
+    <p>Read a batch of pre-written emails and decide what goes out. Nothing is ever sent without your say-so.</p>
+  </div>
+
+  <p>For each one, you have three simple choices:</p>
+  <div class="three">
+    <div class="opt"><div class="e">✅</div><b>Approve</b><span>Looks great — send it as written.</span></div>
+    <div class="opt"><div class="e">✏️</div><b>Edit</b><span>Tweak a line, then approve.</span></div>
+    <div class="opt"><div class="e">🚫</div><b>Skip</b><span>Not a fit — set it aside.</span></div>
+  </div>
+
+  <blockquote class="note"><p><b>That's the whole job.</b> Point the team at a target, then spend a few minutes a day approving outreach. Everything before and after this step runs on its own.</p></blockquote>
+</section>
+
+<!-- ============ SLIDE 7 · AGENT 3 — MAILER ============ -->
+<section class="sheet" data-tag="Agent 3 of 5">
+  <div class="agent-head">
+    <span class="agent-badge" style="background:var(--badge-peach)">📬</span>
+    <div class="titles">
+      <p class="role">Agent 3 · The Mailer</p>
+      <h2>Sends, so it lands</h2>
+      <p class="nick">Your mail carrier — delivers approved emails the right way.</p>
+    </div>
+  </div>
+  <div class="agent-meta">
+    <span class="chip"><span class="lbl">Runs</span> &nbsp;Weekday mornings</span>
+    <span class="chip"><span class="lbl">It receives</span> &nbsp;Only emails you approved</span>
+    <span class="chip"><span class="lbl">It does</span> &nbsp;Delivers the 3-touch sequence</span>
+  </div>
+  <div class="agent-body">
+    <p>Once you've approved an email, the Mailer takes over and actually sends it — spacing the three touches out over time so the outreach feels natural, not pushy. It sends through a specialized cold-email service that's built to keep messages out of spam folders, and rotates across your dedicated outreach addresses to protect their reputation.</p>
+    <p>If an email address turns out to be dead, it's quietly flagged as bounced instead of being sent — so you're not wasting touches on bad contacts. Everything it does is recorded on the lead's card.</p>
+    <blockquote class="why"><p><b>Why it matters to you:</b> good writing only works if it actually reaches the inbox. The Mailer handles the technical craft of deliverability so your approved emails are seen — without you thinking about any of it.</p></blockquote>
+  </div>
+</section>
+
+<!-- ============ SLIDE 8 · AGENT 5 — INBOX WATCHER (the payoff) ============ -->
+<section class="sheet" data-tag="Agent 4 of 5">
+  <div class="agent-head">
+    <span class="agent-badge" style="background:var(--badge-mint)">👀</span>
+    <div class="titles">
+      <p class="role">The Inbox Watcher · the payoff</p>
+      <h2>Catches the warm replies</h2>
+      <p class="nick">Turns automated sending into "a real lead is waiting for you."</p>
+    </div>
+  </div>
+  <div class="agent-meta">
+    <span class="chip"><span class="lbl">Runs</span> &nbsp;All day, every ~20 min</span>
+    <span class="chip"><span class="lbl">It watches</span> &nbsp;Your outreach inbox</span>
+    <span class="chip"><span class="lbl">It surfaces</span> &nbsp;Genuine human replies</span>
+  </div>
+  <div class="agent-body">
+    <p>This is the teammate that closes the loop — and the reason the whole system exists. Throughout the day it keeps checking the outreach inbox and reads every response, sorting it into one of three buckets:</p>
+    <ul>
+      <li><strong>A real human reply</strong> — a warm lead. It flags this for you right away so you can jump in personally.</li>
+      <li><strong>An auto-reply</strong> ("out of office") — handled automatically, never bothers you.</li>
+      <li><strong>A bounce</strong> (dead address) — cleaned up quietly in the background.</li>
+    </ul>
+    <p>When a genuine reply comes in, the lead is flipped to <strong>"Responded — Owner Follow-up"</strong> — your cue to take over the conversation.</p>
+    <blockquote class="why"><p><b>Why it matters to you:</b> you never have to sit and watch an inbox. Warm leads surface fast and land in front of you — and your time only ever goes to people who actually wrote back.</p></blockquote>
+  </div>
+</section>
+
+<!-- ============ SLIDE 9 · AGENT 4 — FOLLOW-UP ============ -->
+<section class="sheet" data-tag="Agent 5 of 5">
+  <div class="agent-head">
+    <span class="agent-badge" style="background:var(--badge-yellow)">🔁</span>
+    <div class="titles">
+      <p class="role">The Follow-Up · the long game</p>
+      <h2>Revives the quiet ones</h2>
+      <p class="nick">Keeps good leads from ever going to waste.</p>
+    </div>
+  </div>
+  <div class="agent-meta">
+    <span class="chip"><span class="lbl">Runs</span> &nbsp;Weekly (Sunday mornings)</span>
+    <span class="chip"><span class="lbl">It revisits</span> &nbsp;Good leads who never replied</span>
+    <span class="chip"><span class="lbl">It does</span> &nbsp;A fresh attempt, months later</span>
+  </div>
+  <div class="agent-body">
+    <p>Not everyone replies the first time — and that's normal. Leads who got the full sequence but stayed quiet aren't thrown away. After a <strong>90-day cool-off</strong>, the Follow-Up quietly pulls the good-quality ones back into the pipeline for a fresh attempt.</p>
+    <p>Crucially, it starts clean: it clears the old emails and writes a <strong>brand-new approach that never references the earlier outreach</strong>, so it feels like a genuine first hello. It caps this at two retries, and always respects anyone who's asked not to be contacted again.</p>
+    <blockquote class="why"><p><b>Why it matters to you:</b> timing is everything in sales — a "no reply" often just means "not right now." This teammate gives your best prospects a second, well-timed shot, so good leads keep working for you long after the first email.</p></blockquote>
+  </div>
+</section>
+
+<!-- ============ SLIDE 10 · A DAY IN THE LIFE ============ -->
+<section class="sheet" data-tag="A day in the life">
+  <p class="kicker">Putting it together</p>
+  <h2>A typical day, start to finish</h2>
+  <p>Here's how the team's schedule flows on a normal weekday. Notice how little of it is yours.</p>
+
+  <div class="timeline">
+    <div class="tl"><span class="clock">~4:00 AM</span><p class="what"><b>The Prospector</b> finds new companies and contacts for your latest target, and scores them.</p></div>
+    <div class="tl"><span class="clock">~5:00 AM</span><p class="what"><b>The Copywriter</b> researches each strong lead and writes their personalized emails.</p></div>
+    <div class="tl you"><span class="clock">Morning</span><p class="what"><b>You</b> — your ~15 minutes: review the ready batch and approve what goes out.</p></div>
+    <div class="tl"><span class="clock">~9:00 AM</span><p class="what"><b>The Mailer</b> sends everything you approved, on the right schedule.</p></div>
+    <div class="tl"><span class="clock">7 AM–9 PM</span><p class="what"><b>The Inbox Watcher</b> checks for replies every ~20 minutes and flags warm ones for you.</p></div>
+    <div class="tl you"><span class="clock">As they land</span><p class="what"><b>You</b> — reply to the interested people the team surfaces. That's the win.</p></div>
+    <div class="tl"><span class="clock">Sundays</span><p class="what"><b>The Follow-Up</b> reviews older quiet leads and lines up fresh attempts for the week.</p></div>
+  </div>
+</section>
+
+<!-- ============ SLIDE 11 · WHAT LANDS ON YOUR PLATE ============ -->
+<section class="sheet" data-tag="What reaches you">
+  <p class="kicker">Peace of mind</p>
+  <h2>What actually reaches your desk</h2>
+  <p>The whole point of the team is to protect your time. Here's the clean split between what the system handles silently and the small, high-value slice that comes to you.</p>
+
+  <div class="plate">
+    <div class="card">
+      <h4>🤖 Handled automatically</h4>
+      <ul>
+        <li>Finding companies &amp; the right contacts</li>
+        <li>Researching and writing every email</li>
+        <li>Sending on the right schedule</li>
+        <li>Out-of-office and auto-replies</li>
+        <li>Dead / bounced email addresses</li>
+        <li>Reviving quiet leads months later</li>
+      </ul>
+    </div>
+    <div class="card yours">
+      <h4>🙋 Comes to you</h4>
+      <ul>
+        <li>A few minutes a day approving outreach</li>
+        <li>Genuine replies from interested people</li>
+        <li>The occasional score you want to override</li>
+      </ul>
+    </div>
+  </div>
+
+  <blockquote class="why"><p><b>The bottom line:</b> real, warm leads land in front of you — with the full story of who they are and what was sent — while the busywork stays out of sight. You spend your time closing, not prospecting.</p></blockquote>
+</section>
+
+<!-- ============ SLIDE 12 · CLOSING ============ -->
+<section class="sheet closing" data-tag="ShopJaydees × SixOhQuad">
+  <div class="brand"><span class="dot"></span> ShopJaydees &times; SixOhQuad</div>
+  <p class="kicker">In short</p>
+  <h2>Five specialists. Two jobs for you.</h2>
+  <p class="big" style="max-width:30em;">Your outreach team finds the right businesses, writes to them in your voice, sends it well, and brings you the warm replies — week after week, in the background.</p>
+
+  <div class="reassure">
+    <div class="r"><span class="e">🎯</span><p><b>You stay in control.</b> Nothing is ever sent without your approval — you decide who's contacted and what they receive.</p></div>
+    <div class="r"><span class="e">🔒</span><p><b>Your main inbox stays clean.</b> Cold outreach runs on separate dedicated addresses; warm conversations move to you.</p></div>
+    <div class="r"><span class="e">⏱️</span><p><b>Your time is protected.</b> A few minutes a day in, real interested leads out. The team handles the rest.</p></div>
+  </div>
+
+  <div class="signoff">
+    <p><b>Questions about any of this?</b> Just reach out — <a href="mailto:cody@sixohquad.com">cody@sixohquad.com</a>. Happy to walk through any teammate in more detail.</p>
+    <p style="margin-top:0.4rem;">ShopJaydees &times; SixOhQuad &nbsp;·&nbsp; Meet Your Outreach Team</p>
+  </div>
+</section>
+
+</body>
+</html>

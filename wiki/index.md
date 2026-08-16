@@ -21,13 +21,14 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 
 - [Jenn Milne](people/jenn-milne.md): client contact and signatory at Jaydees Apparel; owns daily approvals and warm lead follow-up; working style and go-live context.
 - [Tamara](people/tamara.md): Jaydees staff who owns quote/opportunity intake downstream of the CRM handoff; possible future automation target.
+- [Ellie (outreach persona)](people/ellie.md): the generated outreach persona every cold email is written as; identity rules, mailboxes, voice, and content limits in one place (not a real person).
 
 ## Systems
 
 - [Lead generation system](systems/lead-generation-system.md): the contracted system, now live; daily 5am/6am/9am cadence, status flow, domain rotation, campaigns, reply handling, plus discovery, enrichment, and scoring.
 - [Prospect handoff to CRM agent](systems/prospect-crm-handoff-agent.md): ClickUp agent that copies a replied prospect into the CRM and DMs Jenn on "Responded - Follow-up".
 - [Daily approval workflow](systems/daily-approval-workflow.md): the client's daily ClickUp review of drafts and flagged warm leads, fifteen to twenty minutes per day.
-- [Outreach messaging framework](systems/outreach-messaging-framework.md): research inputs, voice, message structure, personalization layers, credibility claims, and the three-touch sequence.
+- [Outreach messaging framework](systems/outreach-messaging-framework.md): research inputs, the confident direct voice, real-calendar urgency, direct-question CTAs, A/B message angles, personalization layers, credibility claims, and the three-touch sequence ending in a break-up email (rewritten 2026-08-11).
 - [Lead scoring](systems/lead-scoring.md): the one-to-five fit rubric, its inputs, and routing (three or higher proceeds, lower parks, Jenn can override).
 
 ## Decisions
@@ -39,6 +40,7 @@ Catalog of every page in this wiki: relative link, then a one-line summary. Ever
 - [Start small then scale](decisions/start-small-then-scale.md): outreach ramps from a five-to-ten-send test batch to full volume after joint review.
 - [ClickUp single source of truth](decisions/clickup-single-source-of-truth.md): every lead's status, score, and history lives in ClickUp; no separate databases.
 - [Hunter.io for discovery and enrichment](decisions/hunter-io-for-discovery-and-enrichment.md): one tool for finding companies and verified contacts, per the design spec; confirmed the current discovery stack (Cody, 2026-06-11).
+- [Messaging impact and urgency](decisions/messaging-impact-and-urgency.md): retires the "no pressure" voice after July's 1.5 percent reply rate; real-calendar urgency, direct-question CTAs, break-up Touch 3, and deterministic A/B message angles (2026-08-11).
 - [LinkedIn stays manual](decisions/linkedin-stays-manual.md): the agent writes LinkedIn copy, the owner sends it, keeping the account safe.
 - [Dedicated cold email tool](decisions/dedicated-cold-email-tool.md): Instantly or Smartlead handles sending, warmup, and deliverability instead of ClickUp.
 - [Async approval queue](decisions/async-approval-queue.md): one daily batch review of ten to twenty drafts instead of real-time approvals.

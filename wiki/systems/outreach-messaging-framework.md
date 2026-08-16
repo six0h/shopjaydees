@@ -5,7 +5,7 @@ category: system
 status: active
 owner: cody
 created: 2026-06-11
-updated: 2026-07-22
+updated: 2026-08-11
 tags: [messaging, personalization, outreach]
 sources:
   - file: ingested/documents/messaging-framework.html
@@ -28,15 +28,28 @@ Every message starts from gathered context, never a generic blast:
 
 ## Voice
 
-Messages sound like a local business owner reaching out to another: friendly first, warm, direct, casual (first names, no jargon), professional but not stiff, with local community values woven in naturally. Never salesy or corporate. The design spec sets the tone priority order as friendly, then professional, then casual, then community. Sample emails are signed "Jay, Jaydees Apparel".
+Messages sound like a real person at a local business ([Ellie](../people/ellie.md)) with a genuine reason to reach out this week: warm, direct, confident, first names, no jargon, local community values woven in naturally. Never salesy or corporate, and never apologetic about emailing. Confident never means pushy: no guilt trips, no fake scarcity, no invented discounts. The only urgency permitted is the real calendar (see below). Revised 2026-08-11 after July's 1.5 percent reply rate; the original "friendly first, no pressure" voice is retired (see [messaging impact and urgency](../decisions/messaging-impact-and-urgency.md)).
 
-The design spec's LinkedIn template: a short personalized note, no pitch. "Hi [name], I came across [their org] and love what you're doing with [specific thing]. Would love to connect."
+The LinkedIn note is unchanged: a short personalized note, no pitch. "Hi [name], I came across [their org] and love what you're doing with [specific thing]. Would love to connect."
 
 ## Message structure
 
-1. **Open with value.** What Jaydees does for their specific type of organization, referencing the business directly.
+1. **Open with a specific observation** about their business, then why it matters right now for the coming season.
 2. **Wear It Forward bridge.** Community impact as a genuine differentiator, not the headline.
-3. **Soft ask.** "Worth a quick chat?" No pressure or urgency tactics.
+3. **Direct ask.** One specific question the reader can answer in one line, for example "Want me to put a no-obligation fall quote together for you this week?". Soft closers ("worth a quick chat?", "just checking in", "no worries if not", "no pressure") are banned and fail validation.
+
+## Real-calendar urgency (2026-08-11)
+
+Every touch anchors to the season the prospect is buying into: custom apparel has real production lead times, so an order conversation that starts this week means gear in hand before the season, and one that starts in a month may not. The copy must make that concrete for the specific prospect (crew back on site, league starting, staff in front of customers). Never permitted: invented discounts, deadlines Jaydees did not set, claims that Jaydees is "closing a production window", or "spots filling up". The deadline belongs to the prospect's season, not to us.
+
+## A/B message angles (2026-08-11)
+
+Each lead is deterministically assigned one of two angles (hash of the ClickUp task id) and tagged `angle:deadline` or `angle:direct-ask` on the task:
+
+- **deadline**: Touch 1 opens with the seasonal lock-in window and the lead-time math, then personalizes.
+- **direct-ask**: Touch 1 opens with the personalized observation and goes straight to the quote question; the timing argument arrives in Touch 2.
+
+Reply performance per angle is read by filtering ClickUp on the `angle:` tag against the `interest:` tags set by the reply poller. This is the first controlled messaging comparison in the engagement.
 
 ## Four personalization layers
 
@@ -49,6 +62,7 @@ Hard limits on what the agent may say, enforced in code, not just prompt guidanc
 - **Generic apparel only.** Copy offers "custom apparel" / "branded apparel" and never names a specific product, garment, style, fabric, colour, or price. The segment varies the message, not the product.
 - **The concrete offer is a no-obligation quote**, not a free mockup. The agent never states or estimates a price.
 - **Correct season only.** Each period allows one selling-season word; the others fail validation and force a regenerate.
+- **Every touch ends on a real question** (2026-08-11): each body must contain a question and must not contain a soft closer ("worth a quick chat", "just checking in", "no worries if", "no pressure", and similar), and must carry Ellie's sign-off.
 
 A draft breaking any of these is regenerated (up to three tries per run) before it can reach the queue.
 
@@ -62,9 +76,9 @@ These claims come from the framework deck; they are positioned as authentic soci
 
 ## The three-touch sequence
 
-- **Day zero, intro.** Personalized value prop plus Wear It Forward plus a soft call to action.
-- **Day four, value.** Share something genuinely useful for their situation, for example how similar schools use spirit wear as ongoing fundraisers. No hard sell.
-- **Day nine, open door.** Brief friendly check-in from a different angle, lighter tone, genuinely leaving the door open.
+- **Day zero, why now.** Specific observation, the seasonal why-now, Wear It Forward, and the direct quote question.
+- **Day four, value plus timeline.** One genuinely useful, specific idea for their situation, then an honest restatement that the seasonal window is shrinking, and the ask again in fresh words.
+- **Day nine, break-up.** Ellie is wrapping up her seasonal outreach list and closes the file unless they say otherwise: one-line recap, a genuinely easy out, one final yes-or-no question. Replaced the "friendly check-in" (2026-08-11); a break-up email is more honest than a third nudge and is the highest-reply touch in cold outreach.
 
 No response after touch three puts the lead in a ninety-day cool-off. LinkedIn connection requests are short, personal, and not a pitch; the client sends them manually to keep them human.
 
@@ -75,6 +89,8 @@ Every message lands in the ClickUp queue before sending. Options: approve, edit,
 ## Related pages
 
 - [Lead generation system](lead-generation-system.md)
+- [Ellie, the outreach persona](../people/ellie.md)
+- [Messaging impact and urgency](../decisions/messaging-impact-and-urgency.md)
 - [Personalization content guardrails](../decisions/personalization-content-guardrails.md)
 - [Anti-AI-writing guardrails](../decisions/anti-ai-writing-guardrails.md)
 - [Seasonal playbook](../topics/seasonal-playbook.md)
