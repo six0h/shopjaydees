@@ -59,6 +59,10 @@ export interface ClickUpFieldIds {
   emailConfidence: string;
   contactLinkedin: string;
   contactPhone: string;
+  companyPhone: string;
+  mobile: string;
+  extension: string;
+  otherPhoneLines: string;
   segment: string;
   category: string;
   leadScore: string;
@@ -165,6 +169,10 @@ export function loadConfig(): Config {
       emailConfidence: required("CLICKUP_FIELD_EMAIL_CONFIDENCE"),
       contactLinkedin: required("CLICKUP_FIELD_CONTACT_LINKEDIN"),
       contactPhone: required("CLICKUP_FIELD_CONTACT_PHONE"),
+      companyPhone: required("CLICKUP_FIELD_COMPANY_PHONE"),
+      mobile: required("CLICKUP_FIELD_MOBILE"),
+      extension: required("CLICKUP_FIELD_EXTENSION"),
+      otherPhoneLines: required("CLICKUP_FIELD_OTHER_PHONE_LINES"),
       segment: required("CLICKUP_FIELD_SEGMENT"),
       category: required("CLICKUP_FIELD_CATEGORY"),
       leadScore: required("CLICKUP_FIELD_LEAD_SCORE"),

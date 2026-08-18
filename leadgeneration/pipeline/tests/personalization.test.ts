@@ -537,6 +537,44 @@ describe("runPersonalization", () => {
     expect(fieldIds).toContain("f-review-decision");
   });
 
+  it("extracts phone numbers from the scrape into the ClickUp writeback", async () => {
+    const config = makePersonalizationConfig();
+    const clickup = makeMockClickUp();
+    const gemini = makeMockGemini();
+    const alerter = makeMockAlerter();
+    const logger = createLogger("test");
+
+    // Scrape returns a tel: link + a footer number.
+    const firecrawl: FirecrawlClient = {
+      scrape: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          markdown: "# ABC Plumbing\n\nCall us: 604-599-1234 or fax 604-599-9999.",
+          metadata: { sourceURL: "https://abcplumbing.ca", statusCode: 200 },
+          links: ["tel:+16045991234"],
+        },
+      }),
+    };
+
+    const getTasksMock = clickup.getTasks as ReturnType<typeof vi.fn>;
+    getTasksMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([makeEnrichedClickUpTask({})]);
+
+    await runPersonalization({ config, clickup, firecrawl, gemini, alerter, logger });
+
+    const updateCalls = (clickup.updateTask as ReturnType<typeof vi.fn>).mock.calls;
+    const readyForReviewCall = updateCalls.find(
+      (call: unknown[]) => (call[1] as { status?: string }).status === "Ready for Review"
+    );
+    expect(readyForReviewCall).toBeDefined();
+    const cf = (readyForReviewCall![1] as { custom_fields: Array<{ id: string; value: unknown }> })
+      .custom_fields;
+    const byId = new Map(cf.map((f) => [f.id, f.value]));
+    expect(byId.get("f-company-phone")).toBe("(604) 599-1234");
+    expect(byId.get("f-other-phone-lines")).toBe("(604) 599-9999 (fax)");
+  });
+
   it("resets leads stuck in Personalizing > 30 min", async () => {
     const config = makePersonalizationConfig();
     const clickup = makeMockClickUp();

@@ -26,6 +26,7 @@ import type {
 import { InstantlyApiError, createInstantlyClient } from "./clients/instantly.js";
 import { createFirecrawlClient, findSecondaryPages } from "./clients/firecrawl.js";
 import type { FirecrawlClient } from "./clients/firecrawl.js";
+import { extractPhones, type ScrapedPage } from "./phone-extract.js";
 import { createGeminiClient } from "./clients/gemini.js";
 import type { GeminiClient } from "./clients/gemini.js";
 import { scoreLead } from "./scoring.js";
@@ -1222,11 +1223,18 @@ export async function runPersonalization(
       let scrapedContent = "";
       let scrapeFailed = false;
       let pagesScraped = 0;
+      // Per-page markdown + links, retained for deterministic phone extraction.
+      const scrapedPages: ScrapedPage[] = [];
 
       const homepageResult = await firecrawl.scrape(lead.companyDomain);
       if (homepageResult.success && homepageResult.data?.markdown) {
         scrapedContent += `## Homepage (${lead.companyDomain})\n\n${homepageResult.data.markdown}`;
         pagesScraped += 1;
+        scrapedPages.push({
+          url: lead.companyDomain,
+          markdown: homepageResult.data.markdown,
+          links: homepageResult.data.links ?? [],
+        });
 
         const links = homepageResult.data.links ?? [];
         const secondaryPages = findSecondaryPages(links, lead.companyDomain);
@@ -1236,6 +1244,11 @@ export async function runPersonalization(
           if (pageResult.success && pageResult.data?.markdown) {
             scrapedContent += `\n\n---\n\n## ${pageUrl}\n\n${pageResult.data.markdown}`;
             pagesScraped += 1;
+            scrapedPages.push({
+              url: pageUrl,
+              markdown: pageResult.data.markdown,
+              links: pageResult.data.links ?? [],
+            });
           }
         }
       } else {
@@ -1255,6 +1268,22 @@ export async function runPersonalization(
       if (scrapeFailed) {
         result.results.scrapeFailedButProceeded += 1;
       }
+
+      // Deterministic phone extraction from the pages already scraped (no extra
+      // Firecrawl cost). Written to ClickUp in the Ready-for-Review writeback below.
+      const phones = extractPhones(scrapedPages, lead.contactName);
+      const phoneCustomFields = [
+        phones.companyPhone
+          ? { id: config.fields.companyPhone, value: phones.companyPhone }
+          : null,
+        phones.otherPhoneLines
+          ? { id: config.fields.otherPhoneLines, value: phones.otherPhoneLines }
+          : null,
+        phones.mobile ? { id: config.fields.mobile, value: phones.mobile } : null,
+        phones.extension
+          ? { id: config.fields.extension, value: phones.extension }
+          : null,
+      ].filter((f): f is { id: string; value: string } => f !== null);
 
       // Step 5-6: Generate + validate, with bounded in-run retry reusing the scrape.
       let drafts: GeminiDraftOutput | undefined;
@@ -1467,6 +1496,7 @@ export async function runPersonalization(
               id: config.personalizationFields.reviewDecision,
               value: 0,
             },
+            ...phoneCustomFields,
           ],
         });
 

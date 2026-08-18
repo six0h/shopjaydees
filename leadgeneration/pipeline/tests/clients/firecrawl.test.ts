@@ -60,7 +60,7 @@ describe("FirecrawlClient", () => {
       expect(opts.headers.Authorization).toBe("Bearer fc_test_key");
       const body = JSON.parse(opts.body);
       expect(body.url).toBe("https://abcplumbing.ca");
-      expect(body.formats).toEqual(["markdown"]);
+      expect(body.formats).toEqual(["markdown", "links"]);
       expect(body.onlyMainContent).toBe(true);
       expect(body.waitFor).toBe(3000);
       expect(body.timeout).toBe(15000);
@@ -188,7 +188,7 @@ describe("FirecrawlClient", () => {
   });
 
   describe("findSecondaryPages", () => {
-    it("identifies about page and community page from links", () => {
+    it("identifies about, community, and contact pages from links", () => {
       const links = [
         "https://abcplumbing.ca/about",
         "https://abcplumbing.ca/services",
@@ -198,23 +198,26 @@ describe("FirecrawlClient", () => {
 
       const pages = findSecondaryPages(links, "https://abcplumbing.ca");
 
-      expect(pages).toHaveLength(2);
+      expect(pages).toHaveLength(3);
       expect(pages[0]).toBe("https://abcplumbing.ca/about");
       expect(pages[1]).toBe("https://abcplumbing.ca/community");
+      expect(pages[2]).toBe("https://abcplumbing.ca/contact");
     });
 
-    it("returns at most 2 pages", () => {
+    it("returns at most 3 pages (one per bucket)", () => {
       const links = [
         "https://example.com/about",
         "https://example.com/about-us",
         "https://example.com/team",
         "https://example.com/community",
         "https://example.com/giving",
+        "https://example.com/contact",
+        "https://example.com/contact-us",
       ];
 
       const pages = findSecondaryPages(links, "https://example.com");
 
-      expect(pages).toHaveLength(2);
+      expect(pages).toHaveLength(3);
     });
 
     it("prioritizes about pages over community pages", () => {
@@ -244,7 +247,7 @@ describe("FirecrawlClient", () => {
     it("returns empty array when no matching pages found", () => {
       const links = [
         "https://abcplumbing.ca/services",
-        "https://abcplumbing.ca/contact",
+        "https://abcplumbing.ca/faq",
         "https://abcplumbing.ca/pricing",
       ];
 

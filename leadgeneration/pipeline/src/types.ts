@@ -223,6 +223,13 @@ export const COMMUNITY_PATH_KEYWORDS = [
   "/give-back",
 ] as const;
 
+export const CONTACT_PATH_KEYWORDS = [
+  "/contact",
+  "/contact-us",
+  "/contactus",
+  "/get-in-touch",
+] as const;
+
 export interface FirecrawlScrapeResult {
   success: boolean;
   data?: {

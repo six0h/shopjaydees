@@ -1,6 +1,10 @@
 import type { Logger } from "../logger.js";
 import type { FirecrawlScrapeResult } from "../types.js";
-import { ABOUT_PATH_KEYWORDS, COMMUNITY_PATH_KEYWORDS } from "../types.js";
+import {
+  ABOUT_PATH_KEYWORDS,
+  COMMUNITY_PATH_KEYWORDS,
+  CONTACT_PATH_KEYWORDS,
+} from "../types.js";
 
 const BASE_URL = "https://api.firecrawl.dev/v1";
 
@@ -29,6 +33,7 @@ export function findSecondaryPages(
 
   const aboutPages: string[] = [];
   const communityPages: string[] = [];
+  const contactPages: string[] = [];
 
   for (const link of links) {
     let linkHost: string;
@@ -54,9 +59,16 @@ export function findSecondaryPages(
       communityPages.push(link);
       continue;
     }
+
+    // Contact pages carry direct lines / extensions for phone enrichment.
+    const isContact = CONTACT_PATH_KEYWORDS.some((kw) => linkPath === kw || linkPath.startsWith(kw + "/"));
+    if (isContact && contactPages.length === 0) {
+      contactPages.push(link);
+      continue;
+    }
   }
 
-  return [...aboutPages, ...communityPages].slice(0, 2);
+  return [...aboutPages, ...communityPages, ...contactPages].slice(0, 3);
 }
 
 export function createFirecrawlClient(
@@ -76,8 +88,10 @@ export function createFirecrawlClient(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          // "links" is required for secondary-page discovery and for tel:-link
+          // phone extraction (tel: links survive onlyMainContent stripping).
+          formats: ["markdown", "links"],
           url,
-          formats: ["markdown"],
           onlyMainContent: true,
           waitFor: 3000,
           timeout: 15000,
