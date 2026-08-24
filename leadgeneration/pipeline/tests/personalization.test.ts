@@ -515,13 +515,14 @@ describe("runPersonalization", () => {
     // Verify Gemini was called
     expect(gemini.generateDrafts).toHaveBeenCalledOnce();
 
-    // Verify results were written to ClickUp with status "Ready for Review"
+    // Verify results were written to ClickUp with status "Approved" (leads now
+    // land straight in Approved, skipping the manual Ready-for-Review gate).
     const updateCalls = (clickup.updateTask as ReturnType<typeof vi.fn>).mock.calls;
-    const readyForReviewCall = updateCalls.find(
-      (call: unknown[]) => (call[1] as { status?: string }).status === "Ready for Review"
+    const approvedCall = updateCalls.find(
+      (call: unknown[]) => (call[1] as { status?: string }).status === "Approved"
     );
-    expect(readyForReviewCall).toBeDefined();
-    const updateBody = readyForReviewCall![1] as { custom_fields: Array<{ id: string; value: unknown }> };
+    expect(approvedCall).toBeDefined();
+    const updateBody = approvedCall![1] as { custom_fields: Array<{ id: string; value: unknown }> };
     expect(updateBody.custom_fields).toBeDefined();
 
     // Verify specific fields were set
@@ -564,11 +565,11 @@ describe("runPersonalization", () => {
     await runPersonalization({ config, clickup, firecrawl, gemini, alerter, logger });
 
     const updateCalls = (clickup.updateTask as ReturnType<typeof vi.fn>).mock.calls;
-    const readyForReviewCall = updateCalls.find(
-      (call: unknown[]) => (call[1] as { status?: string }).status === "Ready for Review"
+    const approvedCall = updateCalls.find(
+      (call: unknown[]) => (call[1] as { status?: string }).status === "Approved"
     );
-    expect(readyForReviewCall).toBeDefined();
-    const cf = (readyForReviewCall![1] as { custom_fields: Array<{ id: string; value: unknown }> })
+    expect(approvedCall).toBeDefined();
+    const cf = (approvedCall![1] as { custom_fields: Array<{ id: string; value: unknown }> })
       .custom_fields;
     const byId = new Map(cf.map((f) => [f.id, f.value]));
     expect(byId.get("f-company-phone")).toBe("(604) 599-1234");

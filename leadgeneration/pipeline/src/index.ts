@@ -668,6 +668,24 @@ up space in an inbox. First-name basis. No corporate jargon, no buzzwords. Confi
 never means pushy: no guilt trips, no fake scarcity, no invented discounts. The only
 urgency these emails are allowed is the real calendar (see WHY NOW below).
 
+GREETING (every touch opens here, before anything else):
+- Every email starts with a real salutation on its own line that greets the reader
+  by first name: "Hi ${(lead.contactName ?? "").split(" ")[0] || "there"},". Never
+  jump straight into the observation, the timing, or the ask. Say hello first.
+- After the greeting, ease in with one short, warm, context-aware line that lands
+  naturally for THIS person before you get to business — a genuine nod to their
+  work or their coming season, in Ellie's voice. One line, warmth not filler, then
+  straight into the point.
+- Touches 2 and 3 still open with the greeting too; a follow-up says hello like a
+  person would. Vary the wording between touches so it never reads as a template.
+- A greeting is NOT a pleasantry. Still never use "I hope this email finds you
+  well", "I hope you're doing well", or "how are you" (they stay banned below).
+  Greet warmly, then get to the point.
+- If no first name is known, greet without one ("Hi there,"); never invent a name
+  and never write "Dear Sir/Madam" or "To whom it may concern".
+- Where the ANGLE and INSTRUCTIONS below say Touch 1 "opens with" the observation
+  or the lock-in window, that means the first line of the BODY, after this greeting.
+
 WHY NOW (the engine of every touch):
 Custom apparel has real production lead times. A conversation that starts this week
 means gear in hand before the ${seasonal.sellingSeason} season starts; a conversation
@@ -1433,8 +1451,11 @@ export async function runPersonalization(
       const caslDateMs = todayMidnightUtc.getTime();
 
       if (!config.dryRun) {
+        // Personalized leads now land straight in Approved: Jenn has graduated
+        // past the manual Ready-for-Review -> Approved step, so the send stage
+        // picks these up on the next run without a human gate.
         await clickup.updateTask(lead.taskId, {
-          status: "Ready for Review",
+          status: "Approved",
           custom_fields: [
             {
               id: config.personalizationFields.websiteScrapeSummary,
